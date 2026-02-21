@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "aequitas-mas"
+version = "5.0.0"
+description = "Multi-Agent System for Brazilian Market (B3) Decision Support"
+authors = ["Seu Nome <seu.email@exemplo.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# Orquestração e Grafos
+langgraph = "^0.2.0"
+# Validação e Tipagem (Norma v5.0)
+pydantic = "^2.0.0"
+# Motor Quantitativo (Agente Graham)
+yfinance = "^0.2.40"
+pandas = "^2.0.0"
+numpy = "^1.24.0"
+# RAG e Qualitativo (Agente Fisher)
+langchain-community = "^0.3.0"
+beautifulsoup4 = "^4.12.0"
+langchain-core = "^0.3.0"
+langchain-google-genai = "^2.0.0"
+ddgs = "^9.10.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.0.0"
+ruff = "^0.3.0"
+ipykernel = "^6.29.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

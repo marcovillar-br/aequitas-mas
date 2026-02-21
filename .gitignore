@@ -1,0 +1,17 @@
+# Ambientes Virtuais e Cache de Python
+.venv/
+__pycache__/
+*.pyc
+
+# IDEs e Ferramentas
+.vscode/
+.idx/
+.idea/
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs do sistema
+*.log
