@@ -28,7 +28,7 @@ O projeto utiliza um grafo acíclico dirigido (DAG) para processar ativos financ
 
 ## 🚀 Stack Técnica
 
-* **Linguagem:** Python 3.12+
+* **Linguagem:** Python 3.10+
 * **Orquestração:** [LangGraph](https://www.langchain.com/langgraph) (Agentes baseados em estado)
 * **LLM Engine:** Google Gemini 1.5 Flash (API v1 Stable)
 * **Gestão de Dependências:** [Poetry](https://python-poetry.org/)
