@@ -9,7 +9,7 @@ def test_connection():
         # A recomendação atual é usar o modelo estável ou o sucessor direto
         # Tente 'gemini-1.5-flash' ou o novo 'gemini-2.0-flash' se sua chave permitir
         llm = ChatGoogleGenerativeAI(
-            model="gemini-flash-latest", # <--- Use este alias, ele é o mais estável para v1
+            model="gemini-flash-latest",
             temperature=0
         )
 

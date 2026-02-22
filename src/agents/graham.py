@@ -10,8 +10,11 @@ def graham_agent(state: AequitasState):
     ticker = state.get("target_ticker")
     
     # Inicializa o modelo da Google
-    llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
-        
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-flash-latest",
+        temperature=0
+    )
+    
     try:
         # Chamada limpa da ferramenta (Sem metadados de citação)
         metrics = get_graham_data(ticker)

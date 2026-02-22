@@ -5,7 +5,10 @@ from src.core.state import AequitasState, FisherAnalysis
 def fisher_agent(state: AequitasState):
     ticker = state.get("target_ticker")
     # Flash é mais resiliente a erros de endpoint 404
-    llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-flash-latest",
+        temperature=0
+    )
     
     results = []
     # Uso do novo módulo 'ddgs'

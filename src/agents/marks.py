@@ -10,7 +10,10 @@ def marks_agent(state: AequitasState):
     analysis = state.get("qual_analysis")
     ticker = state.get("target_ticker")
     
-    llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-flash-latest",
+        temperature=0
+    )
     
     # Prompt de Auditoria Cross-Agent
     prompt = (
