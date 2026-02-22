@@ -7,41 +7,41 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from src.core.state import AequitasState
 
-# 1. DEFINIÇÃO DO ROTEADOR (CONDITIONAL EDGES)
+# 1. ROUTER DEFINITION (CONDITIONAL EDGES)
 def router(state: AequitasState) -> Literal["graham", "fisher", "marks", "__end__"]:
     """
-    Lógica de roteamento do Supervisor (Aequitas Core).
-    Decide o próximo passo com base no estado atual.
+    Supervisor routing logic (Aequitas Core).
+    Decides the next step based on the current state.
     """
-    # Se o Agente Graham (Quant) ainda não atuou, ele é a prioridade
+    # If Graham Agent (Quant) hasn't acted yet, it is the priority
     if not state.get("quant_metrics"):
         return "graham"
     
-    # Se já temos os dados quantitativos mas falta a análise qualitativa
+    # If we already have quantitative data but lack qualitative analysis
     if not state.get("qual_analysis"):
         return "fisher"
     
-    # Se Graham e Fisher concluíram, Marks (Auditor) faz o veredito final
+    # If Graham and Fisher have finished, Marks (Auditor) makes the final verdict
     if len(state.get("audit_log", [])) == 0:
         return "marks"
     
     return "__end__"
 
-# 2. CONSTRUÇÃO DO GRAFO
+# 2. GRAPH CONSTRUCTION
 def create_graph():
-    # Inicializa o Grafo com o esquema de estado normativo
+    # Initialize the Graph with the normative state schema
     workflow = StateGraph(AequitasState)
 
-    # Definição dos Nós (Nesta fase, usaremos placeholders para os agentes)
-    # Em breve, conectaremos os LLMs reais nestes pontos
+    # Node Definition (At this stage, we will use placeholders for the agents)
+    # Soon, we will connect the real LLMs at these points
     workflow.add_node("graham", graham_agent)
     workflow.add_node("fisher", fisher_agent)
     workflow.add_node("marks", marks_agent)
 
-    # Definição das Bordas
-    workflow.set_entry_point("graham") # Entrada padrão
+    # Edge Definition
+    workflow.set_entry_point("graham") # Default entry point
     
-    # Roteamento Inteligente
+    # Intelligent Routing
     workflow.add_conditional_edges(
         "graham",
         router,
@@ -56,11 +56,11 @@ def create_graph():
     workflow.add_edge("fisher", "marks")
     workflow.add_edge("marks", END)
 
-    # 3. PERSISTÊNCIA (CHECKPOINTER)
-    # SqliteSaver local para manter o Isomorfismo e Custo Zero
+    # 3. PERSISTENCE (CHECKPOINTER)
+    # Local MemorySaver to maintain Isomorphism and Zero Cost
     memory = MemorySaver()
     
     return workflow.compile(checkpointer=memory)
 
-# Instância Global do Grafo
+# Global Graph Instance
 app = create_graph()
