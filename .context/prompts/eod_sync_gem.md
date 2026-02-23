@@ -32,4 +32,5 @@ Execute the state compression function on our conversation history today and gen
 **Strict Tasks for the Next Session (Dependency Order):**
 1. [ ] **[Definition/Practice]:** [Detailed technical action 1]
 2. [ ] **[Definition/Practice]:** [Detailed technical action 2]
----
+
+**User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.

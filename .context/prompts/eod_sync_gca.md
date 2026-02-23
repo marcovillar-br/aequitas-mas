@@ -29,3 +29,5 @@ Generate the final output STRICTLY in Portuguese (PT-BR), using exactly the foll
 **Tarefas Estritas para a Próxima Sessão:**
 1. [ ] **[Ação Técnica 1]**
 2. [ ] **[Ação Técnica 2]**
+
+**User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
