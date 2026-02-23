@@ -13,7 +13,7 @@ MOCK_STOCK_INFO = {
 }
 
 @patch("src.tools.b3_fetcher.requests.get")
-def test_get_risk_free_rate_success(mock_get):
+def test_get_risk_free_rate_success(mock_get) -> None:
     """Validates the correct conversion of Selic from API to Decimal."""
     mock_response = MagicMock()
     mock_response.json.return_value = MOCK_SELIC_RESPONSE
@@ -27,7 +27,7 @@ def test_get_risk_free_rate_success(mock_get):
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
 @patch("src.tools.b3_fetcher.get_risk_free_rate")
-def test_get_graham_data_success(mock_selic, mock_yf):
+def test_get_graham_data_success(mock_selic, mock_yf) -> None:
     """Validates the full calculation pipeline with Decimal precision."""
     # Setup mocks
     mock_selic.return_value = Decimal("0.105") # 10.5%
@@ -46,7 +46,7 @@ def test_get_graham_data_success(mock_selic, mock_yf):
     assert result.price_to_earnings == Decimal("7.50") # 30 / 4
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
-def test_get_graham_data_negative_eps(mock_yf):
+def test_get_graham_data_negative_eps(mock_yf) -> None:
     """Ensures the system rejects companies with losses (Risk Confinement)."""
     instance = mock_yf.return_value
     # Setting a negative EPS to trigger the safety filter
@@ -57,7 +57,7 @@ def test_get_graham_data_negative_eps(mock_yf):
         get_graham_data("MGLU3")
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
-def test_get_graham_data_invalid_ticker_pydantic(mock_yf):
+def test_get_graham_data_invalid_ticker_pydantic(mock_yf) -> None:
     """Validates that Pydantic blocks non-B3 standard tickers."""
     instance = mock_yf.return_value
     instance.info = MOCK_STOCK_INFO

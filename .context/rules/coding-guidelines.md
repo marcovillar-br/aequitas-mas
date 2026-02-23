@@ -39,3 +39,23 @@
 - **DDD**: Respect Bounded Contexts. Do not mix quantitative domains (Graham) with qualitative domains (Fisher) within the same entity.
 - **Immutability (SOTA)**: Utilize `model_config = ConfigDict(frozen=True)` in Pydantic V2 models to guarantee immutable state tensors across the LangGraph execution.
 - **Fail Fast**: Validate inputs at the system boundary. Raise specific exceptions (`ValueError`, `RuntimeError`) immediately upon detecting anomalies.
+
+### Naming Conventions
+Follow these strict naming patterns to maintain architectural clarity:
+
+| Entity | Pattern | Example |
+| :--- | :--- | :--- |
+| **Classes / Pydantic Schemas** | `PascalCase` | `GrahamMetrics`, `AequitasState` |
+| **Functions / Methods / Variables** | `snake_case` | `get_graham_data`, `target_ticker` |
+| **Constants / Configs** | `UPPER_SNAKE_CASE` | `RECURSION_LIMIT`, `SELIC_API_URL` |
+| **Files / Modules** | `snake_case` | `b3_fetcher.py`, `graph.py` |
+| **LangGraph Nodes** | `snake_case` | `graham_node`, `supervisor_node` |
+
+#### Semantic Rules:
+- **Suffixes:** Use `Metrics` for quantitative schemas (e.g., `GrahamMetrics`) and `Analysis` for qualitative outputs (e.g., `FisherAnalysis`).
+- **Private Members:** Use a single leading underscore for internal helper functions or protected class members (e.g., `_calculate_intrinsic_value`).
+- **Clarity:** Prefer descriptive names over abbreviations (e.g., `margin_of_safety` instead of `mos`).
+
+### Tooling Abbreviations
+- **GCA**: Gemini Code Assist (IDE Extension).
+- **GEM**: Gemini Custom Explorer (Web Interface).

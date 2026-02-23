@@ -70,7 +70,7 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         # RETURN VALIDATED BY PYDANTIC SCHEMA
         return GrahamMetrics(
             ticker=ticker,
-            p_l=p_l.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            price_to_earnings=p_l.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             margin_of_safety=margin_of_safety.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             fair_value=fair_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         )
