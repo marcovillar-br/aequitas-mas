@@ -6,13 +6,13 @@ def test_connection():
     print("--- Alinhamento Aequitas-MAS 2026 ---")
     
     try:
-        # Configuração oficial validada: gemini-flash-latest
+        # Official validated configuration: gemini-flash-latest
         llm = ChatGoogleGenerativeAI(
             model="gemini-flash-latest",
             temperature=0
         )
 
-        prompt = "Confirme recepção via endpoint estável v1."
+        prompt = "Confirm reception via stable v1 endpoint."
         print(f"Enviando para: {llm.model}")
         
         response = llm.invoke([HumanMessage(content=prompt)])

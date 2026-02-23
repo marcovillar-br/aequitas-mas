@@ -4,25 +4,25 @@ from src.core.state import AequitasState, FisherAnalysis
 
 def fisher_agent(state: AequitasState):
     """
-    Agente Fisher usando Google Gemini Flash.
-    Utiliza LLM with_structured_output para amarrar inferência estocástica 
-    à validação estrita do schema Pydantic.
+    Fisher Agent using Google Gemini Flash.
+    Uses LLM with_structured_output to bind stochastic inference 
+    to strict Pydantic schema validation.
     """
     ticker = state.get("target_ticker")
     
-    # 1. Instância do LLM
+    # 1. LLM Instance
     llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-latest", # Nome padronizado e estável
-        temperature=0.1 # Leve estocasticidade para inferência de sentimento
+        model="gemini-flash-latest", # Standardized and stable alias
+        temperature=0.1 # Slight stochasticity for sentiment inference
     )
     
-    # 2. Binding do Modelo Pydantic à Saída do LLM
+    # 2. Binding Pydantic Model to LLM Output
     structured_llm = llm.with_structured_output(FisherAnalysis)
     
     results = []
     urls = []
     
-    # Busca de Contexto via DDGS
+    # Context Retrieval via DDGS
     with DDGS() as ddgs:
         search_query = f"notícias recentes {ticker} B3 mercado financeiro"
         for r in ddgs.text(search_query, max_results=3):
@@ -32,21 +32,21 @@ def fisher_agent(state: AequitasState):
     
     context = "\n\n".join(results)
     
-    # 3. Prompt de Engenharia (Instruction-Tuned)
+    # 3. Prompt Engineering (Instruction-Tuned)
     prompt = (
-        f"Analise estas notícias recentes sobre a empresa {ticker}:\n\n{context}\n\n"
-        "Com base APENAS nestas informações, preencha o schema de análise:\n"
-        "- sentiment_score: Extraia o sentimento de mercado (-1.0 para extremo pessimismo, 1.0 para extremo otimismo).\n"
-        "- key_risks: Liste os principais riscos, incertezas macroeconômicas ou políticas mencionadas.\n"
-        f"- source_urls: Utilize estritamente estas URLs de referência: {urls}"
+        f"Analyze these recent news about the company {ticker}:\n\n{context}\n\n"
+        "Based ONLY on this information, populate the analysis schema:\n"
+        "- sentiment_score: Extract market sentiment (-1.0 for extreme pessimism, 1.0 for extreme optimism).\n"
+        "- key_risks: List the main risks, macroeconomic or political uncertainties mentioned (in Portuguese).\n"
+        f"- source_urls: Strictly use these reference URLs: {urls}"
     )
     
-    # 4. Inferência Estruturada
-    # O retorno não é mais uma string (AIMessage), mas a própria instância do FisherAnalysis validada
+    # 4. Structured Inference
+    # The return is no longer a string (AIMessage), but the validated FisherAnalysis instance itself
     analysis_data: FisherAnalysis = structured_llm.invoke(prompt)
     
-    # 5. Formatação do Histórico de Conversação
-    # Como o router precisa manter a memória do grafo, convertemos a decisão em linguagem natural
+    # 5. Conversation History Formatting
+    # Since the router needs to maintain graph memory, we convert the decision to natural language (PT-BR for User)
     content_summary = (
         f"Resumo Fisher Qualitativo - Sentimento: {analysis_data.sentiment_score} | "
         f"Riscos mapeados: {', '.join(analysis_data.key_risks)}"

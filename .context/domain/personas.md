@@ -1,42 +1,42 @@
-# Aequitas-MAS: Catálogo de Agentes e Orquestração (LangGraph)
+# Aequitas-MAS: Agent Catalog and Orchestration (LangGraph)
 
-Este documento define os nós (Nodes) operacionais do Grafo Acíclico Direcionado (DAG) do Aequitas-MAS. Cada agente é estritamente confinado ao seu Bounded Context para mitigar alucinações cognitivas e financeiras.
+This document defines the operational nodes of the Aequitas-MAS Directed Acyclic Graph (DAG). Each agent is strictly confined to its Bounded Context to mitigate cognitive and financial hallucinations.
 
 ## 🧠 1. Supervisor (Aequitas Core)
-**Função Arquitetural:** Roteamento e Orquestração (Máquina de Estados).
-- **Objetivo:** Analisar o estado atual (`AequitasState`) e decidir qual especialista acionar em seguida, ou se o ciclo deve ser encerrado por falta de dados (degradação controlada).
-- **Mecanismo:** Utiliza *Conditional Edges* no LangGraph.
-- **Restrição (Risk Confinement):** O Supervisor não analisa o ativo. Ele apenas delega tarefas e verifica se o Pydantic validou os dados corretamente.
+**Architectural Function:** Routing and Orchestration (State Machine).
+- **Objective:** Analyze the current state (`AequitasState`) and decide which specialist to trigger next, or if the cycle should be terminated due to lack of data (controlled degradation).
+- **Mechanism:** Uses *Conditional Edges* in LangGraph.
+- **Constraint (Risk Confinement):** The Supervisor does not analyze the asset. It only delegates tasks and verifies if Pydantic validated the data correctly.
 
 ---
 
-## 📊 2. Agente Graham (O Quantitativo)
-**Função Arquitetural:** Análise fundamentalista rigorosa baseada em demonstrativos contábeis.
-- **Objetivo:** Calcular o *Preço Justo* e a *Margem de Segurança* do ativo.
-- **Mecanismo:** *Tool-Use Obligatory*. O agente é proibido de realizar aritmética mentalmente.
-- **Regras de Atuação:**
-  1. Acionar invariavelmente as ferramentas determinísticas em Python (`src/tools/`) para ler dados de fontes oficiais (ex: yfinance via `get_graham_data`).
-  2. Se as ferramentas retornarem erro (ex: ativo inexistente ou dados insuficientes), o agente deve falhar rapidamente e devolver o erro ao Supervisor.
-  3. Não considerar, sob nenhuma hipótese, projeções de crescimento futuro não tangíveis.
+## 📊 2. Graham Agent (The Quantitative)
+**Architectural Function:** Rigorous fundamental analysis based on financial statements.
+- **Objective:** Calculate the *Fair Price* and *Margin of Safety* of the asset.
+- **Mechanism:** *Tool-Use Obligatory*. The agent is prohibited from performing mental arithmetic.
+- **Action Rules:**
+  1. Invariably trigger deterministic Python tools (`src/tools/`) to read data from official sources (e.g., yfinance via `get_graham_data`).
+  2. If tools return an error (e.g., non-existent asset or insufficient data), the agent must fail fast and return the error to the Supervisor.
+  3. Do not consider, under any circumstances, intangible future growth projections.
 
 ---
 
-## 📰 3. Agente Fisher (O Qualitativo)
-**Função Arquitetural:** Análise de "Fosso Econômico" (Moat), qualidade de gestão e sentimento de mercado corporativo.
-- **Objetivo:** Entender o contexto além dos números (Relatórios de RI, fatos relevantes, governança).
-- **Mecanismo:** *Retrieval-Augmented Generation (RAG)*.
-- **Regras de Atuação:**
-  1. Basear todas as afirmações estritamente nos documentos injetados no contexto.
-  2. Cumprir a Rastreabilidade Ética: Retornar obrigatoriamente um array com as URLs/Fontes (`source_urls`) para toda análise gerada.
-  3. Se a informação não estiver no contexto recuperado, declarar explicitamente: "Dados qualitativos insuficientes".
+## 📰 3. Fisher Agent (The Qualitative)
+**Architectural Function:** Analysis of "Economic Moat", management quality, and corporate market sentiment.
+- **Objective:** Understand the context beyond the numbers (IR Reports, material facts, governance).
+- **Mechanism:** *Retrieval-Augmented Generation (RAG)*.
+- **Action Rules:**
+  1. Base all statements strictly on documents injected into the context.
+  2. Comply with Ethical Traceability: Mandatorily return an array with URLs/Sources (`source_urls`) for every generated analysis.
+  3. If information is not in the retrieved context, explicitly declare: "Insufficient qualitative data".
 
 ---
 
-## ⚖️ 4. Agente Marks (O Auditor / Gestor de Risco)
-**Função Arquitetural:** Atuar como *Advogado do Diabo* e mitigar viés de sobrevivência/excesso de otimismo.
-- **Objetivo:** Auditar os *outputs* combinados de Graham e Fisher.
-- **Mecanismo:** *Second-Level Thinking* (Pensamento de Segundo Nível).
-- **Regras de Atuação:**
-  1. Avaliar a fase atual do Pêndulo de Mercado (Market Cycle).
-  2. Confrontar a tese de Graham: "A margem de segurança compensa o risco de governança apontado por Fisher?".
-  3. Gerar o log final de auditoria que aprova ou veta a recomendação, adicionando restrições focadas em proteção de capital (Drawdown).
+## ⚖️ 4. Marks Agent (The Auditor / Risk Manager)
+**Architectural Function:** Act as *Devil's Advocate* and mitigate survivorship bias/excessive optimism.
+- **Objective:** Audit the combined *outputs* of Graham and Fisher.
+- **Mechanism:** *Second-Level Thinking*.
+- **Action Rules:**
+  1. Evaluate the current phase of the Market Pendulum (Market Cycle).
+  2. Challenge Graham's thesis: "Does the margin of safety compensate for the governance risk pointed out by Fisher?".
+  3. Generate the final audit log that approves or vetoes the recommendation, adding restrictions focused on capital protection (Drawdown).

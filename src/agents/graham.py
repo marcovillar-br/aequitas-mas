@@ -4,19 +4,19 @@ from src.core.state import AequitasState
 
 def graham_agent(state: AequitasState):
     """
-    Agente Graham usando Google Gemini Flash.
-    Efetua a análise quantitativa via ferramentas determinísticas.
+    Graham Agent using Google Gemini Flash.
+    Performs quantitative analysis via deterministic tools.
     """
     ticker = state.get("target_ticker")
     
-    # Inicializa o modelo da Google
+    # Initialize Google model
     llm = ChatGoogleGenerativeAI(
         model="gemini-flash-latest",
         temperature=0
     )
     
     try:
-        # Chamada limpa da ferramenta (Sem metadados de citação)
+        # Clean tool call (No citation metadata)
         metrics = get_graham_data(ticker)
         
         content = (

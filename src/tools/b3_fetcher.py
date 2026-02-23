@@ -5,23 +5,23 @@ from src.core.state import GrahamMetrics
 
 def get_risk_free_rate() -> float:
     """
-    Busca a taxa Selic anualizada via API SGS do Banco Central do Brasil.
-    Implementa um fallback de contingência para garantir o confinamento de risco.
+    Fetches the annualized Selic rate via Central Bank of Brazil SGS API.
+    Implments a contingency fallback to ensure risk confinement.
     """
     try:
-        # Código 432: Taxa de juros - Selic - Meta (Anualizada)
+        # Code 432: Interest Rate - Selic - Target (Annualized)
         url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
         return float(data[0]['valor']) / 100.0
     except Exception as e:
-        # Fallback conservador acadêmico (ex: 10.5% a.a.) caso a API do BCB falhe
+        # Academic conservative fallback (e.g., 10.5% p.a.) if BCB API fails
         return 0.105 
 
 def get_graham_data(ticker: str) -> GrahamMetrics:
     """
-    Extrai dados da B3 e calcula métricas via Valor Justo Dinâmico.
+    Extracts B3 data and calculates metrics via Dynamic Fair Value.
     """
     yf_ticker = f"{ticker.upper()}.SA" if not ticker.endswith(".SA") else ticker.upper()
     
@@ -34,20 +34,20 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         book_value = info.get("bookValue")
         
         if not all([current_price, eps, book_value]) or eps <= 0 or book_value <= 0:
-            raise ValueError(f"Dados inconsistentes (EPS/BV negativos ou nulos) para {ticker}")
+            raise ValueError(f"Inconsistent data (Negative or Null EPS/BV) for {ticker}")
 
-        # --- APLICAÇÃO SOTA: DECAIMENTO DE GRAHAM ---
+        # --- SOTA APPLICATION: GRAHAM DECAY ---
         selic = get_risk_free_rate()
-        equity_risk_premium = 0.045  # Prêmio de risco (ERP) padrão para BR (~4.5%)
+        equity_risk_premium = 0.045  # Standard Equity Risk Premium (ERP) for BR (~4.5%)
         discount_rate = selic + equity_risk_premium
         
-        # O P/L exigido cai conforme os juros sobem
+        # Required P/E drops as interest rates rise
         target_p_e = 1 / discount_rate
-        target_p_b = 1.5 # Margem sobre o patrimônio mantida constante
+        target_p_b = 1.5 # Margin over equity kept constant
         
         dynamic_multiplier = target_p_e * target_p_b
         
-        # Fórmula adaptada com o multiplicador parametrizado
+        # Adapted formula with parameterized multiplier
         fair_value = math.sqrt(dynamic_multiplier * eps * book_value)
         
         margin_of_safety = ((fair_value - current_price) / fair_value) * 100
@@ -61,4 +61,4 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         )
 
     except Exception as e:
-        raise RuntimeError(f"Erro ao processar {ticker}: {str(e)}")
+        raise RuntimeError(f"Error processing {ticker}: {str(e)}")
