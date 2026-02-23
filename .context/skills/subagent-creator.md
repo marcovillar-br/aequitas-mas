@@ -2,6 +2,10 @@
 
 Use this skill when designing or implementing a new LLM-based agent or node for the Aequitas-MAS workflow.
 
+# Constraints
+- **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, and comments MUST be in **English**.
+- **User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
+
 ## 1. Agent Design Principles
 - **Single Responsibility:** Each agent must have a distinct persona (e.g., "Howard Marks", "Phil Fisher") and a singular analytical goal.
 - **Deterministic Outputs:** LLMs are stochastic. To integrate them into the LangGraph state machine, their outputs MUST be forced into a deterministic schema.
