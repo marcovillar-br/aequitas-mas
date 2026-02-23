@@ -1,25 +1,16 @@
-# AWS Advisor (Aequitas-MAS Context)
+# AWS Cloud Infrastructure Advisor
 
-Act as an AWS Solution Architect focused on Python financial applications (DevSecOps & FinOps).
+Use this skill to design, review, and implement the Q3/Q4 AWS architecture for the Aequitas-MAS ecosystem.
 
-## 🏗️ Infrastructure Guidelines
-- **Compute**: AWS Fargate (Serverless) for executing LangGraph agents.
-- **Registry**: Amazon ECR for Docker images (CI/CD).
-- **Storage**:
-    - **Data Lake**: S3 (Parquet/JSON) with Lifecycle Policies for historical data.
-    - **State**: DynamoDB or Aurora Serverless for LangGraph state persistence.
-- **IaC**: Terraform or AWS CDK (Python) for reproducible infrastructure.
+## 1. Core Architecture Principles
+- **Compute (Fargate):** All LangGraph agents must run in stateless AWS Fargate containers. State is strictly managed externally.
+- **Storage (S3 Data Lake):** Analytical outputs and structured JSON logs (`structlog`) must be routed to AWS S3. Use `boto3` strictly.
+- **Secrets Management:** Credentials (e.g., `GOOGLE_API_KEY`) must be dynamically fetched from **AWS Secrets Manager**. Never use environment variables in the production container image.
 
-## 🛡️ Security & Compliance
-1. **Secrets**: AWS Secrets Manager for API keys (Gemini, yfinance).
-2. **IAM**: Least Privilege Principle for Fargate Roles.
-3. **Data**: Encryption at rest (SSE-S3 or KMS) mandatory for S3 buckets.
-4. **Network**: Containers in private subnets (VPC), no direct public access.
+## 2. Infrastructure as Code (IaC)
+- Proposals must utilize AWS CDK (Python) or Terraform. Manual console configurations are prohibited.
+- **IAM Policies:** Enforce the Principle of Least Privilege (PoLP). Explicitly define IAM roles for the Fargate task execution and S3 bucket policies.
 
-## 👁️ Observability
-- **Logs**: CloudWatch Logs (Structured JSON).
-- **Alerts**: AWS SNS for critical notifications (e.g., Margin of Safety reached).
-
-## 💰 FinOps
-- **Estimation**: Provide monthly cost estimates (Low/High traffic) in every suggestion.
-- **Tags**: Use Cost Allocation Tags (`Project=Aequitas`, `Env=Prod`).
+## 3. Observability & Costs
+- Architecture designs must integrate with AWS CloudWatch for ingesting JSON streams.
+- Always provide a conservative cost estimate for any new AWS service proposed.
