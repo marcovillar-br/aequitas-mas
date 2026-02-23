@@ -1,12 +1,12 @@
 import yfinance as yf
 import requests
-import math
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from src.core.state import GrahamMetrics
 
-def get_risk_free_rate() -> float:
+def get_risk_free_rate() -> Decimal:
     """
     Fetches the annualized Selic rate via Central Bank of Brazil SGS API.
-    Implments a contingency fallback to ensure risk confinement.
+    Ensures Financial Precision using Decimal.
     """
     try:
         # Code 432: Interest Rate - Selic - Target (Annualized)
@@ -14,14 +14,17 @@ def get_risk_free_rate() -> float:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
-        return float(data[0]['valor']) / 100.0
-    except Exception as e:
+        
+        # Convert to Decimal immediately to maintain precision
+        return Decimal(str(data[0]['valor'])) / Decimal("100.0")
+    except (requests.RequestException, KeyError, IndexError, InvalidOperation):
         # Academic conservative fallback (e.g., 10.5% p.a.) if BCB API fails
-        return 0.105 
+        return Decimal("0.105")
 
 def get_graham_data(ticker: str) -> GrahamMetrics:
     """
     Extracts B3 data and calculates metrics via Dynamic Fair Value.
+    Implements Risk Confinement by using Decimal and deterministic logic.
     """
     yf_ticker = f"{ticker.upper()}.SA" if not ticker.endswith(".SA") else ticker.upper()
     
@@ -29,36 +32,49 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         stock = yf.Ticker(yf_ticker)
         info = stock.info
         
-        current_price = info.get("currentPrice") or info.get("regularMarketPrice")
-        eps = info.get("trailingEps")
-        book_value = info.get("bookValue")
+        # Raw Data Extraction
+        raw_price = info.get("currentPrice") or info.get("regularMarketPrice")
+        raw_eps = info.get("trailingEps")
+        raw_bvps = info.get("bookValue")
         
-        if not all([current_price, eps, book_value]) or eps <= 0 or book_value <= 0:
-            raise ValueError(f"Inconsistent data (Negative or Null EPS/BV) for {ticker}")
+        # Validation: Zero math hallucination - abort on invalid data
+        if not all([raw_price, raw_eps, raw_bvps]) or raw_eps <= 0 or raw_bvps <= 0:
+            raise ValueError(f"Inconsistent or negative data (EPS/BV) for {ticker}")
 
-        # --- SOTA APPLICATION: GRAHAM DECAY ---
+        # Conversion to Decimal for fiduciaries calculations
+        price = Decimal(str(raw_price))
+        eps = Decimal(str(raw_eps))
+        bvps = Decimal(str(raw_bvps))
+        
+        # --- SOTA APPLICATION: DYNAMIC GRAHAM MULTIPLIER ---
         selic = get_risk_free_rate()
-        equity_risk_premium = 0.045  # Standard Equity Risk Premium (ERP) for BR (~4.5%)
+        equity_risk_premium = Decimal("0.045")  # Standard ERP for BR (~4.5%)
         discount_rate = selic + equity_risk_premium
         
-        # Required P/E drops as interest rates rise
-        target_p_e = 1 / discount_rate
-        target_p_b = 1.5 # Margin over equity kept constant
+        # Required P/E (Multiplier) drops as interest rates rise
+        target_p_e = Decimal("1") / discount_rate
+        target_p_b = Decimal("1.5") # Conservant Graham margin over equity
         
         dynamic_multiplier = target_p_e * target_p_b
         
-        # Adapted formula with parameterized multiplier
-        fair_value = math.sqrt(dynamic_multiplier * eps * book_value)
+        # DETERMINISTIC CALCULATION
+        # Fair Value = sqrt(dynamic_multiplier * eps * bvps)
+        fair_value = (dynamic_multiplier * eps * bvps).sqrt()
         
-        margin_of_safety = ((fair_value - current_price) / fair_value) * 100
-        p_l = current_price / eps if eps != 0 else 0
+        # Margin of Safety = ((Fair Value - Price) / Fair Value) * 100
+        margin_of_safety = ((fair_value - price) / fair_value) * Decimal("100")
+        
+        # Price to Earnings Ratio (P/L)
+        p_l = price / eps
 
+        # RETURN VALIDATED BY PYDANTIC SCHEMA
         return GrahamMetrics(
             ticker=ticker,
-            p_l=round(p_l, 2),
-            margin_of_safety=round(margin_of_safety, 2),
-            fair_value=round(fair_value, 2)
+            p_l=p_l.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            margin_of_safety=margin_of_safety.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            fair_value=fair_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         )
 
     except Exception as e:
+        # Graceful degradation: No guessing
         raise RuntimeError(f"Error processing {ticker}: {str(e)}")
