@@ -3,7 +3,7 @@ from src.core.state import AequitasState
 
 def marks_agent(state: AequitasState):
     """
-    Agente Marks: O Auditor de Risco ( Howard Marks Style).
+    Agente Marks usando Google Gemini Flash.
     Cruza dados de Graham e Fisher para identificar excesso de confiança ou riscos ocultos.
     """
     metrics = state.get("quant_metrics")

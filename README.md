@@ -1,7 +1,7 @@
 
 # Aequitas-MAS (Multi-Agent System) v5.0
 
-**Aequitas-MAS** é um ecossistema de agentes inteligentes projetado para análise fundamentalista e tomada de decisão financeira de alto nível. O sistema transcende cálculos estáticos ao combinar o rigor matemático do **Value Investing** com análises qualitativas de mercado e auditoria de risco, utilizando **LangGraph** para orquestração e **Gemini 1.5 Flash** como motor de inferência.
+**Aequitas-MAS** é um ecossistema de agentes inteligentes projetado para análise fundamentalista e tomada de decisão financeira de alto nível. O sistema transcende cálculos estáticos ao combinar o rigor matemático do **Value Investing** com análises qualitativas de mercado e auditoria de risco, utilizando **LangGraph** para orquestração e **Gemini Flash** como motor de inferência.
 
 ## 🧠 Arquitetura de Agentes
 
@@ -16,7 +16,7 @@ O projeto utiliza um grafo acíclico dirigido (DAG) para processar ativos financ
 2. **Nó FISHER (Qualitativo):** 
 * Avalia o "Yield Gap" e o sentimento do mercado através de dados macroeconômicos.
 * Identifica vantagens competitivas e sustentabilidade de dividendos.
-* Processado via **Gemini 1.5 Flash** (Endpoint estável `v1`).
+* Processado via **Gemini Flash** (Alias `gemini-flash-latest`).
 
 
 3. **Nó MARKS (Auditoria de Risco):** 
@@ -30,7 +30,7 @@ O projeto utiliza um grafo acíclico dirigido (DAG) para processar ativos financ
 
 * **Linguagem:** Python 3.10+
 * **Orquestração:** [LangGraph](https://www.langchain.com/langgraph) (Agentes baseados em estado)
-* **LLM Engine:** Google Gemini 1.5 Flash (API v1 Stable)
+* **LLM Engine:** Google Gemini Flash (Alias `gemini-flash-latest`)
 * **Gestão de Dependências:** [Poetry](https://python-poetry.org/)
 * **Dados:** yfinance, Pandas, Beautifulsoup4
 

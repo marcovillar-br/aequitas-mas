@@ -1,28 +1,17 @@
-# Security & Compliance (Aequitas-MAS)
+# Security & Observability Best Practices
 
-## 1. LLM & AI Security (GenAI)
-- **Prompt Injection**: Sanitize external inputs before injecting into Gemini context.
-- **Output Validation**: Never trust LLM output. Use **Pydantic** to enforce strict schemas.
-- **Data Leakage**: Never include API keys or credentials in prompt text.
+Use this skill to review code for vulnerabilities, handle sensitive financial data, and manage cloud credentials safely.
 
-## 2. Financial Integrity
-- **Numerical Precision**: Strictly use `decimal.Decimal` for monetary calculations. `float` is forbidden for financial values.
-- **Data Source**: Validate `yfinance` data integrity (e.g., gaps in time series) before processing.
+## 1. Secrets Management
+- **Local:** Use `.env` files loaded via `python-dotenv`. Never commit this file.
+- **Production (AWS):** Prepare all code to eventually fetch credentials via `boto3` from **AWS Secrets Manager**. 
+- **Rule:** API Keys (like `GOOGLE_API_KEY`) must never be hardcoded or passed as default arguments in function signatures.
 
-## 3. Infrastructure & Cloud (AWS)
-- **Secrets Management**:
-    - **Local**: Environment variables (not committed).
-    - **Prod**: AWS Secrets Manager. **Never** hardcode keys in code.
-- **IAM**: Apply Least Privilege Principle to Fargate Roles.
-- **Network**: Agents must run in private subnets, without direct public IP.
+## 2. Structured Logging & Sanitization (structlog)
+- **Library:** Use `structlog` for JSON-formatted observability. `print()` and standard `logging` are forbidden.
+- **PII & Secrets:** Never pass API keys, user identifiers, or raw authentication headers into the logger.
+- **Context Binding:** Use `structlog.contextvars.bind_contextvars()` to attach safe metadata (like `target_ticker` or `thread_id`) to the log stream.
 
-## 4. Supply Chain & Dependencies
-- **Poetry**: Keep `poetry.lock` committed and audited.
-- **Images**: Scan Docker images in ECR (Amazon Inspector) for vulnerabilities (CVEs).
-
-## 5. LangGraph Safety
-- **Recursion Limit**: Configure recursion limits in the graph (e.g., `recursion_limit=15`) to avoid infinite loops and excessive LLM costs.
-- **State Isolation**: Ensure that the state of one ticker does not leak to another (isolation by `thread_id`).
-
-## 6. Secure Observability
-- **Logs**: Use structured JSON. Never log PII (CPF, Email) or proprietary strategy details (Alpha).
+## 3. Code Execution Risks
+- **Confinement:** Mathematical evaluation must use standard library math or AST parsing. Never use `eval()` or `exec()` for parsing dynamic financial formulas.
+- **Dependency Integrity:** Pin versions strictly in `pyproject.toml` using Poetry to avoid supply-chain attacks.

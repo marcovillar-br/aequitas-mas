@@ -4,7 +4,7 @@ from src.core.state import AequitasState, FisherAnalysis
 
 def fisher_agent(state: AequitasState):
     """
-    Agente Fisher Refatorado.
+    Agente Fisher usando Google Gemini Flash.
     Utiliza LLM with_structured_output para amarrar inferência estocástica 
     à validação estrita do schema Pydantic.
     """

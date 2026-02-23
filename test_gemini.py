@@ -6,8 +6,7 @@ def test_connection():
     print("--- Alinhamento Aequitas-MAS 2026 ---")
     
     try:
-        # A recomendação atual é usar o modelo estável ou o sucessor direto
-        # Tente 'gemini-1.5-flash' ou o novo 'gemini-2.0-flash' se sua chave permitir
+        # Configuração oficial validada: gemini-flash-latest
         llm = ChatGoogleGenerativeAI(
             model="gemini-flash-latest",
             temperature=0
@@ -23,9 +22,8 @@ def test_connection():
 
     except Exception as e:
         print(f"\nERRO: {e}")
-        print("\nTentando com nomenclatura de 2026...")
+        print("\nTentando reconexão...")
         try:
-            # Algumas chaves agora exigem o alias simplificado
             llm_alt = ChatGoogleGenerativeAI(model="gemini-flash-latest")
             print(f"Sucesso com 'gemini-flash-latest': {llm_alt.invoke('Oi').content}")
         except:

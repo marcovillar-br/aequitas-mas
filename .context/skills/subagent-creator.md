@@ -1,34 +1,17 @@
-# Subagent Creator (LangGraph Node Factory)
+# Subagent Creator (LangGraph Nodes)
 
-Use this skill to design and implement new nodes (Agents) in the Aequitas-MAS graph.
+Use this skill when designing or implementing a new LLM-based agent or node for the Aequitas-MAS workflow.
 
-## 1. Agent Definition
-Before creating the file, define:
-- **Bounded Context:** Which domain does it master? (e.g., Macroeconomics, Technical, ESG).
-- **Input (State):** What data from `AgentState` does it consume?
-- **Output (Schema):** What Pydantic model should it return?
+## 1. Agent Design Principles
+- **Single Responsibility:** Each agent must have a distinct persona (e.g., "Howard Marks", "Phil Fisher") and a singular analytical goal.
+- **Deterministic Outputs:** LLMs are stochastic. To integrate them into the LangGraph state machine, their outputs MUST be forced into a deterministic schema.
 
-## 2. System Prompt Template
-Create the file in `.context/agents/[agent_name].md` following this pattern:
+## 2. Implementation Rules (SOTA)
+- **Engine:** Use `ChatGoogleGenerativeAI(model="gemini-flash-latest")` for fast tasks, or `gemini-1.5-pro` for deep reasoning.
+- **Structured Output:** You MUST bind the LLM to a Pydantic schema using `.with_structured_output(YourPydanticModel)`.
+- **Temperature Control:** - `temperature=0.0`: For extraction, mathematical classification, or strict auditing.
+  - `temperature=0.1`: Maximum allowed for sentiment analysis or qualitative summarization to preserve logic stability.
 
-```markdown
-# Identity
-You are **[Agent Name]**, a specialized financial analyst focused on **[Domain]**.
-Your goal is to **[Main Objective]** within the Aequitas-MAS ecosystem.
-
-# Context & Methodology
-- **Philosophy:** Follow the principles of [Author/Book].
-- **Bounded Context:** You operate strictly within [Context Name]. Do not hallucinate data from other contexts.
-- **Input:** You will receive [Input Data].
-
-# Instructions
-1. Analyze the provided data using [Methodology].
-2. Cross-reference with [External Sources/Tools].
-3. Output your findings strictly adhering to the [Pydantic Schema Name].
-
-# Constraints
-- Never invent financial data.
-- If data is missing, return `None` or raise a specific flag.
-- Use `decimal.Decimal` for all monetary calculations.
-- **Language:** All final analysis and commentary provided to the user must be in **Portuguese (PT-BR)**.
-```
+## 3. Integration with Graph
+- The agent function must accept the `AequitasState` TypedDict as its sole argument.
+- It must return a dictionary representing the state mutation (e.g., `{"new_key": data, "messages": [...]}`). Do not mutate the state directly in the function body.

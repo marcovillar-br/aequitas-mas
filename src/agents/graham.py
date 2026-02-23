@@ -4,7 +4,7 @@ from src.core.state import AequitasState
 
 def graham_agent(state: AequitasState):
     """
-    Agente Graham usando Google Gemini 1.5 Pro.
+    Agente Graham usando Google Gemini Flash.
     Efetua a análise quantitativa via ferramentas determinísticas.
     """
     ticker = state.get("target_ticker")

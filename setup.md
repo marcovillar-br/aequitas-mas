@@ -125,6 +125,7 @@ poetry run pytest tests/test_tools.py
 ### 3. [Verificação Crítica]
 
 * **Tecnologias:** O uso de Pydantic v2 é mandatório pela performance de validação em tempo de execução de grafos.
+* **Engine:** O alias `gemini-flash-latest` é mandatório para garantir acesso à versão mais recente e estável do modelo Flash.
 * **Ética:** O sistema de logs deve ser configurado para capturar o "raciocínio" do Agente Marks antes de qualquer recomendação, atendendo aos requisitos de explicabilidade da IA.
 * **SOTA:** Recomendo a leitura de *Zhang et al. (2024)* sobre **FinRobot** para refinar o `Data-CoT Agent` na próxima sprint.
 
