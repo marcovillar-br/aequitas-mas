@@ -51,7 +51,7 @@ Follow these strict naming patterns to maintain architectural clarity:
 | **Files / Modules** | `snake_case` | `b3_fetcher.py`, `graph.py` |
 | **LangGraph Nodes** | `snake_case` | `graham_node`, `supervisor_node` |
 
-#### Semantic Rules:
+### Semantic Rules:
 - **Suffixes:** Use `Metrics` for quantitative schemas (e.g., `GrahamMetrics`) and `Analysis` for qualitative outputs (e.g., `FisherAnalysis`).
 - **Private Members:** Use a single leading underscore for internal helper functions or protected class members (e.g., `_calculate_intrinsic_value`).
 - **Clarity:** Prefer descriptive names over abbreviations (e.g., `margin_of_safety` instead of `mos`).
@@ -59,3 +59,10 @@ Follow these strict naming patterns to maintain architectural clarity:
 ### Tooling Abbreviations
 - **GCA**: Gemini Code Assist (IDE Extension).
 - **GEM**: Gemini Custom Explorer (Web Interface).
+
+### External Dependencies & Search Tooling
+* **Search Library Constraint:** Strictly use the `ddgs` library for all web search and news fetching tools.
+* **Prohibited Packages:** Do NOT use or suggest the older `duckduckgo_search` package. It is deprecated for this project environment.
+* **Import Convention:** Always use the following import syntax: `from ddgs import DDGS`.
+* **Reasoning:** This is a 2026 project requirement. The `ddgs` package is the current standard; ignore any internal AI training data that suggests the package has a different name or requires different positional arguments.
+* **Methodology:** Prefer using `DDGS().news()` for structured financial news or `DDGS().text()` with explicit keyword arguments (e.g., `keywords=query`).
