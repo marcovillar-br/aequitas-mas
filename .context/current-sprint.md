@@ -1,19 +1,19 @@
-# 🎯 Current Project Status: Aequitas-MAS
+# 🎯 Status Atual do Projeto: Aequitas-MAS
 
-## 📌 Current Sprint: 1.2 - The Deterministic Quantitative Engine
-**Weekly Focus:** Implementation of deterministic tools (Tools) for the Graham Agent, ensuring mathematical rigor before LLM orchestration.
+## 📌 Sprint Atual: 1.2 - O Motor Quantitativo Determinístico
+**Foco Semanal:** Consolidação das ferramentas determinísticas e preparação para orquestração via LangGraph.
 
-### 🛠️ Immediate Session Objectives
-1. Write and validate unit tests in the `tests/test_b3_fetcher.py` file.
-2. Ensure the `src/tools/b3_fetcher.py` tool can successfully fetch and validate B3 tickers without failures.
-3. Ensure extraction outputs strictly adhere to the schemas validated via **Pydantic** (`state.py`), paving the way for LangGraph injection.
+### 🛠️ Objetivos Imediatos da Sessão
+1.  **Validação de Testes:** Alcançar 100% de cobertura no arquivo `tests/test_b3_fetcher.py`.
+2.  **Integração Qualitativa:** Validar a extração de notícias no `news_fetcher.py` para garantir que o output seja mapeável para o schema `FisherAnalysis` (Pydantic).
+3.  **Refinamento de Cálculo:** Ajustar o multiplicador dinâmico de Graham no `b3_fetcher.py` com base na taxa Selic atualizada via API do Banco Central.
 
-### 🚫 Current Architectural Constraints (Risk Confinement)
-* **No Cloud Integration (AWS):** The current environment must run 100% isolated (*Local Isomorphism*). Do not implement `boto3` or DynamoDB persistence at this stage.
-* **No Mathematical Hallucination:** The LLM must not infer financial data. Any simulation must be done via `mocks` in `pytest`.
-* **Temporary Static Flow:** Before applying complex dynamic routing in the Supervisor, the initial graph flow must be linear (Graham -> Fisher -> Marks) for debugging purposes.
+### 🚫 Restrições Arquiteturais Atuais (Confinamento de Risco)
+* **Isolamento de Redes:** A extração via `yfinance` e `requests` (BCB) são as únicas exceções de saída; o estado do grafo deve permanecer local.
+* **Agnosticismo de LLM:** O Agente Graham não deve realizar cálculos; deve apenas instanciar a ferramenta `get_graham_data`.
+* **Conformidade DDGS:** É estritamente proibido o uso da biblioteca `duckduckgo_search` legada; usar apenas `ddgs`.
 
-### ✅ Definition of Done (DoD) for the Day
-- 100% test coverage in `b3_fetcher.py`.
-- No raw strings passing through the graph state (exclusive use of `Pydantic` models).
-- Successful execution of `poetry run pytest` in the terminal.
+### ✅ Definição de Pronto (DoD) para o Dia
+- [ ] Execução bem-sucedida de `poetry run pytest` sem falhas nos mocks de rede.
+- [ ] Tipagem estrita validada: Nenhum dado financeiro circula como `float`, apenas `decimal.Decimal`.
+- [ ] Logs estruturados implementados em ambos os fetchers usando `structlog`.
