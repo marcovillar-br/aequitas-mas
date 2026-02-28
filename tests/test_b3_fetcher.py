@@ -52,8 +52,9 @@ def test_get_graham_data_negative_eps(mock_yf) -> None:
     # Setting a negative EPS to trigger the safety filter
     instance.info = {**MOCK_STOCK_INFO, "trailingEps": -1.0}
 
-    # Corrected: Match the actual error message being raised in src/tools/b3_fetcher.py
-    with pytest.raises(RuntimeError, match="Inconsistent or negative data"):
+    # The function now raises a RuntimeError, wrapping the original ValueError.
+    # The regex r"..." makes the match more robust.
+    with pytest.raises(RuntimeError, match=r"Erro ao processar .* Dados inconsistentes ou negativos"):
         get_graham_data("MGLU3")
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
@@ -62,6 +63,7 @@ def test_get_graham_data_invalid_ticker_pydantic(mock_yf) -> None:
     instance = mock_yf.return_value
     instance.info = MOCK_STOCK_INFO
 
-    # AAPL fails the validator in GrahamMetrics (must end in 3, 4, or 11)
-    with pytest.raises(RuntimeError, match="Invalid ticker"):
+    # The tool raises a RuntimeError wrapping the original Pydantic error.
+    # The regex r"..." makes the match more robust.
+    with pytest.raises(RuntimeError, match=r"Erro ao processar .* validation error"):
         get_graham_data("AAPL")

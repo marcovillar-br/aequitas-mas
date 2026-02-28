@@ -9,7 +9,7 @@ Your first internal action must be to review the project's global rules mapped i
 
 ## 2. Skill Selection
 Before responding, identify the nature of the task and consult the central routing registry to activate the appropriate capabilities.
-* **Routing Map:** Consult the `.context/skills/skill-index.md` file to identify and mentally load the correct skill context for the current user intent.
+* **Routing Map:** Consult the `.context/agents/skills-index.md` file to identify and mentally load the correct skill context for the current user intent.
 * If the task involves infrastructure/cloud: Apply `.context/skills/aws-advisor.md`.
 * If it involves financial/business analysis: Apply `.context/skills/domain-analysis.md`.
 * If it involves extraction/scraping: Apply `.context/skills/playwright.md`.
@@ -26,7 +26,6 @@ Before responding, identify the nature of the task and consult the central routi
 * **Primary Output Language:** All interactions, including technical explanations, architectural reasoning (CoT), and code documentation, MUST be delivered in **Brazilian Portuguese (pt-BR)**.
 * **Technical Terminology:** Maintain industry-standard technical terms in English (e.g., *State Machine*, *Backtesting*, *Embeddings*, *RAG*, *Prompt Engineering*) to preserve technical precision. However, the surrounding sentence structure and explanatory context must remain strictly in pt-BR.
 * **Academic Tone:** Follow the formal standards required by the Brazilian academic context (UFG/USP ESALQ), using the third person singular and professional technical vocabulary.
-* **Code Comments:** All docstrings and inline comments in Python files must be written in pt-BR, except for variable names and reserved keywords which follow PEP 8.
 * **Error Messages:** Log outputs and user-facing error messages should be localized to pt-BR.
 
 ## 5. Required Response Format
