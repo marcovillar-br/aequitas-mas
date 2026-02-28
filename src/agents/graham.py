@@ -1,8 +1,8 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from src.tools.b3_fetcher import get_graham_data
-from src.core.state import AequitasState
+from src.core.state import AgentState
 
-def graham_agent(state: AequitasState):
+def graham_agent(state: AgentState):
     """
     Graham Agent using Google Gemini Flash.
     Performs quantitative analysis via deterministic tools.
@@ -25,7 +25,7 @@ def graham_agent(state: AequitasState):
         )
         
         return {
-            "quant_metrics": metrics,
+            "metrics": metrics,
             "messages": [{"role": "assistant", "content": content}]
         }
     except Exception as e:

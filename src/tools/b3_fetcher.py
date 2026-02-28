@@ -1,7 +1,20 @@
+import re
 import yfinance as yf
 import requests
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from src.core.state import GrahamMetrics
+
+def _validate_ticker(ticker: str) -> None:
+    """
+    Validates the ticker format against B3 standard (e.g., PETR4, MGLU3).
+    Raises ValueError on failure.
+    """
+    # Strip .SA suffix if present, and convert to upper case for consistency
+    processed_ticker = ticker.upper().replace(".SA", "")
+    
+    # B3 tickers are typically 5 or 6 characters (e.g., PETR4, BIDI11)
+    if not re.match(r"^[A-Z0-9]{5,6}$", processed_ticker):
+        raise ValueError(f"Formato de ticker inválido: '{ticker}'. Deve seguir o padrão B3 (ex: PETR4, MGLU3).")
 
 def get_risk_free_rate() -> Decimal:
     """
@@ -29,6 +42,8 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
     yf_ticker = f"{ticker.upper()}.SA" if not ticker.endswith(".SA") else ticker.upper()
     
     try:
+        _validate_ticker(ticker) # FAIL-FAST BOUNDARY
+        
         stock = yf.Ticker(yf_ticker)
         info = stock.info
         

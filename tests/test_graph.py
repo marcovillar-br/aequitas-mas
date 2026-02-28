@@ -1,9 +1,10 @@
 import pytest
 from unittest.mock import patch
 from typing import Dict, Any
+from decimal import Decimal
 
-from src.core.graph import router, app
-from src.core.state import AequitasState, GrahamMetrics, FisherAnalysis
+from src.core.graph import router
+from src.core.state import AgentState, GrahamMetrics, FisherAnalysis
 
 # -----------------------------------------------------------------------------
 # 1. UNIT TESTS: ROUTER LOGIC (Deterministic State Transitions)
@@ -11,10 +12,10 @@ from src.core.state import AequitasState, GrahamMetrics, FisherAnalysis
 
 def test_router_initial_state_goes_to_graham() -> None:
     """Tests if an empty state prioritizes the quantitative analysis (Graham)."""
-    initial_state: AequitasState = {
+    initial_state: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
-        "quant_metrics": None,
+        "metrics": None,
         "qual_analysis": None,
         "audit_log": [],
         "next_agent": ""
@@ -27,15 +28,17 @@ def test_router_quant_state_goes_to_fisher() -> None:
     """Tests if a state with quantitative data routes to the qualitative analysis (Fisher)."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        p_l=5.5,
-        margin_of_safety=30.0,
-        fair_value=45.0
+        vpa=Decimal("35.0"),
+        lpa=Decimal("8.0"),
+        price_to_earnings=Decimal("5.5"),
+        margin_of_safety=Decimal("30.0"),
+        fair_value=Decimal("45.0")
     )
     
-    state_with_quant: AequitasState = {
+    state_with_quant: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
-        "quant_metrics": mock_metrics,
+        "metrics": mock_metrics,
         "qual_analysis": None,
         "audit_log": [],
         "next_agent": ""
@@ -46,13 +49,20 @@ def test_router_quant_state_goes_to_fisher() -> None:
 
 def test_router_full_context_goes_to_marks() -> None:
     """Tests if a state with both quant and qual data routes to the auditor (Marks)."""
-    mock_metrics = GrahamMetrics(ticker="PETR4", p_l=5.5, margin_of_safety=30.0, fair_value=45.0)
+    mock_metrics = GrahamMetrics(
+        ticker="PETR4",
+        vpa=Decimal("35.0"),
+        lpa=Decimal("8.0"),
+        price_to_earnings=Decimal("5.5"),
+        margin_of_safety=Decimal("30.0"),
+        fair_value=Decimal("45.0")
+    )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
-    state_ready_for_audit: AequitasState = {
+    state_ready_for_audit: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
-        "quant_metrics": mock_metrics,
+        "metrics": mock_metrics,
         "qual_analysis": mock_analysis,
         "audit_log": [],
         "next_agent": ""
@@ -63,13 +73,20 @@ def test_router_full_context_goes_to_marks() -> None:
 
 def test_router_completed_state_ends_graph() -> None:
     """Tests if a fully populated state terminates the graph execution."""
-    mock_metrics = GrahamMetrics(ticker="PETR4", p_l=5.5, margin_of_safety=30.0, fair_value=45.0)
+    mock_metrics = GrahamMetrics(
+        ticker="PETR4",
+        vpa=Decimal("35.0"),
+        lpa=Decimal("8.0"),
+        price_to_earnings=Decimal("5.5"),
+        margin_of_safety=Decimal("30.0"),
+        fair_value=Decimal("45.0")
+    )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
-    completed_state: AequitasState = {
+    completed_state: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
-        "quant_metrics": mock_metrics,
+        "metrics": mock_metrics,
         "qual_analysis": mock_analysis,
         "audit_log": ["Audited successfully. Nominal margin is valid."],
         "next_agent": ""
@@ -97,7 +114,14 @@ def test_full_graph_execution_with_mocks(
     
     # 1. Setup Mocks
     mock_graham.return_value = {
-        "quant_metrics": GrahamMetrics(ticker="WEGE3", p_l=25.0, margin_of_safety=10.0, fair_value=40.0),
+        "metrics": GrahamMetrics(
+            ticker="WEGE3",
+            vpa=Decimal("10.0"),
+            lpa=Decimal("1.5"),
+            price_to_earnings=Decimal("25.0"), 
+            margin_of_safety=Decimal("10.0"), 
+            fair_value=Decimal("40.0")
+        ),
         "messages": [{"role": "assistant", "content": "Graham executed."}]
     }
     mock_fisher.return_value = {
