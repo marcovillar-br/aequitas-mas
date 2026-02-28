@@ -16,6 +16,7 @@ Before responding, identify the nature of the task and consult the central routi
 * If it involves protection/Compliance: Apply `.context/skills/security.md`.
 * If it involves creating new agents: Apply `.context/skills/subagent-creator.md`.
 * If it involves testing (Mandatory for Tools): Apply `.context/skills/tdd-creator.md`.
+* If it involves source code management (github): Apply `.context/skills/github-manager.md`.
 
 ## 3. Non-Negotiable Project Dogmas (Risk Confinement)
 1. **Zero Numerical Hallucination:** Language Models (LLMs) NEVER calculate financial indicators. All mathematics is isolated in unit-validated *Tools* (Python).
