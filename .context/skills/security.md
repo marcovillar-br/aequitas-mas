@@ -1,17 +1,28 @@
-# Security & Observability Best Practices
+# SKILL: SECURITY, COMPLIANCE & FINOPS
 
-Use this skill to review code for vulnerabilities, handle sensitive financial data, and manage cloud credentials safely.
+## 1. Trigger / Intent
+Activate this skill during infrastructure setup, code reviews, environment configuration, or when designing LangGraph state transitions to ensure zero-trust architecture and financial integrity.
 
-## 1. Secrets Management
-- **Local (Zero Trust):** Per `setup.md`, the use of `.env` files is **forbidden**. Inject secrets like `GOOGLE_API_KEY` via your IDE's secret manager or session environment variables.
-- **Production (AWS):** Prepare all code to eventually fetch credentials via `boto3` from **AWS Secrets Manager**. 
-- **Rule:** API Keys (like `GOOGLE_API_KEY`) must never be hardcoded or passed as default arguments in function signatures.
+## 2. Infrastructure & FinOps Constraints
 
-## 2. Structured Logging & Sanitization (structlog)
-- **Library:** Use `structlog` for JSON-formatted observability. `print()` and standard `logging` are forbidden.
-- **PII & Secrets:** Never pass API keys, user identifiers, or raw authentication headers into the logger.
-- **Context Binding:** Use `structlog.contextvars.bind_contextvars()` to attach safe metadata (like `target_ticker` or `thread_id`) to the log stream.
+### 2.1. Secret Management (Zero Trust)
+* **Local Environment:** Enforce the use of IDE-native Secret Managers (e.g., Google IDX Secret Manager). NEVER instruct the user to commit `.env` files.
+* **Production Environment:** AWS Secrets Manager is mandatory. API keys (Gemini, Anthropic, AWS) must be injected at runtime.
+* **IAM Least Privilege:** Fargate tasks and Lambda functions must operate with the absolute minimum required AWS IAM permissions.
 
-## 3. Code Execution Risks
-- **Confinement:** Mathematical evaluation must use standard library math or AST parsing. Never use `eval()` or `exec()` for parsing dynamic financial formulas.
-- **Dependency Integrity:** Pin versions strictly in `pyproject.toml` using Poetry to avoid supply-chain attacks.
+### 2.2. FinOps & Circuit Breakers
+* **Graph Recursion Limit:** LangGraph execution MUST include a strict `recursion_limit` (e.g., `recursion_limit=15`) upon compilation to prevent infinite LLM debate loops and unexpected billing spikes.
+
+## 3. LLM & State Security (Agentic Context)
+
+### 3.1. State Edge Validation
+* **Graph Isolation:** State variables must not bleed across different financial assets. Use unique `thread_id` configurations in LangGraph.
+* **Pydantic Firewalls:** The transition between graph nodes (edges) must act as a validation firewall. If an LLM outputs malformed data, the Pydantic parser (>= v2.0) should catch the `ValidationError` and trigger a deterministic fallback, not a hallucination.
+
+### 3.2. GenAI Vulnerability Mitigation
+* **Prompt Injection:** Sanitize all external inputs (e.g., news articles scraped by Playwright) before injecting them into the Gemini/Claude context windows.
+* **Numerical Integrity:** Language Models are prohibited from performing financial arithmetic. All state values representing money or percentages must be handled as `decimal.Decimal` in Python, never as `float`.
+
+## 4. Audit & Observability
+* **Structured Logging:** Use JSON-formatted logging for all agent decisions.
+* **PII Protection:** Ensure logs are sanitized. Never log personal identifiable information or raw proprietary trading alpha signals.

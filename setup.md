@@ -1,35 +1,22 @@
+# AEQUITAS-MAS: SETUP & ISOMORPHISM PROTOCOL (V5.0)
 
-### 1. [Análise de Contexto]
+## 1. Architectural Philosophy & Isomorphism
+The setup ignores traditional "loose scripts" approaches. The system is treated as a **Cyclic State Graph**. The transition to an Agnostic Workspace (v5.0) eliminates development environment variance, ensuring that the Auditing Agent (Marks) operates on the exact same binaries as the Quantitative Agent (Graham).
 
-Com base nos documentos `01_Aequitas_MAS_DDE_v4.2.docx` e `02_Aequitas_MAS_ETD_v5.docx`, o setup ignora abordagens tradicionais de "scripts soltos". O sistema é tratado como um **Grafo de Estado Cíclico**. A transição da versão 4 para a 5.0 (Agnostic Workspace) foi motivada pela necessidade de eliminar a variância do ambiente de desenvolvimento, garantindo que o Agente Marks (Auditoria) opere sobre os mesmos binários que o Agente Graham (Cálculo).
+To mitigate **Semantic Entropy** in the LLM, the system implements an **Isomorphic Validation Layer**:
+Let $S_t$ be the system state and $T$ be the deterministic calculation tool. The LLM output ($O$) is forced through a strict typing filter $P$ (Pydantic):
+$$S_{t+1} = P(T(O))$$
+This ensures that hallucination errors do not propagate into financial calculations, where precision must be absolute ($\epsilon = 0$).
 
-### 2. [Intuição Técnica (CoT)]
+## 2. System Prerequisites
+To ensure the local environment is identical to production (Cloud-Native AWS), the following are mandatory:
+* **WSL2 (Ubuntu 22.04+)**: Linux kernel isolation (if on Windows).
+* **Nix Package Manager**: Declarative manager to ensure the Python interpreter and C libraries are binarily identical across machines.
+* **Poetry (v2.0+)**: Deterministic dependency management and package graph conflict resolution.
 
-A robustez de um Sistema Multi-Agente (MAS) para finanças depende da gestão da **Entropia Semântica**. Em sistemas puramente baseados em LLM, a passagem de informação entre agentes é estocástica. Para mitigar isto, o setup implementa uma **Camada de Validação Isomórfica**.
-Seja  o estado do sistema e  a ferramenta de cálculo. O output do LLM () é forçado a passar por um filtro de tipagem  (Pydantic):
-
-
-
-Isto garante que o erro não se propague para os cálculos financeiros, onde a precisão deve ser absoluta ().
-
----
-
-# 📄 AEQUITAS-MAS: PROTOCOLO DE SETUP E ISOMORFISMO (V5.0)
-
-### 1. Pré-requisitos de Sistema
-
-Para garantir que o ambiente local seja idêntico ao de produção (Cloud-Native), é obrigatório:
-
-* **WSL2 (Ubuntu 22.04+)**: Isolamento de kernel Linux.
-* **Nix Package Manager**: Gestor declarativo para garantir que o interpretador Python e bibliotecas C sejam binariamente idênticos em qualquer máquina.
-* **Poetry (v2.0+)**: Gestão determinística de dependências e resolução de conflitos de grafos de pacotes.
-
-### 2. Inicialização do Workspace e Isomorfismo (`dev.nix`)
-
-O ficheiro `dev.nix` elimina o problema "funciona na minha máquina".
-
+## 3. Workspace Initialization (`dev.nix`)
+The `dev.nix` file acts as the ultimate source of truth for the OS environment.
 ```nix
-# dev.nix
 { pkgs }: {
   channel = "stable-23.11";
   packages = [
@@ -46,46 +33,45 @@ O ficheiro `dev.nix` elimina o problema "funciona na minha máquina".
 
 ```
 
-### 3. O Contrato de Dependências (`pyproject.toml`)
+## 4. Dependency Contract (`pyproject.toml`)
 
-A instalação via Poetry trava as versões críticas para evitar a quebra da lógica de grafos.
+Installation via Poetry locks critical versions to prevent graph logic breakage.
 
 ```bash
-# Inicialização e configuração de isolamento
+# Initialization and isolation configuration
 poetry config virtualenvs.in-project true
 poetry init --name aequitas-mas --python "^3.11"
 
-# Dependências Core SOTA
+# Core SOTA Dependencies
 poetry add langgraph==0.0.15 pydantic>=2.0 langchain-anthropic
 poetry add yfinance pandas numpy
 poetry add --group dev pytest pytest-mock
 
 ```
 
-### 4. Estrutura de Diretórios (Arquitetura Hexagonal)
+## 5. Directory Structure (Hexagonal Architecture)
 
-O projeto separa a inteligência (Agentes) dos adaptadores (Tools/Infra).
+The project rigorously separates intelligence (Agents) from adapters (Tools/Infra).
 
-* `src/core/`: Gestão de estado e definições do LangGraph (`state.py`, `graph.py`).
-* `src/agents/`: Prompts e lógica das personas (Graham, Fisher, Marks).
-* `src/tools/`: Funções determinísticas (Cálculos de Graham, Scrapers B3).
-* `src/infra/`: Adaptadores de persistência (SqliteSaver/DynamoDB).
+* `src/core/`: State management and LangGraph definitions (`state.py`, `graph.py`).
+* `src/agents/`: LLM Prompts and Personas logic (Graham, Fisher, Marks).
+* `src/tools/`: Deterministic functions (Graham Calculations, B3 Scrapers).
+* `src/infra/`: Persistence and Cloud adapters (SqliteSaver / DynamoDB).
 
-### 5. Implementação do Contrato de Estado (`src/core/state.py`)
+## 6. State Contract Implementation (`src/core/state.py`)
 
-Este é o coração do **Confinamento de Risco**. O estado não é texto, é um objeto validado.
+This is the core of the **Risk Confinement**. The state is not text; it is a validated object.
+
 ```python
-from decimal import Decimal
-from typing import Annotated, List, Optional, TypedDict
-
+from typing import Annotated, TypedDict, List, Optional
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 class FinancialMetrics(BaseModel):
     ticker: str = Field(pattern=r"^[A-Z0-9]{5}$")
-    vpa: Decimal
-    lpa: Decimal
-    intrinsic_value: Optional[Decimal] = None
+    vpa: float 
+    lpa: float
+    intrinsic_value: Optional[float] = None
 
 class AgentState(TypedDict):
     messages: Annotated[List, add_messages]
@@ -94,40 +80,30 @@ class AgentState(TypedDict):
 
 ```
 
-### 6. Protocolo de Segurança e FinOps (Zero Trust)
+## 7. Security & FinOps Protocol (Zero Trust)
 
-* **API Keys**: Proibido o uso de `.env`. As chaves são injetadas via Secret Manager da IDE ou variáveis de ambiente de sessão.
-* **Recursion Limit**: Todo grafo deve ser compilado com `recursion_limit=15` para evitar loops de custo infinitos em caso de divergência entre agentes.
+* **API Keys**: Usage of `.env` files is strictly prohibited. Keys are injected via the IDE's Secret Manager (Google IDX) or runtime environment variables.
+* **Recursion Limit**: Every LangGraph compilation MUST include `recursion_limit=15` to prevent infinite cost loops in case of agent divergence.
 
-### 7. Critérios de Validação (DoD)
+## 8. Validation Criteria (Definition of Done - DoD)
 
-Para validar o setup, execute o protocolo de teste de integridade:
+To validate the setup, execute the integrity test protocol:
 
 ```bash
-# 1. Verificar Isomorfismo do Python
+# 1. Verify Python Isomorphism
 poetry run python -c "import platform; print(platform.python_version())"
 
-# 2. Testar Motor Quantitativo (Pendente implementação completa)
-poetry run pytest tests/test_tools.py
+# 2. Test Quantitative Engine (Tools)
+poetry run pytest tests/
 
 ```
 
----
+## 9. Implementation Status Table (Sync: PME v5.0)
 
-### Tabela de Status de Implementação (Sincronizada com PME v5.0)
-
-| Fase | Componente | Status | Rastreabilidade |
+| Phase | Component | Status | Traceability |
 | --- | --- | --- | --- |
-| **1.1** | Ambiente Agnóstico (Nix/Poetry) | ✅ Concluído | ETD v5, Cap 3 |
-| **1.2** | Isomorfismo de Estado (state.py) | ✅ Concluído | DDE v4.2, Sec 1 |
-| **1.3** | Motor Quantitativo (Tools) | 🔄 Em Execução | src/tools/ |
-| **2.1** | Orquestração Graham-Fisher | 📅 Agendado | src/agents/ |
+| **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
+| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | DDE v4.2, Sec 1 |
+| **1.3** | Quantitative Engine (Tools) | 🔄 In Progress | `src/tools/` |
+| **2.1** | Graham-Fisher Orchestration | 📅 Scheduled | `src/agents/` |
 
-### 3. [Verificação Crítica]
-
-* **Tecnologias:** O uso de Pydantic v2 é mandatório pela performance de validação em tempo de execução de grafos.
-* **Engine:** O alias `gemini-flash-latest` é mandatório para garantir acesso à versão mais recente e estável do modelo Flash.
-* **Ética:** O sistema de logs deve ser configurado para capturar o "raciocínio" do Agente Marks antes de qualquer recomendação, atendendo aos requisitos de explicabilidade da IA.
-* **SOTA:** Recomendo a leitura de *Zhang et al. (2024)* sobre **FinRobot** para refinar o `Data-CoT Agent` na próxima sprint.
-
-**Próximo Ponto de Retomada:** Implementação da ferramenta `fetch_b3_data` em `src/tools/b3_fetcher.py`.
