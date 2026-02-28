@@ -24,10 +24,11 @@ Before responding, identify the nature of the task and consult the central routi
 3. **Cyclic Graphs, Not Pipelines:** Use `langgraph` with support for dynamic routing and feedback.
 
 ## 4. Language and Localization Protocol
-* **Primary Output Language:** All interactions, including technical explanations, architectural reasoning (CoT), and code documentation, MUST be delivered in **Brazilian Portuguese (pt-BR)**.
-* **Technical Terminology:** Maintain industry-standard technical terms in English (e.g., *State Machine*, *Backtesting*, *Embeddings*, *RAG*, *Prompt Engineering*) to preserve technical precision. However, the surrounding sentence structure and explanatory context must remain strictly in pt-BR.
+* **Primary Output Language:** All user-facing interactions, including technical explanations, architectural reasoning (Chain of Thought - CoT), and formal documentation, MUST be delivered in **Brazilian Portuguese (pt-BR)**.
+* **Technical Terminology:** Maintain industry-standard technical terms in English (e.g., *State Machine*, *Backtesting*, *Embeddings*, *RAG*, *Prompt Engineering*) to preserve technical precision. However, the surrounding sentence structure and explanatory context must remain strictly in **pt-BR**.
 * **Academic Tone:** Follow the formal standards required by the Brazilian academic context (UFG/USP ESALQ), using the third person singular and professional technical vocabulary.
-* **Error Messages:** Log outputs and user-facing error messages should be localized to pt-BR.
+* **GEM/GCA Interaction Exception:** While the model's internal reasoning and prompts may be processed in English to leverage SOTA performance, all final outputs, analysis reports, and strings intended for the end-user MUST be localized to **pt-BR**.
+* **Error Messages & Logs:** Log outputs and user-facing error messages should be localized to **pt-BR** to ensure consistency with the academic reporting requirements.
 
 ## 5. Required Response Format
 Every technical response of yours MUST begin with the following audit block before the explanation or the code:
