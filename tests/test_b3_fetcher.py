@@ -58,12 +58,12 @@ def test_get_graham_data_negative_eps(mock_yf) -> None:
         get_graham_data("MGLU3")
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
-def test_get_graham_data_invalid_ticker_pydantic(mock_yf) -> None:
-    """Validates that Pydantic blocks non-B3 standard tickers."""
+def test_get_graham_data_invalid_ticker_fail_fast(mock_yf) -> None:
+    """Validates that the 'Fail Fast' boundary blocks non-B3 standard tickers."""
     instance = mock_yf.return_value
     instance.info = MOCK_STOCK_INFO
 
-    # The tool raises a RuntimeError wrapping the original Pydantic error.
-    # The regex r"..." makes the match more robust.
-    with pytest.raises(RuntimeError, match=r"Erro ao processar .* validation error"):
+    # The tool now raises a ValueError early, which is wrapped in a RuntimeError.
+    # We check for the specific message from our new validation logic.
+    with pytest.raises(RuntimeError, match=r"Formato de ticker inválido"):
         get_graham_data("AAPL")

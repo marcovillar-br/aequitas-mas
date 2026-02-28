@@ -1,15 +1,15 @@
 import structlog
 from langchain_google_genai import ChatGoogleGenerativeAI
-from src.core.state import AequitasState
+from src.core.state import AgentState
 
 logger = structlog.get_logger(__name__)
 
-def marks_agent(state: AequitasState) -> dict:
+def marks_agent(state: AgentState) -> dict:
     """
     Marks Agent using Google Gemini Flash.
     Cross-references Graham and Fisher data to identify overconfidence or hidden risks.
     """
-    metrics = state["quant_metrics"]
+    metrics = state["metrics"]
     analysis = state.get("qual_analysis")
     ticker = state["target_ticker"]
 

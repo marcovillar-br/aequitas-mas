@@ -5,16 +5,16 @@ from typing import Literal
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.core.state import AequitasState
+from src.core.state import AgentState
 
 # 1. ROUTER DEFINITION (CONDITIONAL EDGES)
-def router(state: AequitasState) -> Literal["graham", "fisher", "marks", "__end__"]:
+def router(state: AgentState) -> Literal["graham", "fisher", "marks", "__end__"]:
     """
     Supervisor routing logic (Aequitas Core).
     Decides the next step based on the current state.
     """
     # If Graham Agent (Quant) hasn't acted yet, it is the priority
-    if not state.get("quant_metrics"):
+    if not state.get("metrics"):
         return "graham"
     
     # If we already have quantitative data but lack qualitative analysis
@@ -30,7 +30,7 @@ def router(state: AequitasState) -> Literal["graham", "fisher", "marks", "__end_
 # 2. GRAPH CONSTRUCTION
 def create_graph():
     # Initialize the Graph with the normative state schema
-    workflow = StateGraph(AequitasState)
+    workflow = StateGraph(AgentState)
 
     # Node Definition (At this stage, we will use placeholders for the agents)
     # Soon, we will connect the real LLMs at these points

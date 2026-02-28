@@ -60,24 +60,41 @@ The project rigorously separates intelligence (Agents) from adapters (Tools/Infr
 
 ## 6. State Contract Implementation (`src/core/state.py`)
 
-This is the core of the **Risk Confinement**. The state is not text; it is a validated object.
+This is the core of the **Risk Confinement**. The state is not text; it is a validated Pydantic object that enforces two critical dogmas:
+1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa`) are strictly typed as `decimal.Decimal`, preventing floating-point errors and ensuring mathematical precision.
+2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
 
 ```python
-from typing import Annotated, TypedDict, List, Optional
-from langgraph.graph.message import add_messages
-from pydantic import BaseModel, Field
+from decimal import Decimal
+from typing import Annotated, List, Optional, TypedDict
+import operator
 
-class FinancialMetrics(BaseModel):
-    ticker: str = Field(pattern=r"^[A-Z0-9]{5}$")
-    vpa: float 
-    lpa: float
-    intrinsic_value: Optional[float] = None
+from pydantic import BaseModel, ConfigDict, Field
+
+class GrahamMetrics(BaseModel):
+    """
+    Deterministic Value Investing metrics (Graham Agent).
+    """
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+    ticker: str = Field(
+        ...,
+        description="The asset's trading code on the B3 exchange.",
+        pattern=r"^[A-Z0-9]{5,6}$"
+    )
+    vpa: Decimal = Field(..., description="Book Value Per Share.")
+    lpa: Decimal = Field(..., description="Earnings Per Share.")
+    fair_value: Optional[Decimal] = Field(
+        None, description="Intrinsic value calculated by the Graham formula."
+    )
 
 class AgentState(TypedDict):
-    messages: Annotated[List, add_messages]
-    metrics: Optional[FinancialMetrics]
-    compliance_approved: bool
-
+    """
+    Represents the Hybrid Cognitive State of Aequitas-MAS.
+    """
+    messages: Annotated[List[dict], operator.add]
+    metrics: Optional[GrahamMetrics]
+    # ... outros campos de estado
 ```
 
 ## 7. Security & FinOps Protocol (Zero Trust)

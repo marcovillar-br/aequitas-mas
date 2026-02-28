@@ -1,11 +1,11 @@
 import structlog
 from langchain_core.messages import AIMessage
-from src.core.state import AequitasState, FisherAnalysis
+from src.core.state import AgentState, FisherAnalysis
 from src.tools.news_fetcher import get_ticker_news
 
 logger = structlog.get_logger()
 
-def fisher_agent(state: AequitasState) -> dict:
+def fisher_agent(state: AgentState) -> dict:
     """
     Analyzes qualitative data (Fisher methodology) with strict grounding.
     """
