@@ -24,7 +24,7 @@ class GrahamMetrics(BaseModel):
         """Validates if the ticker follows B3 standard (ends with 3, 4, or 11)."""
         # Ensured correct class scope for the validator 
         if not v.upper().endswith(("3", "4", "11")):
-            raise ValueError("Invalid ticker for the Brazilian market (B3).")
+            raise ValueError("Ticker inválido para o mercado brasileiro (B3).")
         return v.upper()
 
 class FisherAnalysis(BaseModel):

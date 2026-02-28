@@ -27,7 +27,7 @@ Whenever resuming a session or updating the project state, invoke the **Aequitas
 
 ## 2. Document-Code Parity
 - Every architectural decision made in chat MUST be reflected in a `.context/` file.
-- If a new Agent is created, it must be indexed in `.context/agents/agents.md`.
+- If a new Agent is created, it must be indexed in `.context/domain/personas.md`.
 - If a new Tool is implemented, its mathematical logic must be documented in a TDD or Skill file.
 
 ## 3. State Compression (End of Day - EoD)

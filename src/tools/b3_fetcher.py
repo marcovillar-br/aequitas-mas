@@ -39,7 +39,7 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         
         # Validation: Zero math hallucination - abort on invalid data
         if not all([raw_price, raw_eps, raw_bvps]) or raw_eps <= 0 or raw_bvps <= 0:
-            raise ValueError(f"Inconsistent or negative data (EPS/BV) for {ticker}")
+            raise ValueError(f"Dados inconsistentes ou negativos (LPA/VPA) para {ticker}")
 
         # Conversion to Decimal for fiduciaries calculations
         price = Decimal(str(raw_price))
@@ -77,4 +77,4 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
 
     except Exception as e:
         # Graceful degradation: No guessing
-        raise RuntimeError(f"Error processing {ticker}: {str(e)}")
+        raise RuntimeError(f"Erro ao processar {ticker}: {str(e)}")
