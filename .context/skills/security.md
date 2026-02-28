@@ -3,7 +3,7 @@
 Use this skill to review code for vulnerabilities, handle sensitive financial data, and manage cloud credentials safely.
 
 ## 1. Secrets Management
-- **Local:** Use `.env` files loaded via `python-dotenv`. Never commit this file.
+- **Local (Zero Trust):** Per `setup.md`, the use of `.env` files is **forbidden**. Inject secrets like `GOOGLE_API_KEY` via your IDE's secret manager or session environment variables.
 - **Production (AWS):** Prepare all code to eventually fetch credentials via `boto3` from **AWS Secrets Manager**. 
 - **Rule:** API Keys (like `GOOGLE_API_KEY`) must never be hardcoded or passed as default arguments in function signatures.
 

@@ -74,17 +74,18 @@ O projeto separa a inteligência (Agentes) dos adaptadores (Tools/Infra).
 ### 5. Implementação do Contrato de Estado (`src/core/state.py`)
 
 Este é o coração do **Confinamento de Risco**. O estado não é texto, é um objeto validado.
-
 ```python
-from typing import Annotated, TypedDict, List, Optional
+from decimal import Decimal
+from typing import Annotated, List, Optional, TypedDict
+
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 class FinancialMetrics(BaseModel):
     ticker: str = Field(pattern=r"^[A-Z0-9]{5}$")
-    vpa: float 
-    lpa: float
-    intrinsic_value: Optional[float] = None
+    vpa: Decimal
+    lpa: Decimal
+    intrinsic_value: Optional[Decimal] = None
 
 class AgentState(TypedDict):
     messages: Annotated[List, add_messages]
