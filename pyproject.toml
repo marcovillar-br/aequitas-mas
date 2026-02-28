@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 # Orquestração e Grafos
 langgraph = "^0.2.0"
 # Validação e Tipagem (Norma v5.0)
@@ -36,7 +36,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -20,7 +20,7 @@ The `dev.nix` file acts as the ultimate source of truth for the OS environment.
 { pkgs }: {
   channel = "stable-23.11";
   packages = [
-    pkgs.python311
+    pkgs.python312
     pkgs.poetry
     pkgs.gcc
     pkgs.libffi
@@ -40,10 +40,10 @@ Installation via Poetry locks critical versions to prevent graph logic breakage.
 ```bash
 # Initialization and isolation configuration
 poetry config virtualenvs.in-project true
-poetry init --name aequitas-mas --python "^3.11"
+poetry init --name aequitas-mas --python "^3.12"
 
 # Core SOTA Dependencies
-poetry add langgraph==0.0.15 pydantic>=2.0 langchain-anthropic
+poetry add langgraph==^0.2.0 pydantic>=2.0 langchain-anthropic
 poetry add yfinance pandas numpy
 poetry add --group dev pytest pytest-mock
 
