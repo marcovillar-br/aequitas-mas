@@ -1,19 +1,19 @@
-# 🎯 Status Atual do Projeto: Aequitas-MAS
+# 🎯 Project Status: Aequitas-MAS
 
-## 📌 Sprint Atual: 1.2 - O Motor Quantitativo Determinístico
-**Foco Semanal:** Consolidação das ferramentas determinísticas e preparação para orquestração via LangGraph.
+## 📌 Current Sprint: 3.1 - Cloud Infrastructure & Persistence (IaC)
+**Weekly Focus:** Transitioning from local memory (`MemorySaver`) to AWS Serverless infrastructure (DynamoDB & OpenSearch) using Terraform and Dependency Inversion.
 
-### 🛠️ Objetivos Imediatos da Sessão
-1.  **Validação de Testes:** Alcançar 100% de cobertura no arquivo `tests/test_b3_fetcher.py`.
-2.  **Integração Qualitativa:** Validar a extração de notícias no `news_fetcher.py` para garantir que o output seja mapeável para o schema `FisherAnalysis` (Pydantic).
-3.  **Refinamento de Cálculo:** Ajustar o multiplicador dinâmico de Graham no `b3_fetcher.py` com base na taxa Selic atualizada via API do Banco Central.
+### 🛠️ Immediate Session Objectives
+1. **IaC Provisioning:** Develop `infra/dynamodb.tf` to implement the production Checkpointer (Pay-Per-Request mode).
+2. **Vector Database:** Develop `infra/opensearch.tf` to support the Fisher Agent's RAG pipeline (Serverless).
+3. **Hexagonal Adapters:** Implement `src/infra/adapters/` to isolate `boto3` and AWS SDKs from the core logic (DIP compliance).
 
-### 🚫 Restrições Arquiteturais Atuais (Confinamento de Risco)
-* **Isolamento de Redes:** A extração via `yfinance` e `requests` (BCB) são as únicas exceções de saída; o estado do grafo deve permanecer local.
-* **Agnosticismo de LLM:** O Agente Graham não deve realizar cálculos; deve apenas instanciar a ferramenta `get_graham_data`.
-* **Conformidade DDGS:** É estritamente proibido o uso da biblioteca `duckduckgo_search` legada; usar apenas `ddgs`.
+### 🚫 Architectural Constraints (Risk Confinement)
+* **Dependency Inversion:** It is strictly forbidden to import `boto3` or any cloud SDK inside `/src/agents` or `/src/core`. All cloud interactions must occur via Adapters.
+* **FinOps:** Ensure all Terraform resources use serverless/on-demand billing models to minimize costs during development.
+* **Zero Trust:** Secret Management must be strictly via IDE Secret Manager or AWS Secrets Manager. No `.env` files for cloud credentials.
 
-### ✅ Definição de Pronto (DoD) para o Dia
-- [ ] Execução bem-sucedida de `poetry run pytest` sem falhas nos mocks de rede.
-- [ ] Tipagem estrita validada: Nenhum dado financeiro circula como `float`, apenas `decimal.Decimal`.
-- [ ] Logs estruturados implementados em ambos os fetchers usando `structlog`.
+### ✅ Definition of Done (DoD) for the Session
+- [ ] Terraform files (`dynamodb.tf` and `opensearch.tf`) created and validated.
+- [ ] `boto3` persistence adapter implemented and unit-tested with mocks.
+- [ ] Environment isomorphism maintained: Code must still run locally via `SqliteSaver` if cloud flags are disabled.
