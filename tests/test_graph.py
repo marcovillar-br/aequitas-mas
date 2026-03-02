@@ -96,57 +96,99 @@ def test_router_completed_state_ends_graph() -> None:
     assert next_node == "__end__", f"Expected '__end__', got {next_node}"
 
 # -----------------------------------------------------------------------------
-# 2. INTEGRATION TESTS: GRAPH EXECUTION WITH MOCKS (Isolation Policy)
+# 2. INTEGRATION TESTS: GRAPH EXECUTION FLOW (Centralized Routing)
 # -----------------------------------------------------------------------------
 
-@patch("src.core.graph.marks_agent")
-@patch("src.core.graph.fisher_agent")
-@patch("src.core.graph.graham_agent")
-def test_full_graph_execution_with_mocks(
-    mock_graham: Any, 
-    mock_fisher: Any, 
-    mock_marks: Any
-) -> None:
+@pytest.fixture
+def mock_agents() -> Dict[str, Any]:
+    """Pytest fixture to mock all agents and their return values."""
+    with patch("src.core.graph.graham_agent") as mock_graham, \
+         patch("src.core.graph.fisher_agent") as mock_fisher, \
+         patch("src.core.graph.marks_agent") as mock_marks:
+
+        mock_graham.return_value = {
+            "metrics": GrahamMetrics(
+                ticker="WEGE3", vpa=Decimal("10.0"), lpa=Decimal("1.5"),
+                fair_value=Decimal("40.0"), margin_of_safety=Decimal("10.0")
+            ),
+            "messages": [{"role": "assistant", "content": "Graham executed."}]
+        }
+        mock_fisher.return_value = {
+            "qual_analysis": FisherAnalysis(
+                sentiment_score=0.8, key_risks=["Valuation stretched"],
+                source_urls=["http://mock.com"]
+            ),
+            "messages": [{"role": "assistant", "content": "Fisher executed."}]
+        }
+        mock_marks.return_value = {
+            "audit_log": ["Verdict: High quality, low safety margin."],
+            "messages": [{"role": "assistant", "content": "Marks executed."}]
+        }
+        yield {
+            "graham": mock_graham,
+            "fisher": mock_fisher,
+            "marks": mock_marks
+        }
+
+def test_centralized_routing_flow(mock_agents: Dict[str, Any]) -> None:
     """
-    Simulates the entire DAG execution by mocking the agents' mutations.
-    Ensures the StateGraph compiles and routes correctly without LLM costs.
+    Validates the full, step-by-step execution path of the centralized router.
+    It uses app.stream() to confirm the sequence of nodes is correct.
     """
-    
-    # 1. Setup Mocks
-    mock_graham.return_value = {
-        "metrics": GrahamMetrics(
-            ticker="WEGE3",
-            vpa=Decimal("10.0"),
-            lpa=Decimal("1.5"),
-            price_to_earnings=Decimal("25.0"), 
-            margin_of_safety=Decimal("10.0"), 
-            fair_value=Decimal("40.0")
-        ),
-        "messages": [{"role": "assistant", "content": "Graham executed."}]
-    }
-    mock_fisher.return_value = {
-        "qual_analysis": FisherAnalysis(sentiment_score=0.8, key_risks=["Valuation stretched"], source_urls=["http://mock.com"]),
-        "messages": [{"role": "assistant", "content": "Fisher executed."}]
-    }
-    mock_marks.return_value = {
-        "audit_log": ["Verdict: High quality, low safety margin."],
-        "messages": [{"role": "assistant", "content": "Marks executed."}]
-    }
-    
-    # 2. Recompile Graph: SOTA Fix to inject mocked references into LangGraph nodes
     from src.core.graph import create_graph
-    test_app = create_graph()
+    app = create_graph()
     
-    initial_state: Dict[str, Any] = {"target_ticker": "WEGE3", "messages": []}
-    config = {"configurable": {"thread_id": "test_graph_01"}}
+    initial_state = {"messages": [], "target_ticker": "WEGE3"}
+    config = {"configurable": {"thread_id": "test_full_flow"}}
     
-    # 3. Execute the freshly mocked graph
-    final_state = test_app.invoke(initial_state, config)
+    # Execute the graph stream and capture the path
+    path = []
+    for s in app.stream(initial_state, config=config):
+        path.extend(s.keys())
+        
+    # The expected path of executed nodes. `__end__` is a state, not a node.
+    expected_path = ['graham', 'fisher', 'marks']
     
-    # 4. Assertions
-    assert mock_graham.called, "Graham agent should have been called."
-    assert mock_fisher.called, "Fisher agent should have been called."
-    assert mock_marks.called, "Marks agent should have been called."
+    assert path == expected_path, f"Expected path {expected_path}, but got {path}"
     
-    assert final_state["target_ticker"] == "WEGE3"
-    assert len(final_state["audit_log"]) > 0
+    # Verify each agent was called once
+    mock_agents["graham"].assert_called_once()
+    mock_agents["fisher"].assert_called_once()
+    mock_agents["marks"].assert_called_once()
+
+def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
+    """
+    Validates that the router correctly skips nodes if the state is already
+    partially populated.
+    """
+    from src.core.graph import create_graph
+    app = create_graph()
+    
+    # Start with a state that should skip Graham and Fisher
+    initial_state = {
+        "messages": [],
+        "target_ticker": "PETR4",
+        "metrics": GrahamMetrics(
+            ticker="PETR4", vpa=Decimal("35.0"), lpa=Decimal("8.0"),
+            fair_value=Decimal("45.0"), margin_of_safety=Decimal("30.0")
+        ),
+        "qual_analysis": FisherAnalysis(
+            sentiment_score=0.5, key_risks=["Political Risk"],
+            source_urls=["http://test.com"]
+        ),
+        "audit_log": [],
+    }
+    config = {"configurable": {"thread_id": "test_skip_flow"}}
+
+    path = []
+    for s in app.stream(initial_state, config=config):
+        path.extend(s.keys())
+        
+    # With a conditional entry point, the graph should go straight to Marks.
+    expected_path = ['marks']
+    assert path == expected_path, f"Expected path {expected_path}, but got {path}"
+    
+    # Assert that the skipped agents were NOT called
+    mock_agents["graham"].assert_not_called()
+    mock_agents["fisher"].assert_not_called()
+    mock_agents["marks"].assert_called_once()

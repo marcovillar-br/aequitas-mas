@@ -1,35 +1,72 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from src.tools.b3_fetcher import get_graham_data
-from src.core.state import AgentState
+# -*- coding: utf-8 -*-
+"""
+Graham Agent: Quantitative Analysis Node
 
-def graham_agent(state: AgentState):
+This module defines the agent responsible for performing quantitative analysis
+based on the Benjamin Graham methodology. It acts as a pure orchestrator,
+invoking a deterministic tool to perform calculations, thus adhering to the
+"Zero Numerical Hallucination" dogma.
+"""
+import structlog
+from langchain_core.messages import AIMessage
+
+from src.core.state import AgentState
+from src.tools.b3_fetcher import get_graham_data
+
+# Initialize structured logger for observability
+logger = structlog.get_logger(__name__)
+
+
+def graham_agent(state: AgentState) -> dict:
     """
-    Graham Agent using Google Gemini Flash.
-    Performs quantitative analysis via deterministic tools.
+    Orchestrates the quantitative analysis by invoking the get_graham_data tool.
+
+    This agent extracts the target ticker from the state, calls the deterministic
+    tool, and mutates the state with the resulting `GrahamMetrics` object or
+    logs an audit error if the tool fails.
+
+    Args:
+        state: The current AgentState TypedDict.
+
+    Returns:
+        A dictionary with the mutated state keys (`metrics` or `audit_log`).
     """
-    ticker = state.get("target_ticker")
-    
-    # Initialize Google model
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-latest",
-        temperature=0
-    )
-    
+    ticker = state["target_ticker"]
+    logger.info("graham_agent_invoked", ticker=ticker)
+
     try:
-        # Clean tool call (No citation metadata)
+        # Phase 1 & 2: Invoke the deterministic tool (no LLM math)
         metrics = get_graham_data(ticker)
-        
-        content = (
-            f"Análise quantitativa de {ticker} finalizada. "
-            f"Valor Justo: R${metrics.fair_value} | Margem: {metrics.margin_of_safety}%."
+        logger.info(
+            "graham_tool_success",
+            ticker=ticker,
+            fair_value=metrics.fair_value,
+            margin_of_safety=metrics.margin_of_safety,
+        )
+
+        # Phase 3: Mutate state with validated Pydantic object
+        message = AIMessage(
+            content=(
+                f"Análise quantitativa (Graham) para {ticker} concluída. "
+                f"Valor Justo calculado: R$ {metrics.fair_value}. "
+                f"Margem de Segurança: {metrics.margin_of_safety}%."
+            )
+        )
+        return {"metrics": metrics, "messages": [message]}
+
+    except RuntimeError as e:
+        # Graceful degradation and circuit breaking
+        error_message = f"Graham tool failed for {ticker}: {e}"
+        logger.error("graham_tool_error", ticker=ticker, error=str(e))
+
+        # Append a critical note to the audit log for Marks Agent to see
+        audit_message = (
+            f"CRITICAL: O motor quantitativo falhou para '{ticker}'. "
+            "Causa: Dados insuficientes ou inválidos (LPA/VPA negativos?)."
         )
         
-        return {
-            "metrics": metrics,
-            "messages": [{"role": "assistant", "content": content}]
-        }
-    except Exception as e:
-        return {
-            "messages": [{"role": "assistant", "content": f"Falha no Agente Graham: {str(e)}"}],
-            "next_agent": "__end__"
-        }
+        user_message = AIMessage(
+            content=f"Não foi possível concluir a análise quantitativa para {ticker} devido a dados inconsistentes."
+        )
+
+        return {"audit_log": [audit_message], "messages": [user_message]}
