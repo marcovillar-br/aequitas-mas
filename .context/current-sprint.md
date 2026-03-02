@@ -1,19 +1,19 @@
-# 🎯 Status Atual do Projeto: Aequitas-MAS
+# 🎯 Project Status: Aequitas-MAS
 
-## 📌 Sprint Atual: 1.2 - O Motor Quantitativo Determinístico
-**Foco Semanal:** Consolidação das ferramentas determinísticas e preparação para orquestração via LangGraph.
+## 📌 Current Sprint: 2.2 - Cognitive Hybridization (Graham Agent)
+**Weekly Focus:** Integrating deterministic tools with the LLM via LangChain Function Calling and LangGraph node orchestration.
 
-### 🛠️ Objetivos Imediatos da Sessão
-1.  **Validação de Testes:** Alcançar 100% de cobertura no arquivo `tests/test_b3_fetcher.py`.
-2.  **Integração Qualitativa:** Validar a extração de notícias no `news_fetcher.py` para garantir que o output seja mapeável para o schema `FisherAnalysis` (Pydantic).
-3.  **Refinamento de Cálculo:** Ajustar o multiplicador dinâmico de Graham no `b3_fetcher.py` com base na taxa Selic atualizada via API do Banco Central.
+### 🛠️ Immediate Session Objectives
+1. **Agent Implementation:** Develop `src/agents/graham.py` to act as the orchestrator for the `get_graham_data` tool.
+2. **State Mutation:** Ensure the LLM parses the tool's output into the strictly typed `GrahamMetrics` Pydantic schema and updates the `AgentState`.
+3. **Agent Testing:** Create `tests/test_graham_agent.py` using `unittest.mock.patch` to validate LangGraph state transitions without triggering real LLM API costs.
 
-### 🚫 Restrições Arquiteturais Atuais (Confinamento de Risco)
-* **Isolamento de Redes:** A extração via `yfinance` e `requests` (BCB) são as únicas exceções de saída; o estado do grafo deve permanecer local.
-* **Agnosticismo de LLM:** O Agente Graham não deve realizar cálculos; deve apenas instanciar a ferramenta `get_graham_data`.
-* **Conformidade DDGS:** É estritamente proibido o uso da biblioteca `duckduckgo_search` legada; usar apenas `ddgs`.
+### 🚫 Architectural Constraints (Risk Confinement)
+* **Zero Math Hallucination:** The `graham_agent` LLM MUST NOT perform any intrinsic value calculations. It is restricted to passing the `target_ticker` to the tool.
+* **LLM Parameters:** `temperature=0.0` is mandatory for the Graham node to ensure deterministic extraction.
+* **Immutability:** State updates must strictly respect `ConfigDict(frozen=True)` from the Pydantic schemas.
 
-### ✅ Definição de Pronto (DoD) para o Dia
-- [ ] Execução bem-sucedida de `poetry run pytest` sem falhas nos mocks de rede.
-- [ ] Tipagem estrita validada: Nenhum dado financeiro circula como `float`, apenas `decimal.Decimal`.
-- [ ] Logs estruturados implementados em ambos os fetchers usando `structlog`.
+### ✅ Definition of Done (DoD) for Today
+- [ ] `graham_agent` successfully written and bound to the SOTA tool.
+- [ ] `pytest tests/test_graham_agent.py` passes with 100% coverage on node transitions.
+- [ ] No API keys are used in the codebase (Secret Manager compliance).
