@@ -14,7 +14,13 @@
 * **ALL final outputs**, technical explanations, Chain of Thought (CoT), and academic reports MUST be delivered strictly in **Brazilian Portuguese (pt-BR)**.
 * Maintain technical terms (e.g., *State Machine*, *Backtesting*) in English, but use formal academic pt-BR (UFG/USP ESALQ style) for the surrounding context.
 
+## IDE Interaction Protocol (GCA Prompting)
 
+When utilizing the Gemini Code Assist (GCA) chat in the IDE, the Tech Lead will use the following standard prompt format to anchor the AI's context. GCA must strictly obey this operational boundary:
+
+> "GCA, read `.context/rules/coding-guidelines.md` for the strict project guidelines. Based on the attached `@SPEC.md` and `@PLAN.md`, execute exclusively **Step [Number]**. Focus only on this atomic task (following the RPI methodology) and wait for my review before proceeding."
+
+**Directive to GCA:** If you receive the prompt above, you must initialize your response by confirming that your execution scope is aligned with Aequitas-MAS guidelines. Do not generate code for subsequent steps until explicitly authorized by the Tech Lead.
 
 **Required Output:**
 Start the session by providing the **[Context Activated]** audit block, citing the rules and skills loaded, followed by a brief summary of the current project state in pt-BR.
