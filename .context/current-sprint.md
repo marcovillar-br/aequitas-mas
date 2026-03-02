@@ -1,19 +1,19 @@
 # 🎯 Project Status: Aequitas-MAS
 
 ## 📌 Current Sprint: 3.1 - Cloud Infrastructure & Persistence (IaC)
-**Weekly Focus:** Transitioning from local memory (`MemorySaver`) to AWS Serverless infrastructure (DynamoDB & OpenSearch) using Terraform and Dependency Inversion.
+**Daily Focus:** Iniciar o provisionamento da infraestrutura Serverless na AWS e implementar os adaptadores hexagonais de persistência (Dependency Inversion), garantindo que o núcleo (Core) do LangGraph permaneça agnóstico em relação ao provedor de nuvem.
 
 ### 🛠️ Immediate Session Objectives
-1. **IaC Provisioning:** Develop `infra/dynamodb.tf` to implement the production Checkpointer (Pay-Per-Request mode).
-2. **Vector Database:** Develop `infra/opensearch.tf` to support the Fisher Agent's RAG pipeline (Serverless).
-3. **Hexagonal Adapters:** Implement `src/infra/adapters/` to isolate `boto3` and AWS SDKs from the core logic (DIP compliance).
+1. **IaC Provisioning (Terraform):** Desenvolver o ficheiro `infra/dynamodb.tf` para implementar a tabela de Checkpointer do LangGraph utilizando o modo de faturamento *Pay-Per-Request*.
+2. **Vector Database:** Desenvolver o ficheiro `infra/opensearch.tf` (Amazon OpenSearch Serverless) para preparar o pipeline RAG do Agente Fisher.
+3. **Hexagonal Cloud Adapters:** Criar o diretório e os módulos em `src/infra/adapters/` para isolar a biblioteca `boto3`.
 
 ### 🚫 Architectural Constraints (Risk Confinement)
-* **Dependency Inversion:** It is strictly forbidden to import `boto3` or any cloud SDK inside `/src/agents` or `/src/core`. All cloud interactions must occur via Adapters.
-* **FinOps:** Ensure all Terraform resources use serverless/on-demand billing models to minimize costs during development.
-* **Zero Trust:** Secret Management must be strictly via IDE Secret Manager or AWS Secrets Manager. No `.env` files for cloud credentials.
+* **Dependency Inversion Principle (DIP):** É estritamente proibido importar `boto3` ou qualquer SDK de nuvem dentro dos diretórios `/src/agents` ou `/src/core`. Toda a comunicação deve ser injetada via interfaces/adaptadores.
+* **FinOps:** Todos os recursos Terraform devem usar modelos de cobrança sob demanda (*Serverless*) para evitar custos ociosos durante a fase de desenvolvimento.
+* **Zero Trust:** A gestão de segredos e chaves de API deve continuar a utilizar variáveis de ambiente injetadas pelo Secret Manager da IDE. Proibido o uso de ficheiros `.env` rastreados ou fixos no código.
 
-### ✅ Definition of Done (DoD) for the Session
-- [ ] Terraform files (`dynamodb.tf` and `opensearch.tf`) created and validated.
-- [ ] `boto3` persistence adapter implemented and unit-tested with mocks.
-- [ ] Environment isomorphism maintained: Code must still run locally via `SqliteSaver` if cloud flags are disabled.
+### ✅ Definition of Done (DoD) for Tomorrow
+- [ ] Ficheiros Terraform (`dynamodb.tf` e `opensearch.tf`) codificados e validados via `terraform fmt` e `terraform validate`.
+- [ ] Adaptador de persistência (`src/infra/adapters/dynamo_saver.py`) criado para interfacear com a AWS.
+- [ ] Cobertura de testes unitários para os adaptadores utilizando `pytest-mock` para simular as respostas do `boto3` sem realizar chamadas reais de rede.

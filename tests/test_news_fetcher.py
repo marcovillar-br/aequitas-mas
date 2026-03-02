@@ -51,7 +51,7 @@ def test_get_ticker_news_success(mock_ddgs_class):
 
     # Assert that the mock was called with the correct parameters
     mock_ddgs_instance.news.assert_called_once_with(
-        keywords="PETR4 finanças notícias fatos relevantes",
+        "PETR4 finanças notícias fatos relevantes",
         region="br-pt",
         safesearch="off",
         timelimit="w",

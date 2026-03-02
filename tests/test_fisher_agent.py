@@ -78,7 +78,7 @@ def test_fisher_agent_success_and_traceability(
     # --- Assert ---
     # 1. Verify that the correct functions were called
     mock_get_news.assert_called_once_with("PETR4")
-    mock_chat_model.assert_called_once_with(model="gemini-pro", temperature=0.1)
+    mock_chat_model.assert_called_once_with(model="gemini-2.5-flash", temperature=0.1)
     mock_structured_llm.invoke.assert_called_once()
 
     # 2. Verify the structure and content of the returned state delta
@@ -128,8 +128,14 @@ def test_fisher_agent_tool_failure(mock_get_news, initial_state: AgentState) -> 
     # --- Assert ---
     mock_get_news.assert_called_once_with("PETR4")
 
-    # The agent should not return a `qual_analysis` but an `audit_log`
-    assert "qual_analysis" not in result_delta
+    # The agent should return both a populated `qual_analysis` to avoid loops
+    # and an `audit_log` to signal the failure.
+    assert "qual_analysis" in result_delta
     assert "audit_log" in result_delta
+
+    analysis = result_delta["qual_analysis"]
+    assert isinstance(analysis, FisherAnalysis)
+    assert analysis.key_risks == ["Falha na ferramenta de notícias: API Failure"]
+
     assert len(result_delta["audit_log"]) == 1
-    assert "CRITICAL: A ferramenta de notícias falhou para 'PETR4'" in result_delta["audit_log"][0]
+    assert "CRITICAL: A ferramenta de notícias falhou" in result_delta["audit_log"][0]

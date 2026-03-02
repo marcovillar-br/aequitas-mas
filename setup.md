@@ -1,4 +1,4 @@
-# AEQUITAS-MAS: SETUP & ISOMORPHISM PROTOCOL (V5.0)
+# AEQUITAS-MAS: SETUP & ISOMORPHISM PROTOCOL (V5.1)
 
 ## 1. Architectural Philosophy & Isomorphism
 The setup ignores traditional "loose scripts" approaches. The system is treated as a **Cyclic State Graph**. The transition to an Agnostic Workspace (v5.0) eliminates development environment variance, ensuring that the Auditing Agent (Marks) operates on the exact same binaries as the Quantitative Agent (Graham).
@@ -30,7 +30,6 @@ The `dev.nix` file acts as the ultimate source of truth for the OS environment.
     LANG = "pt_BR.UTF-8";
   };
 }
-
 ```
 
 ## 4. Dependency Contract (`pyproject.toml`)
@@ -46,7 +45,6 @@ poetry init --name aequitas-mas --python "^3.12"
 poetry add langgraph==^0.2.0 pydantic>=2.0 langchain-anthropic
 poetry add yfinance pandas numpy
 poetry add --group dev pytest pytest-mock
-
 ```
 
 ## 5. Directory Structure (Hexagonal Architecture)
@@ -64,39 +62,6 @@ This is the core of the **Risk Confinement**. The state is not text; it is a val
 1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa`) are strictly typed as `decimal.Decimal`, preventing floating-point errors and ensuring mathematical precision.
 2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
 
-```python
-from decimal import Decimal
-from typing import Annotated, List, Optional, TypedDict
-import operator
-
-from pydantic import BaseModel, ConfigDict, Field
-
-class GrahamMetrics(BaseModel):
-    """
-    Deterministic Value Investing metrics (Graham Agent).
-    """
-    model_config = ConfigDict(frozen=True, populate_by_name=True)
-
-    ticker: str = Field(
-        ...,
-        description="The asset's trading code on the B3 exchange.",
-        pattern=r"^[A-Z0-9]{5,6}$"
-    )
-    vpa: Decimal = Field(..., description="Book Value Per Share.")
-    lpa: Decimal = Field(..., description="Earnings Per Share.")
-    fair_value: Optional[Decimal] = Field(
-        None, description="Intrinsic value calculated by the Graham formula."
-    )
-
-class AgentState(TypedDict):
-    """
-    Represents the Hybrid Cognitive State of Aequitas-MAS.
-    """
-    messages: Annotated[List[dict], operator.add]
-    metrics: Optional[GrahamMetrics]
-    # ... outros campos de estado
-```
-
 ## 7. Security & FinOps Protocol (Zero Trust)
 
 * **API Keys**: Usage of `.env` files is strictly prohibited. Keys are injected via the IDE's Secret Manager (Google IDX) or runtime environment variables.
@@ -112,15 +77,14 @@ poetry run python -c "import platform; print(platform.python_version())"
 
 # 2. Test Quantitative Engine (Tools)
 poetry run pytest tests/
-
 ```
 
-## 9. Implementation Status Table (Sync: PME v5.0)
+## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.1)
 
 | Phase | Component | Status | Traceability |
 | --- | --- | --- | --- |
 | **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
 | **1.2** | State Isomorphism (`state.py`) | ✅ Completed | DDE v4.2, Sec 1 |
-| **1.3** | Quantitative Engine (Tools) | 🔄 In Progress | `src/tools/` |
-| **2.1** | Graham-Fisher Orchestration | 📅 Scheduled | `src/agents/` |
-
+| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/` |
+| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/` |
+| **3.1** | Cloud Infrastructure (DynamoDB/OpenSearch) | 🔄 In Progress | `infra/*.tf` |
