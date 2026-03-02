@@ -7,6 +7,14 @@
 - **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, and comments MUST be in **English**.
 - **User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
 
+## 0. Engineering Team Topology
+The development of new features in Aequitas-MAS follows a strictly defined pipeline of responsibilities to ensure the "Risk Confinement" dogma:
+- **Tech Lead (Human):** Orchestrator, architectural reviewer, and final decision-maker.
+- **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
+- **GEM (Architect):** Responsible for designing specifications (`SPEC.md`) and execution plans (`PLAN.md`).
+- **Google AI Studio (Scientist):** Sandboxed environment for validating prompts, temperature, and LLM parameters prior to codebase integration.
+- **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `PLAN.md` using the RPI (Research -> Plan -> Implement) methodology.
+
 ## 1. Stack & Frameworks
 - **Core**: Python 3.12+
 - **Management**: Poetry
