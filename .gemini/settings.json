@@ -1,10 +1,30 @@
 {
+  "general": {
+    "previewFeatures": true,
+    "checkpointing.enabled": true
+  },
+  "tools": {
+    "allowed": [
+      "run_shell_command",
+      "write_file",
+      "read_file",
+      "edit_file",
+      "list_directory",
+      "google_web_search"
+    ],
+    "approvalMode": "auto_edit"
+  },
   "project_context": {
     "name": "Aequitas-MAS",
-    "description": "Sistema de Suporte à Decisão (DSS) híbrido para Value Investing, emulando o Sistema 2 de Kahneman via orquestração LangGraph.",
-    "architecture_style": "Hexagonal Architecture, Domain-Driven Design (DDD), Cyclic Directed Graphs (LangGraph)"
+    "description": "DSS híbrido para Value Investing na B3 (Graham, Fisher, Marks).",
+    "architecture_style": "Hexagonal, DDD, LangGraph"
   },
   "rules": [
+    {
+      "id": "sod-system-prompt-enforcement",
+      "instruction": "MANDATÓRIO: Esta é a sua instrução primária. Antes de gerar qualquer código ou responder a perguntas de arquitetura, você DEVE ler silenciosamente o arquivo '.context/prompts/sod-context-enforcement.md' e assumir todas as regras, personas e restrições de idioma (pt-BR) definidas nele.",
+      "severity": "critical"
+    },
     {
       "id": "dogma-risk-confinement",
       "instruction": "O LLM nunca calcula indicadores financeiros mentalmente. Deve atuar como orquestrador que invoca Tools determinísticas em Python para cálculos rigorosos (Ex: $Valor Justo = \\sqrt{22.5 \\times VPA \\times LPA}$).",
@@ -16,6 +36,10 @@
       "severity": "critical"
     },
     {
+      "id": "skill-enforcement",
+      "instruction": "Sempre utilize a skill 'gemini-api-dev' para validar implementações de function calling e integração de LLM.",
+      "severity": "high"
+    },   {
       "id": "dependency-inversion-principle",
       "instruction": "O Core do sistema (/src/core e /src/agents) é Cloud-Agnostic. É EXPRESSAMENTE PROIBIDO o uso de importações de SDKs de nuvem (ex: import boto3) nestes diretórios. Infraestrutura é injetada via Adapters.",
       "severity": "high"
