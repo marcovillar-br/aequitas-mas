@@ -1,0 +1,80 @@
+name: "AQM Infrastructure Pipeline"
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - "feature/*"
+      - "hotfix/*"
+      - "release/*"
+  pull_request:
+    branches:
+      - main
+      - development
+
+permissions:
+  id-token: write # Required for OIDC authentication
+  contents: read  # Required for checkout
+
+jobs:
+  terraform:
+    name: "Terraform Automation"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+
+    steps:
+      # 1. Initialization and Source Control
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Authentication via OIDC (Zero Trust)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::689366766340:role/Aequitas-MAS-GitHub-CI-CD
+          aws-region: us-east-1
+
+      # 3. Setup Terraform Environment
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+
+      # 4. Static Analysis and Validation
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      # 5. Dynamic Workspace Selection (Risk Confinement)
+      - name: Select Terraform Workspace
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+          if [[ "$BRANCH_NAME" == "main" ]]; then
+            WORKSPACE="prod"
+          elif [[ "$BRANCH_NAME" == "development" ]]; then
+            WORKSPACE="dev"
+          elif [[ "$BRANCH_NAME" == "release" ]]; then
+            WORKSPACE="hom"
+          else
+            WORKSPACE="dev"
+          fi
+          echo "Selected Workspace: $WORKSPACE"
+          terraform workspace select $WORKSPACE || terraform workspace new $WORKSPACE
+
+      # 6. Execution Plan
+      - name: Terraform Plan
+        run: terraform plan -no-color
+        continue-on-error: false
+
+      # 7. Controlled Deployment (Only for permanent branches)
+      - name: Terraform Apply
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+        run: terraform apply -auto-approve
