@@ -3,6 +3,9 @@
 # This file defines the Provider, Backend (Partial), and Global Tags.
 # ==============================================================================
 
+# Recupera informações da conta AWS atual (ID da conta, ARN do usuário, etc.)
+data "aws_caller_identity" "current" {}
+
 terraform {
   required_version = ">= 1.14.5"
 
