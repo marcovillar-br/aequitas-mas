@@ -1,0 +1,101 @@
+name: "AQM Multi-Account Infrastructure"
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - "feat/*"
+      - "fix/*"
+      - "release/*"
+  pull_request:
+    branches:
+      - main
+      - development
+
+permissions:
+  id-token: write # Mandatory for OIDC authentication
+  contents: read  # Mandatory for checkout
+
+jobs:
+  terraform:
+    name: "Terraform Execution"
+    runs-on: ubuntu-latest
+    
+    env:
+      # Sincronização global de região (mapeia para var.AQM_REGION)
+      TF_VAR_AQM_REGION: "us-east-1"
+      DEV_ACCOUNT: "355316257214"
+      HOM_ACCOUNT: "051259249680"
+      PROD_ACCOUNT: "344693946474"
+
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 1. Determine Target Account and Workspace based on Context
+      - name: Set Environment Context
+        id: context
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "ACCOUNT_ID=${{ env.PROD_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "release/"* ]]; then
+            echo "ACCOUNT_ID=${{ env.HOM_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=hom" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "development" ]]; then
+            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+          else
+            # Padrão para feat/* ou branches internas é o ambiente de Dev
+            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+          fi
+
+      # 2. Authenticate to AWS via OIDC (Zero Trust)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD
+          aws-region: ${{ env.TF_VAR_AQM_REGION }}
+
+      # 3. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+
+      # 4. Initialize with Dynamic Backend
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
+            -backend-config="dynamodb_table=aqm-terraform-state-lock"
+
+      # 5. Workspace Selection (Native implementation for idempotency)
+      - name: Select Workspace
+        run: terraform workspace select -or-create ${{ steps.context.outputs.WORKSPACE }}
+
+      # 6. Validation and Planning
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -no-color
+
+      # 7. Controlled Deployment
+      - name: Terraform Apply
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+        run: terraform apply -auto-approve

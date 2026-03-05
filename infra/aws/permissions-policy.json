@@ -1,0 +1,61 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "TerraformBackendAndState",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation",
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::aqm-terraform-state-${ACCOUNT_ID}",
+                "arn:aws:s3:::aqm-terraform-state-${ACCOUNT_ID}/*"
+            ]
+        },
+        {
+            "Sid": "ProjectDynamoDBManagement",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DescribeTable",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:CreateTable",
+                "dynamodb:DeleteTable",
+                "dynamodb:UpdateTable",
+                "dynamodb:TagResource"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:*:*:table/aqm-terraform-state-lock",
+                "arn:aws:dynamodb:*:*:table/AQM_*"
+            ]
+        },
+        {
+            "Sid": "OpenSearchServerlessManagement",
+            "Effect": "Allow",
+            "Action": [
+                "aoss:CreateCollection",
+                "aoss:DeleteCollection",
+                "aoss:UpdateCollection",
+                "aoss:DescribeCollection",
+                "aoss:ListCollections",
+                "aoss:CreateSecurityPolicy",
+                "aoss:DeleteSecurityPolicy",
+                "aoss:UpdateSecurityPolicy",
+                "aoss:DescribeSecurityPolicy",
+                "aoss:CreateAccessPolicy",
+                "aoss:DeleteAccessPolicy",
+                "aoss:UpdateAccessPolicy",
+                "aoss:DescribeAccessPolicy",
+                "aoss:TagResource",
+                "aoss:GetAccountSettings",
+                "aoss:UpdateAccountSettings"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
