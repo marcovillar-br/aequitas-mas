@@ -14,7 +14,7 @@ on:
       - development
 
 permissions:
-  id-token: write # Mandatory for OIDC
+  id-token: write # Mandatory for OIDC authentication
   contents: read  # Mandatory for checkout
 
 jobs:
@@ -23,8 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     
     env:
-      # SINGLE SOURCE OF TRUTH FOR REGION
-      # Terraform automatically maps TF_VAR_AQM_REGION to var.AQM_REGION
+      # Sincronização global de região (mapeia para var.AQM_REGION)
       TF_VAR_AQM_REGION: "us-east-1"
       DEV_ACCOUNT: "355316257214"
       HOM_ACCOUNT: "051259249680"
@@ -38,7 +37,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. Determine Target Account and Workspace based on Event Context
+      # 1. Determine Target Account and Workspace based on Context
       - name: Set Environment Context
         id: context
         run: |
@@ -58,16 +57,16 @@ jobs:
             echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
             echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
           else
+            # Padrão para feat/* ou branches internas é o ambiente de Dev
             echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
             echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
           fi
 
-      # 2. Authenticate to the specific AWS Account via OIDC
+      # 2. Authenticate to AWS via OIDC (Zero Trust)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD
-          # Using the global env variable for consistency
           aws-region: ${{ env.TF_VAR_AQM_REGION }}
 
       # 3. Setup Terraform
@@ -76,7 +75,7 @@ jobs:
         with:
           terraform_version: "1.14.5"
 
-      # 4. Terraform Init with Dynamic Backend Configuration
+      # 4. Initialize with Dynamic Backend
       - name: Terraform Init
         run: |
           terraform init \
@@ -85,11 +84,9 @@ jobs:
             -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
             -backend-config="dynamodb_table=aqm-terraform-state-lock"
 
-      # 5. Workspace Selection/Creation
+      # 5. Workspace Selection (Native implementation for idempotency)
       - name: Select Workspace
-        run: |
-          terraform workspace select ${{ steps.context.outputs.WORKSPACE }} || \
-          terraform workspace new ${{ steps.context.outputs.WORKSPACE }}
+        run: terraform workspace select -or-create ${{ steps.context.outputs.WORKSPACE }}
 
       # 6. Validation and Planning
       - name: Terraform Validate
@@ -98,7 +95,7 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -no-color
 
-      # 7. Deployment (Protected: only for Push on permanent branches)
+      # 7. Controlled Deployment
       - name: Terraform Apply
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
         run: terraform apply -auto-approve
