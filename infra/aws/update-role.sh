@@ -1,3 +1,18 @@
+#!/bin/bash
+set -e
+
+# 1. Identificação Automática da Conta
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+ROLE_NAME="Aequitas-MAS-GitHub-CI-CD"
+POLICY_NAME="AQM-CI-CD-Permissions"
+
+echo "----------------------------------------------------"
+echo "🔐 Updating Hardened Policy for Account: $ACCOUNT_ID"
+echo "🎯 Role: $ROLE_NAME"
+
+# 2. Geração do JSON de Política com Privilégio Mínimo (Hardening)
+# O heredoc substitui automaticamente o ${ACCOUNT_ID}
+cat <<EOF > hardened-policy.json
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -59,3 +74,17 @@
         }
     ]
 }
+EOF
+
+# 3. Aplicação da Política na AWS
+echo "🚀 Applying policy to IAM..."
+aws iam put-role-policy \
+    --role-name "$ROLE_NAME" \
+    --policy-name "$POLICY_NAME" \
+    --policy-document file://hardened-policy.json
+
+echo "✅ Success! Account $ACCOUNT_ID is now hardened."
+echo "----------------------------------------------------"
+
+# Limpeza do arquivo temporário
+rm hardened-policy.json
