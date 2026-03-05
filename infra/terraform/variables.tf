@@ -38,3 +38,13 @@ variable "AQM_DYNAMO_BILLING" {
   type        = string
   default     = "PAY_PER_REQUEST"
 }
+
+variable "AQM_ENABLE_DELETION_PROTECTION" {
+  description = "Logic to prevent accidental deletion of tables per environment"
+  type        = map(bool)
+  default = {
+    dev  = false
+    hom  = true
+    prod = true
+  }
+}

@@ -5,10 +5,6 @@
 
 # 1. Capacity Control (FinOps)
 # Sets the maximum OCUs allowed for this account to prevent unexpected costs.
-resource "aws_opensearchserverless_account_settings" "AQM_CAPACITY_CONTROL" {
-  maximum_indexing_capacity = var.AQM_OS_CAPACITY[terraform.workspace]
-  maximum_search_capacity   = var.AQM_OS_CAPACITY[terraform.workspace]
-}
 
 # 2. Security Policy: Encryption
 # Defines the KMS encryption settings for the collection.

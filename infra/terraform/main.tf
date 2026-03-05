@@ -48,9 +48,3 @@ locals {
     Environment = terraform.workspace
   }
 }
-
-# ==============================================================================
-# DATA SOURCES: Identity & Context
-# ==============================================================================
-# Used to fetch current account ID for resource policies (e.g., OpenSearch)
-data "aws_caller_identity" "current" {}
