@@ -1,0 +1,16 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowAllProjectResources",
+            "Effect": "Allow",
+            "Action": [
+                "s3:*",
+                "dynamodb:*",
+                "aoss:*",
+                "iam:PassRole"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

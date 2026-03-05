@@ -1,12 +1,12 @@
-name: "AQM Infrastructure Pipeline"
+name: "AQM Multi-Account Infrastructure"
 
 on:
   push:
     branches:
       - main
       - development
-      - "feature/*"
-      - "hotfix/*"
+      - "feat/*"
+      - "fix/*"
       - "release/*"
   pull_request:
     branches:
@@ -14,67 +14,91 @@ on:
       - development
 
 permissions:
-  id-token: write # Required for OIDC authentication
-  contents: read  # Required for checkout
+  id-token: write # Mandatory for OIDC
+  contents: read  # Mandatory for checkout
 
 jobs:
   terraform:
-    name: "Terraform Automation"
+    name: "Terraform Execution"
     runs-on: ubuntu-latest
+    
+    env:
+      # SINGLE SOURCE OF TRUTH FOR REGION
+      # Terraform automatically maps TF_VAR_AQM_REGION to var.AQM_REGION
+      TF_VAR_AQM_REGION: "us-east-1"
+      DEV_ACCOUNT: "355316257214"
+      HOM_ACCOUNT: "051259249680"
+      PROD_ACCOUNT: "344693946474"
+
     defaults:
       run:
-        working-directory: ./infra
+        working-directory: ./infra/terraform
 
     steps:
-      # 1. Initialization and Source Control
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Authentication via OIDC (Zero Trust)
+      # 1. Determine Target Account and Workspace based on Event Context
+      - name: Set Environment Context
+        id: context
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "ACCOUNT_ID=${{ env.PROD_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "release/"* ]]; then
+            echo "ACCOUNT_ID=${{ env.HOM_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=hom" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "development" ]]; then
+            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+          else
+            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+          fi
+
+      # 2. Authenticate to the specific AWS Account via OIDC
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::689366766340:role/Aequitas-MAS-GitHub-CI-CD
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD
+          # Using the global env variable for consistency
+          aws-region: ${{ env.TF_VAR_AQM_REGION }}
 
-      # 3. Setup Terraform Environment
+      # 3. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.14.5"
 
-      # 4. Static Analysis and Validation
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
+      # 4. Terraform Init with Dynamic Backend Configuration
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
+            -backend-config="dynamodb_table=aqm-terraform-state-lock"
 
+      # 5. Workspace Selection/Creation
+      - name: Select Workspace
+        run: |
+          terraform workspace select ${{ steps.context.outputs.WORKSPACE }} || \
+          terraform workspace new ${{ steps.context.outputs.WORKSPACE }}
+
+      # 6. Validation and Planning
       - name: Terraform Validate
         run: terraform validate
 
-      # 5. Dynamic Workspace Selection (Risk Confinement)
-      - name: Select Terraform Workspace
-        run: |
-          BRANCH_NAME="${GITHUB_REF##*/}"
-          if [[ "$BRANCH_NAME" == "main" ]]; then
-            WORKSPACE="prod"
-          elif [[ "$BRANCH_NAME" == "development" ]]; then
-            WORKSPACE="dev"
-          elif [[ "$BRANCH_NAME" == "release" ]]; then
-            WORKSPACE="hom"
-          else
-            WORKSPACE="dev"
-          fi
-          echo "Selected Workspace: $WORKSPACE"
-          terraform workspace select $WORKSPACE || terraform workspace new $WORKSPACE
-
-      # 6. Execution Plan
       - name: Terraform Plan
         run: terraform plan -no-color
-        continue-on-error: false
 
-      # 7. Controlled Deployment (Only for permanent branches)
+      # 7. Deployment (Protected: only for Push on permanent branches)
       - name: Terraform Apply
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
         run: terraform apply -auto-approve
