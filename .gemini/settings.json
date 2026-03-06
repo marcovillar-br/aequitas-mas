@@ -1,6 +1,6 @@
 {
   "general": {
-    "previewFeatures": false,
+    "previewFeatures": true,
     "checkpointing.enabled": true
   },
   "tools": {

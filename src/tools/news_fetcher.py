@@ -46,7 +46,7 @@ def _validate_ticker(ticker: str) -> None:
     processed_ticker = ticker.upper().replace(".SA", "")
 
     # B3 tickers are typically 4 letters followed by 1 or 2 digits
-    if not re.match(r"^[A-Z]{4}[0-9]{1,2}$", processed_ticker):
+    if not re.match(r"^[A-Z0-9]{5,6}$", processed_ticker):
         raise ValueError(
             f"Formato de ticker inválido: '{ticker}'. "
             "Deve seguir o padrão da B3 (ex: PETR4, MGLU3, BIDI11)."
