@@ -17,21 +17,21 @@ from src.tools.news_fetcher import NewsItem
 # Mock output from the `get_ticker_news` tool
 MOCK_NEWS_ITEMS = [
     NewsItem(
-        title="Empresa X anuncia expansão",
+        title="Company X announces expansion",
         url="https://example.com/news/1",
-        body="A Empresa X vai abrir novas filiais...",
+        body="Company X is going to open new branches...",
     ),
     NewsItem(
-        title="Novas regulações podem impactar Empresa X",
+        title="New regulations may impact Company X",
         url="https://example.com/news/2",
-        body="O governo anunciou novas regras para o setor...",
+        body="The government announced new rules for the sector...",
     ),
 ]
 
 # Mock response from the structured LLM's .invoke() call
 MOCK_LLM_ANALYSIS = FisherAnalysis(
     sentiment_score=0.2,
-    key_risks=["Incerteza regulatória", "Aumento da concorrência"],
+    key_risks=["Regulatory uncertainty", "Increased competition"],
     source_urls=[],  # The LLM doesn't provide URLs, the agent does
 )
 
@@ -40,7 +40,7 @@ MOCK_LLM_ANALYSIS = FisherAnalysis(
 def initial_state() -> AgentState:
     """Provides a baseline AgentState for tests."""
     return AgentState(
-        messages=[("human", "Analise o ticker PETR4")],
+        messages=[("human", "Analyze the ticker PETR4")],
         target_ticker="PETR4",
         metrics=None,
         qual_analysis=None,
@@ -114,7 +114,7 @@ def test_fisher_agent_no_news_found(mock_get_news, initial_state: AgentState) ->
     analysis = result_delta["qual_analysis"]
 
     assert analysis.sentiment_score == 0.0
-    assert analysis.key_risks == ["Nenhuma notícia recente encontrada."]
+    assert analysis.key_risks == ["No recent news found."]
     assert analysis.source_urls == []
 
 @patch("src.agents.fisher.get_ticker_news", side_effect=RuntimeError("API Failure"))
@@ -135,7 +135,7 @@ def test_fisher_agent_tool_failure(mock_get_news, initial_state: AgentState) -> 
 
     analysis = result_delta["qual_analysis"]
     assert isinstance(analysis, FisherAnalysis)
-    assert analysis.key_risks == ["Falha na ferramenta de notícias: API Failure"]
+    assert analysis.key_risks == ["News tool failure: API Failure"]
 
     assert len(result_delta["audit_log"]) == 1
-    assert "CRITICAL: A ferramenta de notícias falhou" in result_delta["audit_log"][0]
+    assert "CRITICAL: News tool failed" in result_delta["audit_log"][0]

@@ -27,8 +27,8 @@ class MarksVerdict(BaseModel):
     verdict: str = Field(
         ...,
         description=(
-            "The final, consolidated audit verdict, written in Brazilian Portuguese "
-            "(pt-BR), synthesizing quantitative and qualitative findings."
+            "The final, consolidated audit verdict, written in English, "
+            "synthesizing quantitative and qualitative findings."
         ),
     )
 
@@ -55,7 +55,7 @@ def marks_agent(state: AgentState) -> dict:
 
     # 1. Fail-Fast: Check if prior agents produced the necessary data
     if not metrics or not qual_analysis:
-        error_msg = "Dados insuficientes para o veredito do Agente Marks. A análise quantitativa ou qualitativa falhou."
+        error_msg = "Insufficient data for Marks Agent verdict. Quantitative or qualitative analysis failed."
         log.warning(
             "marks_agent_insufficient_data",
             ticker=ticker,
@@ -98,7 +98,7 @@ def marks_agent(state: AgentState) -> dict:
         2.  Analyze the relationship between the margin of safety and the qualitative risks. A high margin of safety might be justified if the risks are severe. A low margin might be unacceptable even if risks seem minor.
         3.  Consider the sentiment score. Does it reflect irrational exuberance or excessive pessimism that could be exploited?
         4.  Conclude with a clear, concise verdict. State whether you **APPROVE** (with potential warnings) or **VETO** the investment thesis.
-        5.  **Your entire response MUST be a single block of text written in Brazilian Portuguese (pt-BR).**
+        5.  **Your entire response MUST be a single block of text written in English.**
 
         Generate the final verdict.
         """
@@ -129,5 +129,5 @@ def marks_agent(state: AgentState) -> dict:
     except Exception as e:
         error_msg = f"Marks Agent LLM failed for {ticker}: {e}"
         log.error("marks_agent_llm_failed", ticker=ticker, error=str(e))
-        return {"audit_log": [f"CRITICAL: O Agente Auditor (Marks) falhou ao gerar o veredito. Causa: {e}"]}
+        return {"audit_log": [f"CRITICAL: Auditor Agent (Marks) failed to generate verdict. Cause: {e}"]}
 

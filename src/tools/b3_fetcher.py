@@ -14,7 +14,7 @@ def _validate_ticker(ticker: str) -> None:
     
     # B3 tickers are typically 5 or 6 characters (e.g., PETR4, BIDI11)
     if not re.match(r"^[A-Z0-9]{5,6}$", processed_ticker):
-        raise ValueError(f"Formato de ticker inválido: '{ticker}'. Deve seguir o padrão B3 (ex: PETR4, MGLU3).")
+        raise ValueError(f"Invalid ticker format: '{ticker}'. Must follow B3 standard (e.g., PETR4, MGLU3).")
 
 def get_risk_free_rate() -> Decimal:
     """
@@ -54,7 +54,7 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         
         # Validation: Zero math hallucination - abort on invalid data
         if not all([raw_price, raw_eps, raw_bvps]) or raw_eps <= 0 or raw_bvps <= 0:
-            raise ValueError(f"Dados inconsistentes ou negativos (LPA/VPA) para {ticker}")
+            raise ValueError(f"Inconsistent or negative data (EPS/BVPS) for {ticker}")
 
         # Conversion to Decimal for fiduciaries calculations
         price = Decimal(str(raw_price))
@@ -79,19 +79,19 @@ def get_graham_data(ticker: str) -> GrahamMetrics:
         # Margin of Safety = ((Fair Value - Price) / Fair Value) * 100
         margin_of_safety = ((fair_value - price) / fair_value) * Decimal("100")
         
-        # Price to Earnings Ratio (P/L)
-        p_l = price / eps
+        # Price to Earnings Ratio (P/E)
+        price_to_earnings = price / eps
 
         # RETURN VALIDATED BY PYDANTIC SCHEMA
         return GrahamMetrics(
             ticker=ticker,
             vpa=bvps.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             lpa=eps.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-            price_to_earnings=p_l.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            price_to_earnings=price_to_earnings.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             margin_of_safety=margin_of_safety.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             fair_value=fair_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         )
 
     except Exception as e:
         # Graceful degradation: No guessing
-        raise RuntimeError(f"Erro ao processar {ticker}: {str(e)}")
+        raise RuntimeError(f"Error processing {ticker}: {str(e)}")

@@ -52,7 +52,7 @@ def fisher_agent(state: AgentState) -> dict:
             logger.warning("fisher_agent_no_news", ticker=ticker)
             analysis = FisherAnalysis(
                 sentiment_score=0.0,
-                key_risks=["Nenhuma notícia recente encontrada."],
+                key_risks=["No recent news found."],
                 source_urls=[],
             )
             message = AIMessage(
@@ -100,14 +100,14 @@ def fisher_agent(state: AgentState) -> dict:
     except RuntimeError as e:
         # 4. Graceful degradation on tool failure
         logger.error("fisher_agent_tool_failed", ticker=ticker, error=str(e))
-        audit_message = f"CRITICAL: A ferramenta de notícias falhou para '{ticker}'. Análise qualitativa comprometida."
+        audit_message = f"CRITICAL: News tool failed for '{ticker}'. Qualitative analysis compromised."
         user_message = AIMessage(
             content=f"Não foi possível realizar a análise de notícias para {ticker}."
         )
         # Populate qual_analysis with a failure state to prevent infinite loops
         analysis_failure = FisherAnalysis(
             sentiment_score=0.0,
-            key_risks=[f"Falha na ferramenta de notícias: {e}"],
+            key_risks=[f"News tool failure: {e}"],
             source_urls=[],
         )
         return {
@@ -118,7 +118,7 @@ def fisher_agent(state: AgentState) -> dict:
     except Exception as e:
         # 5. Graceful degradation on LLM or other failures
         logger.error("fisher_agent_llm_failed", ticker=ticker, error=str(e))
-        audit_message = f"CRITICAL: O modelo de linguagem (LLM) falhou ao analisar notícias para '{ticker}'."
+        audit_message = f"CRITICAL: Language model (LLM) failed to analyze news for '{ticker}'."
         user_message = AIMessage(
             content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}."
         )

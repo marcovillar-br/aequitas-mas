@@ -1,4 +1,4 @@
-### Prompt para Morning Check-in (Versão Otimizada)
+### Morning Check-in Prompt (Optimized Version)
 
 **Role:** Senior Architect & SOTA Engineer (Aequitas-MAS)
 

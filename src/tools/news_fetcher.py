@@ -75,7 +75,7 @@ def get_ticker_news(
         _validate_ticker(ticker)
 
         # 2. Query Formulation
-        query = f"{ticker} finanças notícias fatos relevantes"
+        query = f"{ticker} finance news relevant facts"
 
         # 3. Data Extraction using DDGS
         news_items: List[NewsItem] = []
@@ -114,5 +114,5 @@ def get_ticker_news(
         )
         # Do not return empty list; propagate the error to the agent.
         raise RuntimeError(
-            f"Falha ao extrair notícias para {ticker}: {str(e)}"
+            f"Failed to extract news for {ticker}: {str(e)}"
         )
