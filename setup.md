@@ -64,7 +64,7 @@ This is the core of the **Risk Confinement**. The state is not text; it is a val
 
 ## 7. Security & FinOps Protocol (Zero Trust)
 
-* **API Keys**: Usage of `.env` files is strictly prohibited. Keys are injected via the IDE's Secret Manager (Google IDX) or runtime environment variables.
+* **API Keys**: In a local VS Code environment, developers MUST use a strictly local `.env` file for runtime environment variables. **WARNING:** This `.env` file MUST remain listed in the `.gitignore` to prevent secret leakage. Never commit keys to the repository.
 * **Recursion Limit**: Every LangGraph compilation MUST include `recursion_limit=15` to prevent infinite cost loops in case of agent divergence.
 
 ## 8. Validation Criteria (Definition of Done - DoD)
