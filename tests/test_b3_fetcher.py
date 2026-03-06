@@ -54,7 +54,7 @@ def test_get_graham_data_negative_eps(mock_yf) -> None:
 
     # The function now raises a RuntimeError, wrapping the original ValueError.
     # The regex r"..." makes the match more robust.
-    with pytest.raises(RuntimeError, match=r"Erro ao processar .* Dados inconsistentes ou negativos"):
+    with pytest.raises(RuntimeError, match=r"Error processing .* Inconsistent or negative data"):
         get_graham_data("MGLU3")
 
 @patch("src.tools.b3_fetcher.yf.Ticker")
@@ -65,5 +65,5 @@ def test_get_graham_data_invalid_ticker_fail_fast(mock_yf) -> None:
 
     # The tool now raises a ValueError early, which is wrapped in a RuntimeError.
     # We check for the specific message from our new validation logic.
-    with pytest.raises(RuntimeError, match=r"Formato de ticker inválido"):
+    with pytest.raises(RuntimeError, match=r"Invalid ticker format"):
         get_graham_data("AAPL")

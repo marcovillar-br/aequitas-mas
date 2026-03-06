@@ -32,7 +32,7 @@ MOCK_FISHER_ANALYSIS = FisherAnalysis(
     source_urls=["http://example.com/news1"],
 )
 
-MOCK_VERDICT = "Veredito de teste: A margem de segurança parece adequada, mas os riscos regulatórios exigem cautela. APROVADO com ressalvas."
+MOCK_VERDICT = "Test verdict: The margin of safety seems adequate, but regulatory risks require caution. APPROVED with reservations."
 
 
 # 2. TEST CASES
@@ -102,5 +102,5 @@ def test_marks_agent_insufficient_data():
     # Assert: Verify the warning message is in the audit log
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
-    assert "Dados insuficientes" in result["audit_log"][0]
+    assert "Insufficient data" in result["audit_log"][0]
     assert "messages" not in result  # Should not produce a user-facing message on failure

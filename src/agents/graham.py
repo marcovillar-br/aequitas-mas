@@ -61,8 +61,8 @@ def graham_agent(state: AgentState) -> dict:
 
         # Append a critical note to the audit log for Marks Agent to see
         audit_message = (
-            f"CRITICAL: O motor quantitativo falhou para '{ticker}'. "
-            "Causa: Dados insuficientes ou inválidos (LPA/VPA negativos?)."
+            f"CRITICAL: Quantitative engine failed for '{ticker}'. "
+            "Cause: Insufficient or invalid data (negative EPS/BVPS?)."
         )
         
         user_message = AIMessage(

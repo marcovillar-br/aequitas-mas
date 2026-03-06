@@ -1,97 +1,90 @@
-
 # Aequitas-MAS (Multi-Agent System) v5.0
 
-**Aequitas-MAS** é um ecossistema de agentes inteligentes projetado para análise fundamentalista e tomada de decisão financeira de alto nível. O sistema transcende cálculos estáticos ao combinar o rigor matemático do **Value Investing** com análises qualitativas de mercado e auditoria de risco, utilizando **LangGraph** para orquestração e **Gemini Flash** como motor de inferência.
+**Aequitas-MAS** is an intelligent agent ecosystem designed for fundamental analysis and high-level financial decision-making. The system transcends static calculations by combining the mathematical rigor of **Value Investing** with qualitative market analysis and risk auditing, utilizing **LangGraph** for orchestration and **Gemini Flash** as the inference engine.
 
-## 🧠 Arquitetura de Agentes
+## 🧠 Agent Architecture
 
-O projeto utiliza um grafo acíclico dirigido (DAG) para processar ativos financeiros através de três perspectivas críticas, garantindo que o valor intrínseco seja confrontado com a realidade do mercado:
+The project uses a Directed Acyclic Graph (DAG) to process financial assets through three critical perspectives, ensuring that intrinsic value is confronted with market reality:
 
-1. **Nó GRAHAM (Quantitativo):** 
-* Realiza a coleta de dados fundamentais em tempo real via `yfinance`.
-* Executa o cálculo do **Valor Justo** baseado na fórmula de Benjamin Graham.
-* Estabelece a Margem de Segurança nominal do ativo.
+1. **GRAHAM Node (Quantitative):** 
+* Performs real-time fundamental data collection via `yfinance`.
+* Executes the **Fair Value** calculation based on the Benjamin Graham formula.
+* Establishes the nominal Margin of Safety of the asset.
 
+2. **FISHER Node (Qualitative):** 
+* Evaluates the "Yield Gap" and market sentiment through macroeconomic data.
+* Identifies competitive advantages and dividend sustainability.
+* Processed via **Gemini Flash** (Alias `gemini-flash-latest`).
 
-2. **Nó FISHER (Qualitativo):** 
-* Avalia o "Yield Gap" e o sentimento do mercado através de dados macroeconômicos.
-* Identifica vantagens competitivas e sustentabilidade de dividendos.
-* Processado via **Gemini Flash** (Alias `gemini-flash-latest`).
+3. **MARKS Node (Risk Audit):** 
+* Applies "Second-Level Thinking" (Howard Marks) to challenge the previous nodes.
+* Analyzes institutional, political, and governance risks (especially in state-owned enterprises).
+* Defines the final verdict on the viability of the margin of safety.
 
+## 🚀 Technical Stack
 
-3. **Nó MARKS (Auditoria de Risco):** 
-* Aplica o "Pensamento de Segundo Nível" (Howard Marks) para contestar os nós anteriores.
-* Analisa riscos institucionais, políticos e de governança (especialmente em estatais).
-* Define o veredito final sobre a viabilidade da margem de segurança.
-
-
-
-## 🚀 Stack Técnica
-
-* **Linguagem:** Python 3.10+
-* **Orquestração:** [LangGraph](https://www.langchain.com/langgraph) (Agentes baseados em estado)
+* **Language:** Python 3.10+
+* **Orchestration:** [LangGraph](https://www.langchain.com/langgraph) (State-based agents)
 * **LLM Engine:** Google Gemini Flash (Alias `gemini-flash-latest`)
-* **Gestão de Dependências:** [Poetry](https://python-poetry.org/)
-* **Dados:** yfinance, Pandas, Beautifulsoup4
+* **Dependency Management:** [Poetry](https://python-poetry.org/)
+* **Data:** yfinance, Pandas, Beautifulsoup4
 
-## 🛠️ Instalação e Configuração
+## 🛠️ Installation and Setup
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone https://github.com/marcovillar-br/aequitas-mas.git
 cd aequitas-mas
 
-# Vincule o interpretador e instale as dependências via Poetry
+# Link the interpreter and install dependencies via Poetry
 poetry env use python3
 poetry install
-
 ```
 
-### Variáveis de Ambiente
+### Environment Variables
 
-Crie um arquivo `.env` na raiz do projeto:
+Create a `.env` file in the root of the project:
 
 ```text
-GOOGLE_API_KEY=sua_chave_do_google_ai_studio
-
+GOOGLE_API_KEY=your_google_ai_studio_key
 ```
 
-## 📈 Caso de Uso Real: PETR4
+## 📈 Real Use Case: PETR4
 
-O sistema foi validado com uma análise da **PETR4** em Fevereiro de 2026:
+The system was validated with an analysis of **PETR4** in February 2026:
 
-* **Cálculo Graham:** Valor Justo de **R$ 64,64** (Margem de 41.26%).
-* **Contexto Fisher:** Dividendos atrativos (~10%) vs. Volatilidade geopolítica.
-* **Veredito Marks:** Alerta sobre "alvo móvel" em ativos estatais, ajustando a percepção da margem nominal.
-
----
-
-## 🗺️ Roadmap de Implementação (2026-2027)
-
-Este projeto segue um cronograma de evolução técnica focado na transição de um protótipo funcional para uma infraestrutura de análise distribuída e resiliente:
-
-* **Q1/2026 - Estabilização e Core:**
-* Saneamento do ambiente de dependências (Poetry) e migração para endpoints estáveis `v1`.
-* Refinamento dos algoritmos do **Nó GRAHAM** para suporte a múltiplos ativos simultâneos.
-
-* **Q2/2026 - Observabilidade e Testes:**
-* Implementação de logs estruturados para auditoria de decisões dos agentes Fisher e Marks.
-* Cobertura de testes unitários e de integração para o grafo de estados (LangGraph).
-
-* **Q3/2026 - Cloud Native & Containerização:**
-* Dockerização da aplicação e implementação de CI/CD (GitHub Actions).
-* Deploy experimental em **AWS Fargate** e configuração de **AWS Secrets Manager**.
-
-* **Q4/2026 - Persistência e Big Data:**
-* Implementação de um Data Lake em **AWS S3** via Boto3.
-* Armazenamento histórico de análises para tracking de performance do "Valor Justo" vs. Mercado.
-
-* **Q1/2027 - Entrega Inteligente e API:**
-* Desenvolvimento de uma API (FastAPI) para consumo externo das análises.
-* Configuração de sistema de alertas via **AWS SNS** para notificação de Margens de Segurança críticas.
+* **Graham Calculation:** Fair Value of **R$ 64.64** (Margin of 41.26%).
+* **Fisher Context:** Attractive dividends (~10%) vs. Geopolitical volatility.
+* **Marks Verdict:** Warning about a "moving target" in state-owned assets, adjusting the perception of the nominal margin.
 
 ---
 
-## 📝 Licença
+## 🗺️ Implementation Roadmap (2026-2027)
 
-Este projeto é para fins estritamente acadêmicos e de estudo de engenharia de software. **Não constitui recomendação de compra ou venda de ativos.**
+This project follows a technical evolution schedule focused on transitioning from a functional prototype to a distributed and resilient analysis infrastructure:
+
+* **Q1/2026 - Stabilization and Core:**
+* Dependency environment sanitation (Poetry) and migration to stable `v1` endpoints.
+* Refinement of the **GRAHAM Node** algorithms to support multiple simultaneous assets.
+
+* **Q2/2026 - Observability and Testing:**
+* Implementation of structured logs for auditing decisions of the Fisher and Marks agents.
+* Unit and integration test coverage for the state graph (LangGraph).
+
+* **Q3/2026 - Cloud Native & Containerization:**
+* Application dockerization and CI/CD implementation (GitHub Actions).
+* Experimental deployment on **AWS Fargate** and **AWS Secrets Manager** configuration.
+
+* **Q4/2026 - Persistence and Big Data:**
+* Data Lake implementation on **AWS S3** via Boto3.
+* Historical storage of analyses for performance tracking of "Fair Value" vs. Market.
+
+* **Q1/2027 - Intelligent Delivery and API:**
+* Development of an API (FastAPI) for external consumption of analyses.
+* Configuration of an alert system via **AWS SNS** for notification of critical Margins of Safety.
+
+---
+
+## 📝 License
+
+This project is strictly for academic purposes and software engineering study. **It does not constitute a recommendation to buy or sell assets.**

@@ -70,7 +70,7 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
     when the tool raises a RuntimeError.
     """
     # Arrange: Mock the tool to simulate a failure
-    error_text = "Dados insuficientes ou inválidos (LPA/VPA negativos?)"
+    error_text = "Insufficient or invalid data (negative EPS/BVPS?)"
     mock_get_data.side_effect = RuntimeError(error_text)
 
     # Act: Invoke the agent
@@ -81,9 +81,9 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
     assert "metrics" not in result  # The metrics should not be populated
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
-    assert "CRITICAL: O motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
+    assert "CRITICAL: Quantitative engine failed for 'PETR4'" in result["audit_log"][0]
 
     # Assert that a user-facing error message is returned
     assert "messages" in result
     assert isinstance(result["messages"][0], AIMessage)
-    assert "Não foi possível concluir a análise quantitativa para PETR4" in result["messages"][0].content
+    assert "Não foi possível concluir a análise quantitativa para PETR4 devido a dados inconsistentes" in result["messages"][0].content

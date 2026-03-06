@@ -13,5 +13,5 @@ Task: Rewrite `src/tools/news_fetcher.py` with the following strict constraints:
    - Inside the context manager `with DDGS() as ddgs:`, use the `ddgs.news()` method (do NOT use `.text()`). Set parameters `region="br-pt"`, `safesearch="off"`, `timelimit="w"`, and `max_results=max_results`.
    - Parse the results into a list of `NewsItem` objects.
    - Use `structlog` for logging success.
-   - CRITICAL (Fail Fast): In the `except Exception as e:` block, log the error using `structlog` and immediately `raise RuntimeError(f"Falha ao extrair notícias para {ticker}: {str(e)}")`. Do NOT return an empty list.
+   - CRITICAL (Fail Fast): In the `except Exception as e:` block, log the error using `structlog` and immediately `raise RuntimeError(f"Failed to extract news for {ticker}: {str(e)}")`. Do NOT return an empty list.
 4. All code, variables, and comments must be in English.

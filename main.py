@@ -40,7 +40,10 @@ def run_analysis(ticker: str) -> None:
     
     logger.info("analysis_started", component="supervisor")
     
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 15
+    }
     initial_state = {
         "target_ticker": ticker,
         "messages": []
