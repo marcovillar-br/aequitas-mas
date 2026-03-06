@@ -21,12 +21,12 @@ logger = structlog.get_logger(__name__)
 
 def _format_news_for_prompt(news_items: List[NewsItem]) -> str:
     """Formats a list of NewsItem objects into a single string for the LLM."""
-    prompt_text = "Please analyze the following news articles:\n\n"
+    prompt_text = "Por favor, analise os seguintes artigos de notícias:\n\n"
     for i, item in enumerate(news_items, 1):
-        prompt_text += f"--- Article {i} ---\n"
-        prompt_text += f"Title: {item.title}\n"
+        prompt_text += f"--- Artigo {i} ---\n"
+        prompt_text += f"Título: {item.title}\n"
         prompt_text += f"URL: {item.url}\n"
-        prompt_text += f"Body: {item.body}\n\n"
+        prompt_text += f"Corpo: {item.body}\n\n"
     return prompt_text
 
 
@@ -42,24 +42,29 @@ def fisher_agent(state: AgentState) -> dict:
         A dictionary with the mutated state keys (`qual_analysis` or `audit_log`).
     """
     ticker = state["target_ticker"]
-    logger.info("fisher_agent_invoked", ticker=ticker)
+    logger.info("agente_fisher_invocado", ticker=ticker)
     urls = []
 
     try:
         # 1. Invoke the news tool
         news_items = get_ticker_news(ticker)
         if not news_items:
-            logger.warning("fisher_agent_no_news", ticker=ticker)
+            logger.warning("agente_fisher_sem_noticias", ticker=ticker)
+            audit_message = f"ALERTA: Nenhuma notícia foi encontrada para '{ticker}'. A análise qualitativa foi baseada em dados ausentes, resultando em uma pontuação de sentimento neutra."
             analysis = FisherAnalysis(
                 sentiment_score=0.0,
-                key_risks=["No recent news found."],
+                key_risks=["Nenhuma notícia recente encontrada para a análise."],
                 source_urls=[],
             )
             message = AIMessage(
                 content=f"Análise qualitativa para {ticker} não pôde ser concluída (sem notícias)."
             )
-            return {"qual_analysis": analysis, "messages": [message]}
-        
+            return {
+                "qual_analysis": analysis,
+                "messages": [message],
+                "audit_log": [audit_message],
+            }
+
         urls = [item.url for item in news_items]
         formatted_news = _format_news_for_prompt(news_items)
 
@@ -68,10 +73,12 @@ def fisher_agent(state: AgentState) -> dict:
         structured_llm = llm.with_structured_output(FisherAnalysis)
 
         prompt = (
-            f"Analyze the sentiment and risks for the company in the following news articles about {ticker}. "
-            "Based *only* on the text provided, determine the overall sentiment score from -1.0 (very negative) "
-            "to 1.0 (very positive). Also, identify a list of the top 3-5 key risks mentioned (e.g., 'regulatory changes', 'market volatility'). "
-            f"Use these URLs as the sources: {', '.join(urls)}\n\n"
+            "Você é um analista financeiro incumbido de analisar notícias para a empresa {ticker}. "
+            f"Analise o sentimento e os riscos para a empresa com base *apenas* nos seguintes artigos de notícias. "
+            "Determine a pontuação geral de sentimento de -1.0 (muito negativo) a 1.0 (muito positivo). "
+            "Identifique uma lista de 3 a 5 principais riscos mencionados (ex: 'mudanças regulatórias', 'volatilidade de mercado'). "
+            "Sua resposta deve ser um JSON estruturado com os campos em português. "
+            f"Use estas URLs como fontes: {', '.join(urls)}\n\n"
             f"{formatted_news}"
         )
 
@@ -86,12 +93,12 @@ def fisher_agent(state: AgentState) -> dict:
         )
 
         logger.info(
-            "fisher_agent_success",
+            "agente_fisher_sucesso",
             ticker=ticker,
             sentiment=analysis_result.sentiment_score,
             risks=len(analysis_result.key_risks),
         )
-        
+
         message = AIMessage(
             content=f"Análise qualitativa (Fisher) para {ticker} concluída."
         )
@@ -99,33 +106,37 @@ def fisher_agent(state: AgentState) -> dict:
 
     except RuntimeError as e:
         # 4. Graceful degradation on tool failure
-        logger.error("fisher_agent_tool_failed", ticker=ticker, error=str(e))
-        audit_message = f"CRITICAL: News tool failed for '{ticker}'. Qualitative analysis compromised."
+        logger.error("agente_fisher_ferramenta_falhou", ticker=ticker, error=str(e))
+        audit_message = f"CRÍTICO: Ferramenta de notícias falhou para '{ticker}'. A análise qualitativa foi comprometida por falta de dados."
         user_message = AIMessage(
             content=f"Não foi possível realizar a análise de notícias para {ticker}."
         )
-        # Populate qual_analysis with a failure state to prevent infinite loops
-        analysis_failure = FisherAnalysis(
+        # Create a placeholder analysis to avoid breaking the graph flow
+        failed_analysis = FisherAnalysis(
             sentiment_score=0.0,
-            key_risks=[f"News tool failure: {e}"],
+            key_risks=[f"Falha na ferramenta de notícias: {e}"],
             source_urls=[],
         )
         return {
-            "qual_analysis": analysis_failure,
+            "qual_analysis": failed_analysis,
             "audit_log": [audit_message],
-            "messages": [user_message]
+            "messages": [user_message],
         }
     except Exception as e:
         # 5. Graceful degradation on LLM or other failures
-        logger.error("fisher_agent_llm_failed", ticker=ticker, error=str(e))
-        audit_message = f"CRITICAL: Language model (LLM) failed to analyze news for '{ticker}'."
+        logger.error("agente_fisher_llm_falhou", ticker=ticker, error=str(e))
+        audit_message = f"CRÍTICO: Modelo de linguagem (LLM) falhou ao analisar notícias para '{ticker}'. A análise qualitativa está incompleta ou comprometida."
         user_message = AIMessage(
             content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}."
         )
-        # Still include URLs if the tool part was successful
-        analysis = FisherAnalysis(
+        # Create a placeholder analysis
+        failed_analysis = FisherAnalysis(
             sentiment_score=0.0,
-            key_risks=[f"LLM analysis failed: {str(e)}"],
-            source_urls=urls,
+            key_risks=[f"Falha no modelo de linguagem: {e}"],
+            source_urls=urls,  # Preserve URLs if fetched before LLM failure
         )
-        return {"qual_analysis": analysis, "audit_log": [audit_message], "messages": [user_message]}
+        return {
+            "qual_analysis": failed_analysis,
+            "audit_log": [audit_message],
+            "messages": [user_message],
+        }

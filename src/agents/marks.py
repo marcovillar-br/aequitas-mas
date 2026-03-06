@@ -27,8 +27,8 @@ class MarksVerdict(BaseModel):
     verdict: str = Field(
         ...,
         description=(
-            "The final, consolidated audit verdict, written in English, "
-            "synthesizing quantitative and qualitative findings."
+            "O veredito final consolidado de auditoria, escrito em Português do Brasil, "
+            "sintetizando as descobertas quantitativas e qualitativas."
         ),
     )
 
@@ -48,22 +48,22 @@ def marks_agent(state: AgentState) -> dict:
         A dictionary containing the `audit_log` with the final verdict.
     """
     ticker = state["target_ticker"]
-    log.info("marks_agent_invoked", ticker=ticker)
+    log.info("agente_marks_invocado", ticker=ticker)
 
     metrics = state.get("metrics")
     qual_analysis = state.get("qual_analysis")
 
     # 1. Fail-Fast: Check if prior agents produced the necessary data
     if not metrics or not qual_analysis:
-        error_msg = "Insufficient data for Marks Agent verdict. Quantitative or qualitative analysis failed."
+        audit_message = "Dados insuficientes para o veredito do Agente Marks. A análise quantitativa ou qualitativa falhou."
         log.warning(
-            "marks_agent_insufficient_data",
+            "agente_marks_dados_insuficientes",
             ticker=ticker,
             has_metrics=bool(metrics),
             has_qual_analysis=bool(qual_analysis),
         )
         # Append to audit_log to make the failure explicit in the final state
-        return {"audit_log": [error_msg]}
+        return {"audit_log": [audit_message]}
 
     # 2. Define LLM and Prompt Template
     # Temperature is set to 0.2 to allow for some creative, critical thinking
@@ -72,35 +72,35 @@ def marks_agent(state: AgentState) -> dict:
 
     prompt = ChatPromptTemplate.from_template(
         """
-        **System Prompt: Howard Marks (Risk Auditor)**
+        **System Prompt: Howard Marks (Auditor de Risco)**
 
-        You are Howard Marks, a world-renowned investor known for your "Second-Level Thinking" and focus on risk management. Your task is to act as the final auditor for an investment analysis on the company {ticker}.
+        Você é Howard Marks, um investidor mundialmente renomado conhecido pelo seu "Pensamento de Segundo Nível" (Second-Level Thinking) e foco no gerenciamento de risco. Sua tarefa é atuar como o auditor final para uma análise de investimento na empresa {ticker}.
 
-        You have been provided with two reports:
-        1.  **Quantitative Analysis (Graham):** A cold, hard look at the numbers.
-        2.  **Qualitative Analysis (Fisher):** A summary of market sentiment and news.
+        Você recebeu dois relatórios:
+        1.  **Análise Quantitativa (Graham):** Uma visão fria e dura dos números.
+        2.  **Análise Qualitativa (Fisher):** Um resumo do sentimento de mercado e notícias.
 
-        **Your Goal:**
-        Synthesize these two reports into a final, critical verdict. Your primary concern is capital preservation. Do not simply repeat the data; provide a deeper, second-level insight. Specifically, you MUST answer: **Does the calculated "Margin of Safety" truly compensate for the "Key Risks" identified?**
+        **Seu Objetivo:**
+        Sintetizar esses dois relatórios em um veredito final e crítico. Sua principal preocupação é a preservação de capital. Não repita simplesmente os dados; forneça um insight mais profundo de segundo nível. Especificamente, você DEVE responder: **A "Margem de Segurança" calculada realmente compensa os "Principais Riscos" identificados?**
 
-        **Provided Data:**
+        **Dados Fornecidos:**
         - **Ticker:** {ticker}
-        - **Quantitative Metrics (Graham):**
-            - Fair Value: {fair_value}
-            - Margin of Safety: {margin_of_safety}%
-            - P/E Ratio: {pe_ratio}
-        - **Qualitative Analysis (Fisher):**
-            - News Sentiment Score: {sentiment} (from -1.0 to 1.0)
-            - Identified Key Risks: {key_risks}
+        - **Métricas Quantitativas (Graham):**
+            - Valor Justo: {fair_value}
+            - Margem de Segurança: {margin_of_safety}%
+            - Índice P/L: {pe_ratio}
+        - **Análise Qualitativa (Fisher):**
+            - Pontuação de Sentimento das Notícias: {sentiment} (de -1.0 a 1.0)
+            - Principais Riscos Identificados: {key_risks}
 
-        **Instructions:**
-        1.  Adopt the persona of a skeptical, seasoned investor.
-        2.  Analyze the relationship between the margin of safety and the qualitative risks. A high margin of safety might be justified if the risks are severe. A low margin might be unacceptable even if risks seem minor.
-        3.  Consider the sentiment score. Does it reflect irrational exuberance or excessive pessimism that could be exploited?
-        4.  Conclude with a clear, concise verdict. State whether you **APPROVE** (with potential warnings) or **VETO** the investment thesis.
-        5.  **Your entire response MUST be a single block of text written in English.**
+        **Instruções:**
+        1.  Adote a persona de um investidor cético e experiente.
+        2.  Analise a relação entre a margem de segurança e os riscos qualitativos. Uma margem de segurança alta pode ser justificada se os riscos forem severos. Uma margem baixa pode ser inaceitável mesmo se os riscos parecerem menores.
+        3.  Considere a pontuação de sentimento. Ela reflete uma exuberância irracional ou um pessimismo excessivo que poderia ser explorado?
+        4.  Conclua com um veredito claro e conciso. Declare se você **APROVA** (com potenciais avisos) ou **VETA** a tese de investimento.
+        5.  **Sua resposta deve ser um bloco único de texto escrito em Português do Brasil, adotando o tom de Howard Marks.**
 
-        Generate the final verdict.
+        Gere o veredito final.
         """
     )
 
@@ -120,14 +120,14 @@ def marks_agent(state: AgentState) -> dict:
         )
 
         verdict = response.verdict
-        log.info("marks_agent_success", ticker=ticker)
+        log.info("agente_marks_sucesso", ticker=ticker)
 
         message = AIMessage(content=verdict)
         # 4. Return the final verdict to be appended to the audit log
         return {"audit_log": [verdict], "messages": [message]}
 
     except Exception as e:
-        error_msg = f"Marks Agent LLM failed for {ticker}: {e}"
-        log.error("marks_agent_llm_failed", ticker=ticker, error=str(e))
-        return {"audit_log": [f"CRITICAL: Auditor Agent (Marks) failed to generate verdict. Cause: {e}"]}
-
+        audit_message = f"CRÍTICO: Agente Auditor (Marks) falhou ao gerar o veredito. Causa: {e}"
+        log.error("agente_marks_llm_falhou", ticker=ticker, error=str(e))
+        user_message = AIMessage(content="Ocorreu um erro inesperado ao gerar o veredito final.")
+        return {"audit_log": [audit_message], "messages": [user_message]}

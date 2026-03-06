@@ -51,7 +51,7 @@ def test_get_ticker_news_success(mock_ddgs_class):
 
     # Assert that the mock was called with the correct parameters
     mock_ddgs_instance.news.assert_called_once_with(
-        "PETR4 finance news relevant facts",
+        "PETR4 notícias fatos relevantes financeiro",
         region="br-pt",
         safesearch="off",
         timelimit="w",
@@ -72,7 +72,7 @@ def test_get_ticker_news_invalid_ticker_fails_fast():
         get_ticker_news(invalid_ticker)
 
     # Check that the error message clearly indicates the cause
-    assert "Invalid ticker format" in str(excinfo.value)
+    assert "Formato de ticker inválido" in str(excinfo.value)
     assert "PETROBRAS" in str(excinfo.value)
 
 
@@ -92,5 +92,5 @@ def test_get_ticker_news_api_failure(mock_ddgs_class):
         get_ticker_news("VALE3")
 
     # Assert that the error is caught and re-raised with proper context
-    assert "Failed to extract news for VALE3" in str(excinfo.value)
+    assert "Falha ao extrair notícias para VALE3" in str(excinfo.value)
     assert "API is down" in str(excinfo.value)

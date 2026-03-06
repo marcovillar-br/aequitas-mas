@@ -56,13 +56,13 @@ def graham_agent(state: AgentState) -> dict:
 
     except RuntimeError as e:
         # Graceful degradation and circuit breaking
-        error_message = f"Graham tool failed for {ticker}: {e}"
+        error_message = f"Ferramenta Graham falhou para {ticker}: {e}"
         logger.error("graham_tool_error", ticker=ticker, error=str(e))
 
         # Append a critical note to the audit log for Marks Agent to see
         audit_message = (
-            f"CRITICAL: Quantitative engine failed for '{ticker}'. "
-            "Cause: Insufficient or invalid data (negative EPS/BVPS?)."
+            f"CRÍTICO: Motor quantitativo falhou para '{ticker}'. "
+            "Causa: Dados insuficientes ou inválidos (LPA/VPA negativos?)."
         )
         
         user_message = AIMessage(
