@@ -114,8 +114,12 @@ def test_fisher_agent_no_news_found(mock_get_news, initial_state: AgentState) ->
     analysis = result_delta["qual_analysis"]
 
     assert analysis.sentiment_score == 0.0
-    assert analysis.key_risks == ["No recent news found."]
+    assert analysis.key_risks == ["Nenhuma notícia recente encontrada para a análise."]
     assert analysis.source_urls == []
+
+    assert "audit_log" in result_delta
+    assert len(result_delta["audit_log"]) == 1
+    assert "ALERTA: Nenhuma notícia foi encontrada" in result_delta["audit_log"][0]
 
 @patch("src.agents.fisher.get_ticker_news", side_effect=RuntimeError("API Failure"))
 def test_fisher_agent_tool_failure(mock_get_news, initial_state: AgentState) -> None:
@@ -135,7 +139,6 @@ def test_fisher_agent_tool_failure(mock_get_news, initial_state: AgentState) -> 
 
     analysis = result_delta["qual_analysis"]
     assert isinstance(analysis, FisherAnalysis)
-    assert analysis.key_risks == ["News tool failure: API Failure"]
-
+    assert analysis.key_risks == ["Falha na ferramenta de notícias: API Failure"]
     assert len(result_delta["audit_log"]) == 1
-    assert "CRITICAL: News tool failed" in result_delta["audit_log"][0]
+    assert "CRÍTICO: Ferramenta de notícias falhou" in result_delta["audit_log"][0]

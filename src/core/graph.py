@@ -7,45 +7,45 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from src.core.state import AgentState
 
-# 1. ROUTER DEFINITION (CONDITIONAL EDGES)
+# 1. DEFINIÇÃO DO ROTEADOR (ARESTAS CONDICIONAIS)
 def router(state: AgentState) -> Literal["graham", "fisher", "marks", "__end__"]:
     """
-    Supervisor routing logic (Aequitas Core).
-    Decides the next step based on the current state.
+    Lógica de roteamento do Supervisor (Núcleo Aequitas).
+    Decide o próximo passo com base no estado atual.
     """
-    # If Graham Agent (Quant) hasn't acted yet, it is the priority
+    # Se o Agente Graham (Quant) ainda não atuou, ele é a prioridade
     if not state.get("metrics"):
         return "graham"
-    
-    # If we already have quantitative data but lack qualitative analysis
+
+    # Se já temos dados quantitativos, mas falta a análise qualitativa
     if not state.get("qual_analysis"):
         return "fisher"
-    
-    # If Graham and Fisher have finished, Marks (Auditor) makes the final verdict
+
+    # Se Graham e Fisher terminaram, Marks (Auditor) dá o veredito final
     if len(state.get("audit_log", [])) == 0:
         return "marks"
-    
+
     return "__end__"
 
-# 2. GRAPH CONSTRUCTION
+# 2. CONSTRUÇÃO DO GRAFO
 def create_graph():
     """
-    Builds the Aequitas-MAS agentic graph using LangGraph.
+    Constrói o grafo agêntico Aequitas-MAS usando LangGraph.
 
-    This graph uses a centralized routing pattern where each specialist agent
-    (Graham, Fisher, Marks) returns control to a central `router` function
-    after execution. The router then decides the next step based on the current
-    state, allowing for dynamic, robust, and cyclical workflows.
+    Este grafo utiliza um padrão de roteamento centralizado onde cada agente especialista
+    (Graham, Fisher, Marks) devolve o controle a uma função `router` central
+    após a execução. O roteador então decide o próximo passo com base no estado
+    atual, permitindo fluxos de trabalho dinâmicos, robustos e cíclicos.
     """
-    # Initialize the Graph with the normative state schema
+    # Inicializa o Grafo com o esquema de estado normativo
     workflow = StateGraph(AgentState)
 
-    # Define the specialist agent nodes
+    # Define os nós dos agentes especialistas
     workflow.add_node("graham", graham_agent)
     workflow.add_node("fisher", fisher_agent)
     workflow.add_node("marks", marks_agent)
 
-    # Define the mapping from the router's decision to the next node
+    # Define o mapeamento da decisão do roteador para o próximo nó
     router_map = {
         "graham": "graham",
         "fisher": "fisher",
@@ -53,21 +53,21 @@ def create_graph():
         "__end__": END,
     }
 
-    # The entry point is now conditional, decided by the router function itself,
-    # allowing the graph to start at any point in the process.
+    # O ponto de entrada agora é condicional, decidido pela própria função do roteador,
+    # permitindo que o grafo inicie em qualquer ponto do processo.
     workflow.set_conditional_entry_point(router, router_map)
 
-    # Add conditional edges from each specialist back to the router.
+    # Adiciona arestas condicionais de cada especialista de volta para o roteador.
     workflow.add_conditional_edges("graham", router, router_map)
     workflow.add_conditional_edges("fisher", router, router_map)
     workflow.add_conditional_edges("marks", router, router_map)
 
-    # 3. PERSISTENCE (CHECKPOINTER)
-    # Local MemorySaver to maintain Isomorphism and Zero Cost
+    # 3. PERSISTÊNCIA (CHECKPOINTER)
+    # MemorySaver local para manter Isomorfismo e Custo Zero
     memory = MemorySaver()
 
-    # Compile the graph into a runnable app
+    # Compila o grafo em um aplicativo executável
     return workflow.compile(checkpointer=memory)
 
-# Global Graph Instance
+# Instância Global do Grafo
 app = create_graph()

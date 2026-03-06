@@ -25,10 +25,10 @@ class NewsItem(BaseModel):
     This schema enforces a strict data contract for news items, preventing
     downstream processing of incomplete or malformed data.
     """
-    title: str = Field(..., description="The headline of the news article.")
-    url: str = Field(..., description="The direct URL to the news article.")
+    title: str = Field(..., description="A manchete do artigo de notícia.")
+    url: str = Field(..., description="A URL direta para o artigo de notícia.")
     body: str = Field(
-        ..., description="A snippet or the full body of the article."
+        ..., description="Um trecho ou o corpo completo do artigo."
     )
 
 
@@ -48,8 +48,8 @@ def _validate_ticker(ticker: str) -> None:
     # B3 tickers are typically 4 letters followed by 1 or 2 digits
     if not re.match(r"^[A-Z]{4}[0-9]{1,2}$", processed_ticker):
         raise ValueError(
-            f"Invalid ticker format: '{ticker}'. "
-            "Must follow B3 standard (e.g., PETR4, MGLU3, BIDI11)."
+            f"Formato de ticker inválido: '{ticker}'. "
+            "Deve seguir o padrão da B3 (ex: PETR4, MGLU3, BIDI11)."
         )
 
 
@@ -69,13 +69,13 @@ def get_ticker_news(
     Raises:
         RuntimeError: If the news fetching process fails for any reason.
     """
-    logger.info("news_fetcher_invoked", ticker=ticker)
+    logger.info("news_fetcher_invocado", ticker=ticker)
     try:
         # 1. Boundary Validation (Fail Fast)
         _validate_ticker(ticker)
 
         # 2. Query Formulation
-        query = f"{ticker} finance news relevant facts"
+        query = f'{ticker} notícias fatos relevantes financeiro'
 
         # 3. Data Extraction using DDGS
         news_items: List[NewsItem] = []
@@ -99,7 +99,7 @@ def get_ticker_news(
                     )
 
         logger.info(
-            "news_fetcher_success",
+            "news_fetcher_sucesso",
             ticker=ticker,
             count=len(news_items)
         )
@@ -108,11 +108,11 @@ def get_ticker_news(
     except Exception as e:
         # 5. CRITICAL (Fail Fast on any error)
         logger.error(
-            "news_fetcher_failed",
+            "news_fetcher_falha",
             ticker=ticker,
             error=str(e)
         )
         # Do not return empty list; propagate the error to the agent.
         raise RuntimeError(
-            f"Failed to extract news for {ticker}: {str(e)}"
+            f"Falha ao extrair notícias para {ticker}: {str(e)}"
         )

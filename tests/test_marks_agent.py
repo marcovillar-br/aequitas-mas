@@ -102,5 +102,5 @@ def test_marks_agent_insufficient_data():
     # Assert: Verify the warning message is in the audit log
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
-    assert "Insufficient data" in result["audit_log"][0]
+    assert "Dados insuficientes" in result["audit_log"][0]
     assert "messages" not in result  # Should not produce a user-facing message on failure

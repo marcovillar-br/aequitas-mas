@@ -81,8 +81,7 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
     assert "metrics" not in result  # The metrics should not be populated
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
-    assert "CRITICAL: Quantitative engine failed for 'PETR4'" in result["audit_log"][0]
-
+    assert "CRÍTICO: Motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
     # Assert that a user-facing error message is returned
     assert "messages" in result
     assert isinstance(result["messages"][0], AIMessage)
