@@ -14,7 +14,7 @@ Classes:
 """
 import operator
 from decimal import Decimal, InvalidOperation
-from typing import Annotated, List, Optional, TypedDict, Any
+from typing import Annotated, List, Optional, TypedDict, Any, NotRequired
 
 from pydantic import (
     BaseModel,
@@ -164,10 +164,11 @@ class AgentState(TypedDict):
     target_ticker: str
 
     # Tensores de Decisão (Dados Estruturados).
-    # Opcionais porque são preenchidos progressivamente pelos agentes.
-    metrics: Optional[GrahamMetrics]
-    qual_analysis: Optional[FisherAnalysis]
-    macro_analysis: Optional[MacroAnalysis]
+    # Opcionais e Não-Obrigatórios porque são preenchidos progressivamente.
+    # A ausência da chave indica 'não executado', enquanto None indica 'falha controlada'.
+    metrics: NotRequired[Optional[GrahamMetrics]]
+    qual_analysis: NotRequired[Optional[FisherAnalysis]]
+    macro_analysis: NotRequired[Optional[MacroAnalysis]]
 
     # Log de Auditoria do Agente Marks (O Advogado do Diabo).
     # Annotated + operator.add permite acumular críticas sem sobrescrever.

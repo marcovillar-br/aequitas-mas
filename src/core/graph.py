@@ -15,15 +15,15 @@ def router(state: AgentState) -> Literal["graham", "fisher", "macro", "marks", "
     Decide o próximo passo com base no estado atual.
     """
     # Se o Agente Graham (Quant) ainda não atuou, ele é a prioridade
-    if not state.get("metrics"):
+    if "metrics" not in state:
         return "graham"
 
     # Se já temos dados quantitativos, mas falta a análise qualitativa
-    if not state.get("qual_analysis"):
+    if "qual_analysis" not in state:
         return "fisher"
 
     # If macroeconomic analysis is missing, call the Macro Agent
-    if not state.get("macro_analysis"):
+    if "macro_analysis" not in state:
         return "macro"
 
     # If Graham, Fisher, and Macro have finished, Marks (Auditor) gives the final verdict
