@@ -12,12 +12,11 @@ from src.core.state import AgentState, GrahamMetrics, FisherAnalysis, MacroAnaly
 
 def test_router_initial_state_goes_to_graham() -> None:
     """Tests if an empty state prioritizes the quantitative analysis (Graham)."""
-    initial_state: AgentState = {
-        "messages": [],
-        "target_ticker": "PETR4",
-        "audit_log": [],
-        "next_agent": ""
-    }
+    initial_state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        audit_log=[]
+    )
     
     next_node = router(initial_state)
     assert next_node == "graham", f"Expected 'graham', got {next_node}"
@@ -33,13 +32,12 @@ def test_router_quant_state_goes_to_fisher() -> None:
         fair_value=Decimal("45.0")
     )
     
-    state_with_quant: AgentState = {
-        "messages": [],
-        "target_ticker": "PETR4",
-        "metrics": mock_metrics,
-        "audit_log": [],
-        "next_agent": ""
-    }
+    state_with_quant = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=mock_metrics,
+        audit_log=[]
+    )
     
     next_node = router(state_with_quant)
     assert next_node == "fisher", f"Expected 'fisher', got {next_node}"
@@ -56,14 +54,13 @@ def test_router_full_context_goes_to_macro() -> None:
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
-    state_ready_for_macro: AgentState = {
-        "messages": [],
-        "target_ticker": "PETR4",
-        "metrics": mock_metrics,
-        "qual_analysis": mock_analysis,
-        "audit_log": [],
-        "next_agent": ""
-    }
+    state_ready_for_macro = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=mock_metrics,
+        qual_analysis=mock_analysis,
+        audit_log=[]
+    )
     
     next_node = router(state_ready_for_macro)
     assert next_node == "macro", f"Expected 'macro', got {next_node}"
@@ -81,15 +78,14 @@ def test_router_all_data_goes_to_marks() -> None:
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     mock_macro = MacroAnalysis(trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None)
 
-    state_ready_for_audit: AgentState = {
-        "messages": [],
-        "target_ticker": "PETR4",
-        "metrics": mock_metrics,
-        "qual_analysis": mock_analysis,
-        "macro_analysis": mock_macro,
-        "audit_log": [],
-        "next_agent": ""
-    }
+    state_ready_for_audit = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=mock_metrics,
+        qual_analysis=mock_analysis,
+        macro_analysis=mock_macro,
+        audit_log=[]
+    )
     
     next_node = router(state_ready_for_audit)
     assert next_node == "marks", f"Expected 'marks', got {next_node}"
@@ -108,15 +104,14 @@ def test_router_completed_state_ends_graph() -> None:
     
     mock_macro = MacroAnalysis(trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None)
     
-    completed_state: AgentState = {
-        "messages": [],
-        "target_ticker": "PETR4",
-        "metrics": mock_metrics,
-        "qual_analysis": mock_analysis,
-        "macro_analysis": mock_macro,
-        "audit_log": ["Audited successfully. Nominal margin is valid."],
-        "next_agent": ""
-    }
+    completed_state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=mock_metrics,
+        qual_analysis=mock_analysis,
+        macro_analysis=mock_macro,
+        audit_log=["Audited successfully. Nominal margin is valid."]
+    )
     
     next_node = router(completed_state)
     assert next_node == "__end__", f"Expected '__end__', got {next_node}"

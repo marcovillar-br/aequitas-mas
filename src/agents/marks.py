@@ -6,6 +6,7 @@ This module defines the agent responsible for acting as the "Devil's Advocate,"
 auditing the quantitative analysis from Graham and the qualitative analysis from
 Fisher to provide a final, risk-adjusted verdict.
 """
+import time
 import structlog
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -47,11 +48,15 @@ def marks_agent(state: AgentState) -> dict:
     Returns:
         A dictionary containing the `audit_log` with the final verdict.
     """
-    ticker = state["target_ticker"]
+    ticker = state.target_ticker
     log.info("agente_marks_invocado", ticker=ticker)
 
-    metrics = state.get("metrics")
-    qual_analysis = state.get("qual_analysis")
+    # Free-Tier Rate Limiting
+    log.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)
+    time.sleep(15)
+
+    metrics = state.metrics
+    qual_analysis = state.qual_analysis
 
     # 1. Fail-Fast: Check if prior agents produced the necessary data
     if not metrics or not qual_analysis:
@@ -67,7 +72,9 @@ def marks_agent(state: AgentState) -> dict:
 
     # 2. Define LLM and Prompt Template
     # Temperature is set to 0.2 to allow for some creative, critical thinking
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash", temperature=0.2, max_retries=1
+    )
     structured_llm = llm.with_structured_output(MarksVerdict)
 
     prompt = ChatPromptTemplate.from_template(

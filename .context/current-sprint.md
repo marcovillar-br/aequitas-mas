@@ -19,3 +19,6 @@
 - [ ] HyDE generation prompt and Semantic Chunking logic codified and validated.
 - [ ] Ethical Traceability enforced (sources are mapped to the final Pydantic schema).
 - [ ] Unit test coverage implemented in `tests/test_macro_agent.py` using `pytest-mock` to simulate LLM responses and Vector DB retrievals without real network calls.
+
+## **Context Dependency**
+Active Context Dependency: Consult the `[.context/agents/skills-index.md]` file for the correct routing of assistant competencies in this sprint.
