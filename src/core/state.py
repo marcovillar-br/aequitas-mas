@@ -108,6 +108,22 @@ class FisherAnalysis(BaseModel):
     )
 
 
+class MacroAnalysis(BaseModel):
+    """Holistic evaluation of the macroeconomic environment (Macro Agent)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    trend_summary: str = Field(
+        ..., description="Summary of the current macroeconomic trend."
+    )
+    interest_rate_impact: Optional[float] = Field(
+        None, description="Estimated impact of the interest rate (e.g., Selic/Fed Funds)."
+    )
+    inflation_outlook: Optional[str] = Field(
+        None, description="Inflation outlook extracted from official minutes."
+    )
+
+
 # 2. DEFINIÇÃO DO ESTADO DO GRAFO (LANGGRAPH)
 # O estado é o "objeto vivo" que circula entre os agentes.
 
@@ -131,6 +147,7 @@ class AgentState(TypedDict):
     # Opcionais porque são preenchidos progressivamente pelos agentes.
     metrics: Optional[GrahamMetrics]
     qual_analysis: Optional[FisherAnalysis]
+    macro_analysis: Optional[MacroAnalysis]
 
     # Log de Auditoria do Agente Marks (O Advogado do Diabo).
     # Annotated + operator.add permite acumular críticas sem sobrescrever.

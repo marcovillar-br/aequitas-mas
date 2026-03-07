@@ -4,7 +4,7 @@ from typing import Dict, Any
 from decimal import Decimal
 
 from src.core.graph import router
-from src.core.state import AgentState, GrahamMetrics, FisherAnalysis
+from src.core.state import AgentState, GrahamMetrics, FisherAnalysis, MacroAnalysis
 
 # -----------------------------------------------------------------------------
 # 1. UNIT TESTS: ROUTER LOGIC (Deterministic State Transitions)
@@ -47,8 +47,8 @@ def test_router_quant_state_goes_to_fisher() -> None:
     next_node = router(state_with_quant)
     assert next_node == "fisher", f"Expected 'fisher', got {next_node}"
 
-def test_router_full_context_goes_to_marks() -> None:
-    """Tests if a state with both quant and qual data routes to the auditor (Marks)."""
+def test_router_full_context_goes_to_macro() -> None:
+    """Tests if a state with both quant and qual data routes to the macro agent."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
         vpa=Decimal("35.0"),
@@ -59,11 +59,37 @@ def test_router_full_context_goes_to_marks() -> None:
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
+    state_ready_for_macro: AgentState = {
+        "messages": [],
+        "target_ticker": "PETR4",
+        "metrics": mock_metrics,
+        "qual_analysis": mock_analysis,
+        "audit_log": [],
+        "next_agent": ""
+    }
+    
+    next_node = router(state_ready_for_macro)
+    assert next_node == "macro", f"Expected 'macro', got {next_node}"
+
+def test_router_all_data_goes_to_marks() -> None:
+    """Tests if a state with quant, qual, and macro data routes to the auditor (Marks)."""
+    mock_metrics = GrahamMetrics(
+        ticker="PETR4",
+        vpa=Decimal("35.0"),
+        lpa=Decimal("8.0"),
+        price_to_earnings=Decimal("5.5"),
+        margin_of_safety=Decimal("30.0"),
+        fair_value=Decimal("45.0")
+    )
+    mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
+    mock_macro = MacroAnalysis(trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None)
+
     state_ready_for_audit: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
         "metrics": mock_metrics,
         "qual_analysis": mock_analysis,
+        "macro_analysis": mock_macro,
         "audit_log": [],
         "next_agent": ""
     }
@@ -83,11 +109,14 @@ def test_router_completed_state_ends_graph() -> None:
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
+    mock_macro = MacroAnalysis(trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None)
+    
     completed_state: AgentState = {
         "messages": [],
         "target_ticker": "PETR4",
         "metrics": mock_metrics,
         "qual_analysis": mock_analysis,
+        "macro_analysis": mock_macro,
         "audit_log": ["Audited successfully. Nominal margin is valid."],
         "next_agent": ""
     }
@@ -104,6 +133,7 @@ def mock_agents() -> Dict[str, Any]:
     """Pytest fixture to mock all agents and their return values."""
     with patch("src.core.graph.graham_agent") as mock_graham, \
          patch("src.core.graph.fisher_agent") as mock_fisher, \
+         patch("src.core.graph.macro_agent") as mock_macro, \
          patch("src.core.graph.marks_agent") as mock_marks:
 
         mock_graham.return_value = {
@@ -120,6 +150,12 @@ def mock_agents() -> Dict[str, Any]:
             ),
             "messages": [{"role": "assistant", "content": "Fisher executed."}]
         }
+        mock_macro.return_value = {
+            "macro_analysis": MacroAnalysis(
+                trend_summary="Neutral", interest_rate_impact=None, inflation_outlook=None
+            ),
+            "messages": [{"role": "assistant", "content": "Macro executed."}]
+        }
         mock_marks.return_value = {
             "audit_log": ["Verdict: High quality, low safety margin."],
             "messages": [{"role": "assistant", "content": "Marks executed."}]
@@ -127,6 +163,7 @@ def mock_agents() -> Dict[str, Any]:
         yield {
             "graham": mock_graham,
             "fisher": mock_fisher,
+            "macro": mock_macro,
             "marks": mock_marks
         }
 
@@ -147,13 +184,14 @@ def test_centralized_routing_flow(mock_agents: Dict[str, Any]) -> None:
         path.extend(s.keys())
         
     # The expected path of executed nodes. `__end__` is a state, not a node.
-    expected_path = ['graham', 'fisher', 'marks']
+    expected_path = ['graham', 'fisher', 'macro', 'marks']
     
     assert path == expected_path, f"Expected path {expected_path}, but got {path}"
     
     # Verify each agent was called once
     mock_agents["graham"].assert_called_once()
     mock_agents["fisher"].assert_called_once()
+    mock_agents["macro"].assert_called_once()
     mock_agents["marks"].assert_called_once()
 
 def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
@@ -164,7 +202,7 @@ def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
     from src.core.graph import create_graph
     app = create_graph()
     
-    # Start with a state that should skip Graham and Fisher
+    # Start with a state that should skip Graham, Fisher, and Macro
     initial_state = {
         "messages": [],
         "target_ticker": "PETR4",
@@ -175,6 +213,9 @@ def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
         "qual_analysis": FisherAnalysis(
             sentiment_score=0.5, key_risks=["Political Risk"],
             source_urls=["http://test.com"]
+        ),
+        "macro_analysis": MacroAnalysis(
+            trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None
         ),
         "audit_log": [],
     }
@@ -191,4 +232,5 @@ def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
     # Assert that the skipped agents were NOT called
     mock_agents["graham"].assert_not_called()
     mock_agents["fisher"].assert_not_called()
+    mock_agents["macro"].assert_not_called()
     mock_agents["marks"].assert_called_once()

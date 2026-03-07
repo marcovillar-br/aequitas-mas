@@ -1,19 +1,21 @@
 # 🎯 Project Status: Aequitas-MAS
 
-## 📌 Current Sprint: 3.1 - Cloud Infrastructure & Persistence (IaC)
-**Daily Focus:** Iniciar o provisionamento da infraestrutura Serverless na AWS e implementar os adaptadores hexagonais de persistência (Dependency Inversion), garantindo que o núcleo (Core) do LangGraph permaneça agnóstico em relação ao provedor de nuvem.
+## 📌 Current Sprint: 3.2 - Macro Agent & RAG HyDE Engine
+**Daily Focus:** Implement the internal logic for the Macro Agent, enabling holistic macroeconomic awareness. This involves building a Retrieval-Augmented Generation (RAG) pipeline powered by Hypothetical Dense Embeddings (HyDE) and Semantic Chunking to process FED reports and COPOM minutes.
 
 ### 🛠️ Immediate Session Objectives
-1. **IaC Provisioning (Terraform):** Desenvolver o ficheiro `infra/dynamodb.tf` para implementar a tabela de Checkpointer do LangGraph utilizando o modo de faturamento *Pay-Per-Request*.
-2. **Vector Database:** Desenvolver o ficheiro `infra/opensearch.tf` (Amazon OpenSearch Serverless) para preparar o pipeline RAG do Agente Fisher.
-3. **Hexagonal Cloud Adapters:** Criar o diretório e os módulos em `src/infra/adapters/` para isolar a biblioteca `boto3`.
+1. **RAG Pipeline (HyDE):** Develop the logic within `src/agents/macro.py` to replace the current mock. Implement the HyDE strategy to generate hypothetical economic contexts before querying the Vector Database.
+2. **Document Ingestion:** Create the necessary tools (e.g., `src/tools/macro_fetcher.py`) to ingest, parse, and apply Semantic Chunking to official macroeconomic documents.
+3. **State Integration:** Ensure the `macro_agent` successfully returns a strictly typed `MacroAnalysis` Pydantic object to mutate the `AgentState`.
 
 ### 🚫 Architectural Constraints (Risk Confinement)
-* **Dependency Inversion Principle (DIP):** É estritamente proibido importar `boto3` ou qualquer SDK de nuvem dentro dos diretórios `/src/agents` ou `/src/core`. Toda a comunicação deve ser injetada via interfaces/adaptadores.
-* **FinOps:** Todos os recursos Terraform devem usar modelos de cobrança sob demanda (*Serverless*) para evitar custos ociosos durante a fase de desenvolvimento.
-* **Zero Trust:** A gestão de segredos e chaves de API deve continuar a utilizar variáveis de ambiente injetadas pelo Secret Manager da IDE. Proibido o uso de ficheiros `.env` rastreados ou fixos no código.
+* **Zero Economic Hallucination:** The LLM is strictly forbidden from guessing or interpolating interest rates (e.g., Selic) or inflation metrics. All claims must be anchored in the retrieved context.
+* **Ethical Traceability:** The Macro Agent MUST return an array of URLs or Document IDs (`source_urls`) pointing to the specific COPOM/FED reports used for its analysis.
+* **Graceful Degradation:** If the Vector Database is unavailable or the retrieved context is insufficient, the agent must intercept the anomaly and return `None` (or an empty, neutral analysis) using the `Optional` typing, ensuring the graph does not break before reaching the Marks Agent.
+* **Vector DB Abstraction:** Database interactions must be abstracted, preparing for the OpenSearch Serverless integration provisioned in Sprint 3.1.
 
 ### ✅ Definition of Done (DoD) for Tomorrow
-- [ ] Ficheiros Terraform (`dynamodb.tf` e `opensearch.tf`) codificados e validados via `terraform fmt` e `terraform validate`.
-- [ ] Adaptador de persistência (`src/infra/adapters/dynamo_saver.py`) criado para interfacear com a AWS.
-- [ ] Cobertura de testes unitários para os adaptadores utilizando `pytest-mock` para simular as respostas do `boto3` sem realizar chamadas reais de rede.
+- [ ] `macro_agent` fully implemented, replacing the temporary mock in `src/agents/macro.py`.
+- [ ] HyDE generation prompt and Semantic Chunking logic codified and validated.
+- [ ] Ethical Traceability enforced (sources are mapped to the final Pydantic schema).
+- [ ] Unit test coverage implemented in `tests/test_macro_agent.py` using `pytest-mock` to simulate LLM responses and Vector DB retrievals without real network calls.
