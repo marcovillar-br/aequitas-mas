@@ -23,7 +23,7 @@ def router(state: AgentState) -> Literal["graham", "fisher", "macro", "marks", "
         return "fisher"
 
     # If macroeconomic analysis is missing, call the Macro Agent
-    if "macro_analysis" not in state:
+    if not state.get("macro_analysis"):
         return "macro"
 
     # If Graham, Fisher, and Macro have finished, Marks (Auditor) gives the final verdict

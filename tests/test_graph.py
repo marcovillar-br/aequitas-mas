@@ -17,6 +17,7 @@ def test_router_initial_state_goes_to_graham() -> None:
         "target_ticker": "PETR4",
         "metrics": None,
         "qual_analysis": None,
+        "macro_analysis": None,
         "audit_log": [],
         "next_agent": ""
     }
@@ -40,6 +41,7 @@ def test_router_quant_state_goes_to_fisher() -> None:
         "target_ticker": "PETR4",
         "metrics": mock_metrics,
         "qual_analysis": None,
+        "macro_analysis": None,
         "audit_log": [],
         "next_agent": ""
     }
@@ -64,6 +66,7 @@ def test_router_full_context_goes_to_macro() -> None:
         "target_ticker": "PETR4",
         "metrics": mock_metrics,
         "qual_analysis": mock_analysis,
+        "macro_analysis": None,
         "audit_log": [],
         "next_agent": ""
     }
