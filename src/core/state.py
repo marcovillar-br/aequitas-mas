@@ -122,6 +122,10 @@ class MacroAnalysis(BaseModel):
     inflation_outlook: Optional[str] = Field(
         None, description="Inflation outlook extracted from official minutes."
     )
+    # Rastreabilidade Ética: Citação de fonte obrigatória.
+    source_urls: List[str] = Field(
+        default_factory=list, description="URLs das fontes usadas para a análise."
+    )
 
     @field_validator(
         "interest_rate_impact",
