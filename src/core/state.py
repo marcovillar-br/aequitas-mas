@@ -116,12 +116,28 @@ class MacroAnalysis(BaseModel):
     trend_summary: str = Field(
         ..., description="Summary of the current macroeconomic trend."
     )
-    interest_rate_impact: Optional[float] = Field(
+    interest_rate_impact: Optional[Decimal] = Field(
         None, description="Estimated impact of the interest rate (e.g., Selic/Fed Funds)."
     )
     inflation_outlook: Optional[str] = Field(
         None, description="Inflation outlook extracted from official minutes."
     )
+
+    @field_validator(
+        "interest_rate_impact",
+        mode="before",
+    )
+    @classmethod
+    def coerce_to_decimal(cls, v: Any) -> Optional[Decimal]:
+        """
+        Coage com segurança entradas para Decimal.
+        """
+        if v is None:
+            return None
+        try:
+            return Decimal(str(v))
+        except (InvalidOperation, ValueError):
+            raise ValueError(f"Não foi possível converter o valor '{v}' para Decimal.")
 
 
 # 2. DEFINIÇÃO DO ESTADO DO GRAFO (LANGGRAPH)
