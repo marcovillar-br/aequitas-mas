@@ -7,6 +7,7 @@ based on the Philip Fisher methodology. It analyzes financial news to gauge
 market sentiment and identify potential risks.
 """
 from typing import List
+import time
 
 import structlog
 from langchain_core.messages import AIMessage
@@ -41,8 +42,13 @@ def fisher_agent(state: AgentState) -> dict:
     Returns:
         A dictionary with the mutated state keys (`qual_analysis` or `audit_log`).
     """
-    ticker = state["target_ticker"]
+    ticker = state.target_ticker
     logger.info("agente_fisher_invocado", ticker=ticker)
+
+    # Free-Tier Rate Limiting
+    logger.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)
+    time.sleep(15)
+
     urls = []
 
     try:
@@ -69,7 +75,9 @@ def fisher_agent(state: AgentState) -> dict:
         formatted_news = _format_news_for_prompt(news_items)
 
         # 2. Define the LLM and Prompt for structured output
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.1)
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash", temperature=0.1, max_retries=1
+        )
         structured_llm = llm.with_structured_output(FisherAnalysis)
 
         prompt = (

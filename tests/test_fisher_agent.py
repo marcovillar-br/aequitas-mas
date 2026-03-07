@@ -40,12 +40,11 @@ MOCK_LLM_ANALYSIS = FisherAnalysis(
 def initial_state() -> AgentState:
     """Provides a baseline AgentState for tests."""
     return AgentState(
-        messages=[("human", "Analyze the ticker PETR4")],
+        messages=[],
         target_ticker="PETR4",
         metrics=None,
         qual_analysis=None,
         audit_log=[],
-        next_agent="",
     )
 
 
@@ -78,7 +77,9 @@ def test_fisher_agent_success_and_traceability(
     # --- Assert ---
     # 1. Verify that the correct functions were called
     mock_get_news.assert_called_once_with("PETR4")
-    mock_chat_model.assert_called_once_with(model="gemini-2.5-flash", temperature=0.1)
+    mock_chat_model.assert_called_once_with(
+        model="gemini-2.5-flash", temperature=0.1, max_retries=1
+    )
     mock_structured_llm.invoke.assert_called_once()
 
     # 2. Verify the structure and content of the returned state delta

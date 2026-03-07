@@ -78,7 +78,10 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
 
     # Assert: Check that the agent handled the error correctly
     mock_get_data.assert_called_once_with("PETR4")
-    assert "metrics" not in result  # The metrics should not be populated
+    # Assert that the agent returned a placeholder metric to break the graph loop
+    assert "metrics" in result
+    assert isinstance(result["metrics"], GrahamMetrics)
+    assert result["metrics"].fair_value is None  # Critical value is None on failure
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
     assert "CRÍTICO: Motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
