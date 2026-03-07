@@ -1,6 +1,7 @@
 """
 Temporary mock for the Macro Agent.
-The actual implementation of this agent will occur in another sprint.
+This is a stub for incremental delivery. The actual implementation 
+is the primary focus of the current sprint (Sprint 3.2).
 """
 from src.core.state import AgentState
 
