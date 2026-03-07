@@ -14,7 +14,7 @@ Classes:
 """
 import operator
 from decimal import Decimal, InvalidOperation
-from typing import Annotated, List, Optional, TypedDict, Any
+from typing import Annotated, List, Optional, TypedDict, Any, NotRequired
 
 from pydantic import (
     BaseModel,
@@ -108,6 +108,42 @@ class FisherAnalysis(BaseModel):
     )
 
 
+class MacroAnalysis(BaseModel):
+    """Holistic evaluation of the macroeconomic environment (Macro Agent)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    trend_summary: str = Field(
+        ..., description="Summary of the current macroeconomic trend."
+    )
+    interest_rate_impact: Optional[Decimal] = Field(
+        None, description="Estimated impact of the interest rate (e.g., Selic/Fed Funds)."
+    )
+    inflation_outlook: Optional[str] = Field(
+        None, description="Inflation outlook extracted from official minutes."
+    )
+    # Rastreabilidade Ética: Citação de fonte obrigatória.
+    source_urls: List[str] = Field(
+        default_factory=list, description="URLs das fontes usadas para a análise."
+    )
+
+    @field_validator(
+        "interest_rate_impact",
+        mode="before",
+    )
+    @classmethod
+    def coerce_to_decimal(cls, v: Any) -> Optional[Decimal]:
+        """
+        Coage com segurança entradas para Decimal.
+        """
+        if v is None:
+            return None
+        try:
+            return Decimal(str(v))
+        except (InvalidOperation, ValueError):
+            raise ValueError(f"Não foi possível converter o valor '{v}' para Decimal.")
+
+
 # 2. DEFINIÇÃO DO ESTADO DO GRAFO (LANGGRAPH)
 # O estado é o "objeto vivo" que circula entre os agentes.
 
@@ -128,9 +164,11 @@ class AgentState(TypedDict):
     target_ticker: str
 
     # Tensores de Decisão (Dados Estruturados).
-    # Opcionais porque são preenchidos progressivamente pelos agentes.
-    metrics: Optional[GrahamMetrics]
-    qual_analysis: Optional[FisherAnalysis]
+    # Opcionais e Não-Obrigatórios porque são preenchidos progressivamente.
+    # A ausência da chave indica 'não executado', enquanto None indica 'falha controlada'.
+    metrics: NotRequired[Optional[GrahamMetrics]]
+    qual_analysis: NotRequired[Optional[FisherAnalysis]]
+    macro_analysis: NotRequired[Optional[MacroAnalysis]]
 
     # Log de Auditoria do Agente Marks (O Advogado do Diabo).
     # Annotated + operator.add permite acumular críticas sem sobrescrever.

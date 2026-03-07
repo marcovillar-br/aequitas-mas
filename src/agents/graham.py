@@ -56,7 +56,6 @@ def graham_agent(state: AgentState) -> dict:
 
     except RuntimeError as e:
         # Graceful degradation and circuit breaking
-        error_message = f"Ferramenta Graham falhou para {ticker}: {e}"
         logger.error("graham_tool_error", ticker=ticker, error=str(e))
 
         # Append a critical note to the audit log for Marks Agent to see

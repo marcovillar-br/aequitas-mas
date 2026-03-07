@@ -9,8 +9,6 @@ failure scenarios gracefully.
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
-import pytest
-from langchain_core.messages import AIMessage
 
 from src.agents.marks import MarksVerdict, marks_agent
 from src.core.state import AgentState, FisherAnalysis, GrahamMetrics
