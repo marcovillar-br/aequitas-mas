@@ -79,11 +79,12 @@ poetry run python -c "import platform; print(platform.python_version())"
 poetry run pytest tests/
 ```
 
-### 9. Status do Projeto (Tracking de Execução)
+## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.2)
 
-| Módulo/Componente | Status | Cobertura de Testes | Observações de Arquitetura |
-| :--- | :--- | :--- | :--- |
-| **Infraestrutura AWS (Terraform)** | ✅ Concluído | N/A | Políticas IAM e DynamoDB configurados. |
-| **Agente Fisher (Qualitativo RAG)** | ✅ Concluído | 100% | Rastreabilidade ética operante (URLs). |
-| **Agente Graham (Quantitativo)** | ✅ Concluído | Ativa (`tests/test_graham_agent.py`) | Refatoração para contrato tipado e validação via `pytest` implementada. |
-| **Aequitas Core (Supervisor DAG)** | ✅ Concluído | Ativa (`tests/test_graph.py`) | Contrato de estado em Pydantic alinhado com `Optional[float] = None` e degradação controlada. |
+| Phase | Component | Status | Traceability |
+| --- | --- | --- | --- |
+| **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
+| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | Resolvido: Refatoração Decimal -> float concluída. |
+| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` (Aligned) |
+| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` |
+| **3.2** | Macro Agent & RAG HyDE | 🔄 In Progress | Pendente: Substituir mock por OpenSearch real em `macro.py`. |
