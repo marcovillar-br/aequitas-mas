@@ -3,13 +3,11 @@ name: "AQM Multi-Account Infrastructure"
 on:
   push:
     branches:
-      - main
       - development
       - "feat/*"
-      - "release/*"
+      - "fix/*"
   pull_request:
     branches:
-      - main
       - development
 
 permissions:
@@ -21,15 +19,13 @@ jobs:
     name: "Terraform Execution"
     runs-on: ubuntu-latest
     concurrency:
-      group: terraform-${{ github.event_name == 'pull_request' && 'dev' || (github.ref_name == 'main' && 'prod' || startsWith(github.ref_name, 'release/') && 'hom' || github.ref_name == 'development' && 'dev' || 'dev') }}
+      group: terraform-dev
       cancel-in-progress: false
     
     env:
       # Sincronização global de região (mapeia para var.AQM_REGION)
       TF_VAR_AQM_REGION: "us-east-1"
       DEV_ACCOUNT: "355316257214"
-      HOM_ACCOUNT: "051259249680"
-      PROD_ACCOUNT: "344693946474"
 
     defaults:
       run:
@@ -43,39 +39,9 @@ jobs:
       - name: Set Environment Context
         id: context
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Pull requests always run validate/plan in DEV to avoid PROD OIDC dependency.
-            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
-            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-          
-          if [[ "$BRANCH" == "main" ]]; then
-            echo "ACCOUNT_ID=${{ env.PROD_ACCOUNT }}" >> $GITHUB_OUTPUT
-            echo "WORKSPACE=prod" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == "release/"* ]]; then
-            echo "ACCOUNT_ID=${{ env.HOM_ACCOUNT }}" >> $GITHUB_OUTPUT
-            echo "WORKSPACE=hom" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == "development" ]]; then
-            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
-            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
-          else
-            # Padrão para feat/* ou branches internas é o ambiente de Dev
-            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
-            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
-          fi
-
-      # Debug: Verify context resolution
-      - name: Debug Environment Context
-        run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Base Ref: ${{ github.base_ref }}"
-          echo "Computed ACCOUNT_ID: ${{ steps.context.outputs.ACCOUNT_ID }}"
-          echo "Computed WORKSPACE: ${{ steps.context.outputs.WORKSPACE }}"
-          echo "Role ARN: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD"
+          # Development stage: always execute terraform checks in DEV account/workspace.
+          echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+          echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
 
       # 2. Authenticate to AWS via OIDC (Zero Trust)
       - name: Configure AWS Credentials
@@ -110,7 +76,4 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -no-color
 
-      # 7. Controlled Deployment: Only on Push to Main or Development
-      - name: Terraform Apply
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
-        run: terraform apply -lock-timeout=5m -auto-approve
+      # 7. Controlled Deployment is intentionally disabled in this development stage.
