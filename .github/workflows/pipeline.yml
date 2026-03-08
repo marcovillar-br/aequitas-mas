@@ -6,7 +6,6 @@ on:
       - main
       - development
       - "feat/*"
-      - "fix/*"
       - "release/*"
   pull_request:
     branches:
@@ -22,7 +21,7 @@ jobs:
     name: "Terraform Execution"
     runs-on: ubuntu-latest
     concurrency:
-      group: terraform-${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || startsWith(github.base_ref, 'release/') && 'hom' || github.base_ref == 'development' && 'dev' || 'dev') || (github.ref_name == 'main' && 'prod' || startsWith(github.ref_name, 'release/') && 'hom' || github.ref_name == 'development' && 'dev' || 'dev') }}
+      group: terraform-${{ github.event_name == 'pull_request' && 'dev' || (github.ref_name == 'main' && 'prod' || startsWith(github.ref_name, 'release/') && 'hom' || github.ref_name == 'development' && 'dev' || 'dev') }}
       cancel-in-progress: false
     
     env:
@@ -45,7 +44,10 @@ jobs:
         id: context
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BRANCH="${{ github.base_ref }}"
+            # Pull requests always run validate/plan in DEV to avoid PROD OIDC dependency.
+            echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+            echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+            exit 0
           else
             BRANCH="${{ github.ref_name }}"
           fi
