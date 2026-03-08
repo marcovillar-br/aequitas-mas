@@ -1,13 +1,26 @@
+"""
+LangGraph orchestration module for Aequitas-MAS.
+
+FinOps Circuit Breaker (Recursion Limit):
+In LangGraph 0.2.x, recursion_limit is passed at runtime:
+    result = app.invoke(
+        input_data,
+        config={"recursion_limit": 15}
+    )
+This prevents infinite LLM loops and controls API billing costs.
+"""
+
 import structlog
-from src.agents.graham import graham_agent
+from typing import Literal
+
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledGraph
+
 from src.agents.fisher import fisher_agent
+from src.agents.graham import graham_agent
 from src.agents.macro import macro_agent
 from src.agents.marks import marks_agent
-from typing import Literal
-from langgraph.graph import StateGraph, END
-from langgraph.graph.state import CompiledGraph
-from langgraph.checkpoint.memory import MemorySaver
-
 from src.core.state import AgentState
 
 logger = structlog.get_logger(__name__)
@@ -92,6 +105,8 @@ def create_graph() -> CompiledGraph:
     memory = MemorySaver()
 
     # Compile the graph into an executable application
+    # NOTE: recursion_limit is passed at runtime via config parameter in invoke()
+    # to comply with LangGraph 0.2.x API. See module docstring for circuit breaker usage.
     return workflow.compile(checkpointer=memory)
 
 # Global Graph Instance

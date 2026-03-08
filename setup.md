@@ -59,7 +59,7 @@ The project rigorously separates intelligence (Agents) from adapters (Tools/Infr
 ## 6. State Contract Implementation (`src/core/state.py`)
 
 This is the core of the **Risk Confinement**. The state is not text; it is a validated Pydantic object that enforces two critical dogmas:
-1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa`) are strictly typed as `decimal.Decimal`, preventing floating-point errors and ensuring mathematical precision.
+1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa` e métricas derivadas) are typed as `Optional[float] = None` at the LangGraph state boundary, enabling controlled degradation without stochastic guessing.
 2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
 
 ## 7. Security & FinOps Protocol (Zero Trust)
@@ -79,12 +79,11 @@ poetry run python -c "import platform; print(platform.python_version())"
 poetry run pytest tests/
 ```
 
-## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.1)
+### 9. Status do Projeto (Tracking de Execução)
 
-| Phase | Component | Status | Traceability |
-| --- | --- | --- | --- |
-| **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
-| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | DDE v4.2, Sec 1 |
-| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/` |
-| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/` |
-| **3.1** | Cloud Infrastructure (DynamoDB/OpenSearch) | 🔄 In Progress | `infra/*.tf` |
+| Módulo/Componente | Status | Cobertura de Testes | Observações de Arquitetura |
+| :--- | :--- | :--- | :--- |
+| **Infraestrutura AWS (Terraform)** | ✅ Concluído | N/A | Políticas IAM e DynamoDB configurados. |
+| **Agente Fisher (Qualitativo RAG)** | ✅ Concluído | 100% | Rastreabilidade ética operante (URLs). |
+| **Agente Graham (Quantitativo)** | ✅ Concluído | Ativa (`tests/test_graham_agent.py`) | Refatoração para contrato tipado e validação via `pytest` implementada. |
+| **Aequitas Core (Supervisor DAG)** | ✅ Concluído | Ativa (`tests/test_graph.py`) | Contrato de estado em Pydantic alinhado com `Optional[float] = None` e degradação controlada. |

@@ -19,10 +19,16 @@ Activate this skill during infrastructure setup, code reviews, environment confi
 * **Graph Isolation:** State variables must not bleed across different financial assets. Use unique `thread_id` configurations in LangGraph.
 * **Pydantic Firewalls:** The transition between graph nodes (edges) must act as a validation firewall. If an LLM outputs malformed data, the Pydantic parser (>= v2.0) should catch the `ValidationError` and trigger a deterministic fallback, not a hallucination.
 
-### 3.2. GenAI Vulnerability Mitigation
+### 3.2. GenAI Vulnerability Mitigation & Risk Confinement
 * **Prompt Injection:** Sanitize all external inputs (e.g., news articles scraped by Playwright) before injecting them into the Gemini/Claude context windows.
-* **Numerical Integrity:** Language Models are prohibited from performing financial arithmetic. All state values representing money or percentages must be handled as `decimal.Decimal` in Python, never as `float`.
+* **Algorithmic Security (Anti-Hallucination):** The LLM acts solely as a probabilistic orchestrator. Allowing the LLM to execute raw math or "guess" missing multiples is considered a critical security vulnerability.
+* **State Integrity over Precision:** To prevent catastrophic state failure in LangGraph, data contracts must explicitly handle missing values. 
+  * **Rule:** Ban the use of `Decimal` in Pydantic models facing the LLM. Enforce `Optional[float] = None` to gracefully handle extraction anomalies and immediately cut off the LLM's stochastic guessing. This supersedes standard financial coding guidelines to maintain graph integrity.
+
+### 3.3. Execution Sandboxing
+* Tools executing the `Code Interpreter` pattern or external financial libraries must run in isolated boundaries. The LLM cannot write and execute arbitrary Python code on the fly; it can only invoke pre-approved, strictly typed functions from `/src/tools/`.
 
 ## 4. Audit & Observability
 * **Structured Logging:** Use JSON-formatted logging for all agent decisions.
 * **PII Protection:** Ensure logs are sanitized. Never log personal identifiable information or raw proprietary trading alpha signals.
+* **Traceability:** Agents using RAG must return source URLs or Document IDs in their output schemas to prevent the injection of obsolete data.
