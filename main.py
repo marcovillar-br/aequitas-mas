@@ -36,6 +36,83 @@ except ImportError as e:
     logger.error("import_error", error=str(e), exc_info=True)
     sys.exit(1)
 
+def print_report(final_state: dict) -> None:
+    """
+    Prints a formatted investment report in Portuguese (PT-BR) to the terminal.
+    
+    Args:
+        final_state: The final state dictionary returned by the LangGraph execution.
+    """
+    # Visual separator for terminal readability
+    print("\n" + "=" * 80)
+    print("📊 RELATÓRIO FINAL DE INVESTIMENTO - AEQUITAS-MAS")
+    print("=" * 80 + "\n")
+    
+    # Header: Target Asset
+    ticker = final_state.get("target_ticker", "DESCONHECIDO")
+    print(f"🎯 ATIVO ANALISADO: {ticker}")
+    print("-" * 80)
+    
+    # Section 1: Quantitative Analysis (Graham)
+    metrics = final_state.get("metrics")
+    if metrics:
+        print("\n📈 ANÁLISE QUANTITATIVA (Graham Agent):")
+        print(f"   • Valor Justo (Fair Value): R$ {metrics.fair_value:.2f}" if metrics.fair_value else "   • Valor Justo: Não disponível")
+        print(f"   • Margem de Segurança: {metrics.margin_of_safety:.2f}%" if metrics.margin_of_safety else "   • Margem de Segurança: Não disponível")
+        print(f"   • P/L (Price-to-Earnings): {metrics.price_to_earnings:.2f}" if metrics.price_to_earnings else "   • P/L: Não disponível")
+        print(f"   • VPA (Valor Patrimonial/Ação): R$ {metrics.vpa:.2f}" if metrics.vpa else "   • VPA: Não disponível")
+        print(f"   • LPA (Lucro por Ação): R$ {metrics.lpa:.2f}" if metrics.lpa else "   • LPA: Não disponível")
+    else:
+        print("\n📈 ANÁLISE QUANTITATIVA (Graham Agent):")
+        print("   ⚠️  Dados insuficientes. A análise quantitativa não foi concluída.")
+    
+    # Section 2: Qualitative Analysis (Fisher)
+    qual_analysis = final_state.get("qual_analysis")
+    if qual_analysis:
+        print("\n📰 ANÁLISE QUALITATIVA (Fisher Agent):")
+        print(f"   • Score de Sentimento: {qual_analysis.sentiment_score:.2f} (escala -1 a 1)")
+        print(f"   • Riscos Identificados:")
+        for risk in qual_analysis.key_risks:
+            print(f"     - {risk}")
+        if qual_analysis.source_urls:
+            print(f"   • Fontes: {len(qual_analysis.source_urls)} URL(s) consultada(s)")
+    else:
+        print("\n📰 ANÁLISE QUALITATIVA (Fisher Agent):")
+        print("   ⚠️  Dados insuficientes. A análise qualitativa não foi concluída.")
+    
+    # Section 3: Macroeconomic Analysis (Macro)
+    macro_analysis = final_state.get("macro_analysis")
+    if macro_analysis:
+        print("\n🌐 ANÁLISE MACROECONÔMICA (Macro Agent):")
+        print(f"   • Tendência: {macro_analysis.trend_summary}")
+        if macro_analysis.inflation_outlook:
+            print(f"   • Perspectiva de Inflação: {macro_analysis.inflation_outlook}")
+        if macro_analysis.interest_rate_impact:
+            print(f"   • Impacto da Taxa de Juros: {macro_analysis.interest_rate_impact:.2f}")
+        if macro_analysis.source_urls:
+            print(f"   • Fontes: {len(macro_analysis.source_urls)} documento(s) oficial(is)")
+    else:
+        print("\n🌐 ANÁLISE MACROECONÔMICA (Macro Agent):")
+        print("   ℹ️  Análise macroeconômica não executada ou indisponível.")
+    
+    # Section 4: Final Verdict (Marks - Risk Auditor)
+    print("\n⚖️  VEREDITO FINAL (Marks Agent - Auditor de Risco):")
+    print("-" * 80)
+    
+    audit_log = final_state.get("audit_log", [])
+    if audit_log and len(audit_log) > 0:
+        # The last entry in audit_log is the final verdict from Marks
+        final_verdict = audit_log[-1]
+        print(f"\n{final_verdict}\n")
+    else:
+        print("\n⚠️  ERRO: Veredito final não disponível. A análise de risco não foi concluída.\n")
+        logger.error("final_verdict_missing", ticker=ticker)
+    
+    print("=" * 80)
+    print("Análise concluída. Sistema Aequitas-MAS v2.0")
+    print("=" * 80 + "\n")
+
+
 def run_analysis(ticker: str) -> None:
     """
     Initializes the LangGraph state machine and executes the graph.
@@ -66,10 +143,15 @@ def run_analysis(ticker: str) -> None:
     
     try:
         # Graph execution: FinOps Circuit Breaker enforced by recursion_limit
-        app.invoke(initial_state, config)
+        result = app.invoke(initial_state, config)
         logger.info("analysis_completed", status="success")
+        
+        # Extract final state and print formatted report
+        print_report(result)
+        
     except Exception as e:
         structlog.get_logger().error("graph_execution_failed", error=str(e), exc_info=True)
+        print("\n⚠️  ERRO CRÍTICO: A execução do grafo falhou. Verifique os logs para detalhes.\n")
 
 if __name__ == "__main__":
     logger.info("script_started", file="main.py")

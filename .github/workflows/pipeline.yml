@@ -21,6 +21,9 @@ jobs:
   terraform:
     name: "Terraform Execution"
     runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || startsWith(github.base_ref, 'release/') && 'hom' || github.base_ref == 'development' && 'dev' || 'dev') || (github.ref_name == 'main' && 'prod' || startsWith(github.ref_name, 'release/') && 'hom' || github.ref_name == 'development' && 'dev' || 'dev') }}
+      cancel-in-progress: false
     
     env:
       # Sincronização global de região (mapeia para var.AQM_REGION)
@@ -62,6 +65,16 @@ jobs:
             echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
           fi
 
+      # Debug: Verify context resolution
+      - name: Debug Environment Context
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Base Ref: ${{ github.base_ref }}"
+          echo "Computed ACCOUNT_ID: ${{ steps.context.outputs.ACCOUNT_ID }}"
+          echo "Computed WORKSPACE: ${{ steps.context.outputs.WORKSPACE }}"
+          echo "Role ARN: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD"
+
       # 2. Authenticate to AWS via OIDC (Zero Trust)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -93,9 +106,9 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -no-color
+        run: terraform plan -lock-timeout=5m -no-color
 
       # 7. Controlled Deployment
       - name: Terraform Apply
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
-        run: terraform apply -auto-approve
+        run: terraform apply -lock-timeout=5m -auto-approve
