@@ -87,4 +87,5 @@ poetry run pytest tests/
 | **1.2** | State Isomorphism (`state.py`) | ✅ Completed | Resolvido: Refatoração Decimal -> float concluída. |
 | **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` (Aligned) |
 | **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` |
-| **3.2** | Macro Agent & RAG HyDE | 🔄 In Progress | Pendente: Substituir mock por OpenSearch real em `macro.py`. |
+| **3.1** | Persistência Serverless (DynamoDB) | ✅ Completed | `src/infra/adapters/dynamo_saver.py` (Isomorfismo Local-Cloud) |
+| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | 🔄 In Progress | Pendente: Substituição de mock por chamadas reais via OpenSearchVectorSearch. |

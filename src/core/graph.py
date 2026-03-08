@@ -10,6 +10,8 @@ In LangGraph 0.2.x, recursion_limit is passed at runtime:
 This prevents infinite LLM loops and controls API billing costs.
 """
 
+import os
+
 import structlog
 from typing import Literal
 
@@ -22,6 +24,7 @@ from src.agents.graham import graham_agent
 from src.agents.macro import macro_agent
 from src.agents.marks import marks_agent
 from src.core.state import AgentState
+from src.infra.adapters.dynamo_saver import DynamoDBSaver
 
 logger = structlog.get_logger(__name__)
 
@@ -101,8 +104,12 @@ def create_graph() -> CompiledGraph:
     workflow.add_conditional_edges("marks", router, router_map)
 
     # 3. PERSISTENCE (CHECKPOINTER)
-    # Local MemorySaver to maintain Isomorphism and Zero Cost
-    memory = MemorySaver()
+    env = os.getenv("ENVIRONMENT", "local").lower()
+    if env == "local":
+        memory = MemorySaver()
+    else:
+        # This safely covers cloud environments such as dev, hom, and prod.
+        memory = DynamoDBSaver()
 
     # Compile the graph into an executable application
     # NOTE: recursion_limit is passed at runtime via config parameter in invoke()

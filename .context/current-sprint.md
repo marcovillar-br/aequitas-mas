@@ -1,14 +1,14 @@
 # 🎯 Project Status: Aequitas-MAS
 
-## 📌 Current Sprint: 3.1 - Infraestrutura de Persistência (Serverless)
-**Foco Imediato:** Liquidar a dívida técnica de infraestrutura implementando o `DynamoDBSaver` via Inversão de Dependência, garantindo testabilidade absoluta local.
+## 📌 Current Sprint: 3.2 - Agente Macro e RAG HyDE (OpenSearch)
+**Foco Imediato:** Integrar a busca vetorial real e validar a injeção do contexto macroeconômico holístico no Grafo.
 
 ### 🛠️ Objetivos da Próxima Sessão (SOD)
-1.  **Implementação do Adaptador DynamoDB:** Criar a classe `DynamoDBSaver` com Injeção de Dependência (DI) para isolar o `boto3`.
-2.  **Validação de Zero Trust (Testes):** Desenvolver testes unitários rigorosos com `pytest-mock` simulando o comportamento da tabela DynamoDB sem chamadas de rede.
-3.  **Integração Dinâmica do Checkpointer:** Atualizar a função `create_graph` para selecionar entre `MemorySaver` (local) e `DynamoDBSaver` (cloud) com base no ambiente.
+1.  **Integração OpenSearch (Prioridade 1):** Substituir a estrutura de *mock* em `src/agents/macro.py` por uma chamada ao adaptador vetorizado (ex: `OpenSearchVectorSearch`), utilizando o documento hipotético gerado pelo HyDE para buscar contexto real do FED/COPOM.
+2.  **Rastreabilidade Ética:** Garantir que o campo `source_urls` no *schema* Pydantic `MacroAnalysis` seja preenchido dinamicamente com as URLs ou IDs recuperados do OpenSearch.
+3.  **Confinamento de Infraestrutura (DIP):** Impedir que SDKs de nuvem (`boto3`, `opensearch-py`) vazem diretamente para o arquivo do agente. Eles devem vir encapsulados através da infraestrutura.
 
 ### ✅ Definition of Done (DoD)
-- [ ] `DynamoDBSaver` implementado sem ferir o confinamento da nuvem (DIP).
-- [ ] Cobertura de testes (`pytest-mock`) confirmando o isolamento da AWS.
-- [ ] Ausência estrita da biblioteca `decimal.Decimal` na serialização, preservando a degradação controlada com `Optional[float] = None`.
+- [ ] `macro_agent` realizando *retrieval* dinâmico com base no vetor de similaridade.
+- [ ] Histórico de execução validado sem alucinações (uso restrito de `Optional[float] = None` caso os vetores não contenham dados quantitativos precisos).
+- [ ] Grafo executado de ponta a ponta (`pytest tests/test_graph.py`) confirmando a robustez sem degradação do estado.clea
