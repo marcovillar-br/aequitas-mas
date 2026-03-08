@@ -3,28 +3,22 @@
 Central state module for the Aequitas-MAS.
 
 This file defines the data structure that circulates among the agents in the LangGraph.
-Adhering to the "Zero Numerical Hallucination" principle, all financial metrics
-use `decimal.Decimal` to ensure mathematical precision and avoid floating-point
-errors from the `float` type.
+Adhering to the "Controlled Degradation" principle, financial metrics are represented
+as `Optional[float]` and validated to avoid non-finite values (NaN/Inf).
 
 Classes:
     GrahamMetrics: Pydantic schema for the Graham Agent's metrics.
     FisherAnalysis: Pydantic schema for the Fisher Agent's qualitative analysis.
     AgentState: Pydantic BaseModel representing the complete graph state.
 """
+
+import math
 import operator
-from decimal import Decimal, InvalidOperation
-from typing import Annotated, List, Optional, Any
+from typing import Annotated, Any, List, Optional
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
-
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # 1. PYDANTIC SCHEMAS (BOUNDARY VALIDATION)
@@ -36,9 +30,8 @@ class GrahamMetrics(BaseModel):
     """
     Deterministic Value Investing metrics (Graham Agent).
 
-    This class enforces the "Zero Numerical Hallucination" dogma by using
-    `Decimal` for all financial calculations and preventing the entry of
-    primitive `float` types.
+    This class enforces the "Controlled Degradation" dogma by validating
+    numeric values as finite floats and allowing missing metrics as `None`.
     """
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
@@ -51,18 +44,27 @@ class GrahamMetrics(BaseModel):
     )
 
     # Campos financeiros obrigatórios para a fórmula de Graham.
-    vpa: Optional[Decimal] = Field(None, description="Valor Patrimonial por Ação (VPA).")
-    lpa: Optional[Decimal] = Field(None, description="Lucro por Ação (LPA).")
+    vpa: Optional[float] = Field(
+        default=None,
+        description="Valor Patrimonial por Ação (VPA).",
+    )
+    lpa: Optional[float] = Field(
+        default=None,
+        description="Lucro por Ação (LPA).",
+    )
 
     # Optional fields that depend on calculations or data availability.
-    price_to_earnings: Optional[Decimal] = Field(
-        None, description="Índice Preço/Lucro (P/L)."
+    price_to_earnings: Optional[float] = Field(
+        default=None,
+        description="Índice Preço/Lucro (P/L).",
     )
-    fair_value: Optional[Decimal] = Field(
-        None, description="Valor intrínseco calculado pela fórmula de Graham."
+    fair_value: Optional[float] = Field(
+        default=None,
+        description="Valor intrínseco calculado pela fórmula de Graham.",
     )
-    margin_of_safety: Optional[Decimal] = Field(
-        None, description="Margem de segurança percentual."
+    margin_of_safety: Optional[float] = Field(
+        default=None,
+        description="Margem de segurança percentual.",
     )
 
     @field_validator(
@@ -74,21 +76,19 @@ class GrahamMetrics(BaseModel):
         mode="before",
     )
     @classmethod
-    def coerce_to_decimal(cls, v: Any) -> Optional[Decimal]:
-        """
-        Safely coerces inputs (str, int, float) to Decimal.
-
-        This pre-processing validator ensures that any numerical data
-        received from external sources (APIs, scraping) is converted to
-        `Decimal` before Pydantic validation, avoiding the precision loss
-        of the IEEE 754 standard.
-        """
+    def validate_finite_float(cls, v: Any) -> Optional[float]:
+        """Safely coerces numeric values and rejects NaN/Inf."""
         if v is None:
             return None
         try:
-            return Decimal(str(v))
-        except (InvalidOperation, ValueError):
-            raise ValueError(f"Não foi possível converter o valor '{v}' para Decimal.")
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Não foi possível converter o valor '{v}' para float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"O valor '{v}' não é um número finito válido.")
+
+        return value
 
 
 class FisherAnalysis(BaseModel):
@@ -103,11 +103,13 @@ class FisherAnalysis(BaseModel):
         description="Pontuação de sentimento extraída das notícias (-1 a 1).",
     )
     key_risks: List[str] = Field(
-        ..., description="Lista de principais riscos identificados."
+        ...,
+        description="Lista de principais riscos identificados.",
     )
     # Ethical Traceability: Mandatory source citation.
     source_urls: List[str] = Field(
-        default_factory=list, description="URLs das fontes usadas para a análise."
+        default_factory=list,
+        description="URLs das fontes usadas para a análise.",
     )
 
 
@@ -117,32 +119,38 @@ class MacroAnalysis(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     trend_summary: str = Field(
-        ..., description="Summary of the current macroeconomic trend."
+        ...,
+        description="Summary of the current macroeconomic trend.",
     )
-    interest_rate_impact: Optional[Decimal] = Field(
-        None, description="Estimated impact of the interest rate (e.g., Selic/Fed Funds)."
+    interest_rate_impact: Optional[float] = Field(
+        default=None,
+        description="Estimated impact of the interest rate (e.g., Selic/Fed Funds).",
     )
     inflation_outlook: Optional[str] = Field(
-        None, description="Inflation outlook extracted from official minutes."
+        None,
+        description="Inflation outlook extracted from official minutes.",
     )
     # Ethical Traceability: Mandatory source citation.
     source_urls: List[str] = Field(
-        default_factory=list, description="URLs das fontes usadas para a análise."
+        default_factory=list,
+        description="URLs das fontes usadas para a análise.",
     )
 
-    @field_validator(
-        "interest_rate_impact",
-        mode="before",
-    )
+    @field_validator("interest_rate_impact", mode="before")
     @classmethod
-    def coerce_to_decimal(cls, v: Any) -> Optional[Decimal]:
-        """Safely coerces inputs to Decimal."""
+    def validate_finite_float(cls, v: Any) -> Optional[float]:
+        """Safely coerces numeric values and rejects NaN/Inf."""
         if v is None:
             return None
         try:
-            return Decimal(str(v))
-        except (InvalidOperation, ValueError):
-            raise ValueError(f"Não foi possível converter o valor '{v}' para Decimal.")
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Não foi possível converter o valor '{v}' para float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"O valor '{v}' não é um número finito válido.")
+
+        return value
 
 
 # 2. GRAPH STATE DEFINITION (LANGGRAPH)

@@ -16,14 +16,14 @@ The development of new features in Aequitas-MAS follows a strictly defined pipel
 - **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `PLAN.md` using the RPI (Research -> Plan -> Implement) methodology.
 
 ## 1. Stack & Frameworks
-- **Core**: Python 3.12+
-- **Management**: Poetry
-- **Data**: Pandas (Strict typing), Pydantic V2 (Schema Validation)
-- **Orchestration**: LangGraph (Stateful DAGs)
+- **Core**: Python 3.12+.
+- **Management**: Poetry.
+- **Data**: Pandas (Strict typing), Pydantic V2 (Schema Validation).
+- **Orchestration**: LangGraph (Stateful DAGs).
 
 ## 2. Code Style & Observability
 - **Standard**: PEP 8.
-- **Typing**: Mandatory Type Hints in all function signatures (`def func(a: int) -> str:`).
+- **Typing**: Mandatory Type Hints in all function signatures (e.g., `def func(a: int) -> str:`).
 - **Documentation**: Google-style docstrings for public classes and methods.
 - **Logs (SOTA)**: Use `structlog` exclusively, generating structured JSON outputs for ingestion via Data Lake/CloudWatch. 
 - **Restriction**: The use of `print()` and the standard `logging` library is **strictly forbidden** in production code.
@@ -33,17 +33,23 @@ The development of new features in Aequitas-MAS follows a strictly defined pipel
 - **Inference Temperature**: The default temperature for analytical and financial inference must be `0.0` (Zero-Shot Data Extraction), except for sentiment analysis which may use a maximum of `0.1` for subtle entropy.
 - **Prompt Constraints**: System Prompts must be highly directive, utilizing Markdown formatting and clear "Do's and Don'ts".
 
-## 4. Quality & Testing (TDD)
+## 4. State Management & Controlled Degradation (CRITICAL)
+- **Defensive Typing in State:** LangGraph State definitions and LLM-facing Pydantic schemas MUST use `Optional[float] = None` for financial metrics. This overrides traditional financial engineering rules that strictly demand `Decimal`.
+- **Why:** If a data point is missing, the schema must gracefully fall back to `None` to ensure "Controlled Degradation" and explicitly prevent the LLM from hallucinating a probabilistic guess.
+- **Mathematical Delegation:** LLMs are strictly forbidden from performing calculations. Complex formulas must be written in pure, testable Python inside `/src/tools/`. Internal tools may use `Decimal` for precision but must cast to `float` or `None` when returning data to the Graph State.
+
+## 5. Quality & Testing (TDD)
 - **Framework**: `pytest` and `pytest-asyncio`.
 - **Financial Logic**: Mandatory unit tests for deterministic mathematical functions (e.g., Graham calculations).
 - **Graph Routing**: LangGraph state machine routing must be tested using `unittest.mock.patch`. Ensure transitions between nodes are validated without triggering the underlying LLM APIs (to avoid costs and flaky tests).
 - **Methodology**: Follow the **RPI** flow (Research -> Plan -> Implement) for all new features.
 
-## 5. Security
+## 6. Security & Cloud Agnosticism
+- **Dependency Inversion:** Cloud SDKs (e.g., `import boto3`) are strictly forbidden inside the `/src/agents/` directory. Cloud interactions must be abstracted via adapters in `/src/infra/`.
 - **Secrets**: Never commit keys. `.env` is for local development only. Use AWS Secrets Manager in production.
 - **Data Sanitization**: Sanitize all logs before emitting to avoid exposing PII, API Keys, or sensitive financial context.
 
-## 6. Architectural Principles
+## 7. Architectural Principles
 - **DDD**: Respect Bounded Contexts. Do not mix quantitative domains (Graham) with qualitative domains (Fisher) within the same entity.
 - **Immutability (SOTA)**: Utilize `model_config = ConfigDict(frozen=True)` in Pydantic V2 models to guarantee immutable state tensors across the LangGraph execution.
 - **Fail Fast**: Validate inputs at the system boundary. Raise specific exceptions (`ValueError`, `RuntimeError`) immediately upon detecting anomalies.

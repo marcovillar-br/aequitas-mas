@@ -6,17 +6,17 @@
 
 **2. Risk Confinement and State Management (`src/core/`):**
 * Audit the `state.py` file. Is the `AgentState` using strict Pydantic (v2.0+) validation with `ConfigDict(frozen=True)`?
-* Are financial metrics strictly typed as `decimal.Decimal` instead of primitive `float` to avoid floating-point representation errors?
-* Are qualitative agents enforcing "Ethical Traceability" by explicitly returning source URLs or Document IDs?
+* **CRITICAL CHECK (Controlled Degradation):** Are financial metrics strictly typed as `Optional[float] = None` to handle missing data defensively? Flag any usage of `decimal.Decimal` as a critical blocker, as it breaks LangGraph state serialization.
+* Are qualitative agents enforcing "Ethical Traceability" by explicitly returning source URLs or Document IDs in their schemas?
 * Are there loose primitive types (`str`, `dict`) that could cause hallucination or loss of flow control in LangGraph?
 
 **3. Quantitative Engine and Isolation (`src/tools/` and `tests/`):**
 * Audit `b3_fetcher.py` and its test suite (`test_b3_fetcher.py`).
 * Does the extraction logic have strict and typed error handling?
-* Do the tests appropriately use `pytest-mock` to avoid real network calls during CI/CD validation?
+* Do the tests appropriately use `pytest-mock` to avoid real network calls during CI/CD validation? Ensure 100% of mathematical tools are unit-tested to guarantee Zero Numerical Hallucination.
 
 **4. Hexagonal Architecture, Infrastructure & Security:**
-* Check for any cloud dependency leakage (e.g., `import boto3`) within the domain logic (`src/agents/` and `src/core/`).
+* Check for any cloud dependency leakage. Specifically, ensure the absolute prohibition of infrastructure SDKs (e.g., `import boto3`) within the domain logic (`src/agents/` and `src/core/`).
 * Does the `graph.py` compilation include a FinOps Circuit Breaker (e.g., `recursion_limit=15`) to prevent infinite LLM loops and control API billing costs?
 * Are "Zero Trust" secret management practices followed (strict absence of local `.env` file loading for API credentials)?
 * Do `pyproject.toml` and `setup.md` reflect the Isomorphism protocol?

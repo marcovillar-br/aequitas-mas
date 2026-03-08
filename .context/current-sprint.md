@@ -1,24 +1,24 @@
-# 🎯 Project Status: Aequitas-MAS
+# 🎯 Sprint Atual: Restabelecimento do Confinamento de Risco e Auditoria Arquitetural
 
-## 📌 Current Sprint: 3.2 - Macro Agent & RAG HyDE Engine
-**Daily Focus:** Implement the internal logic for the Macro Agent, enabling holistic macroeconomic awareness. This involves building a Retrieval-Augmented Generation (RAG) pipeline powered by Hypothetical Dense Embeddings (HyDE) and Semantic Chunking to process FED reports and COPOM minutes.
+## 📌 Foco do Dia (Objetivos Atómicos)
+1. **Refatoração da Máquina de Estados (LangGraph):** Substituir implementações não-conformes de tipagem monetária pelo esquema Pydantic oficial (`Optional[float] = None`), assegurando a Degradação Controlada na ausência de dados.
+2. **Shift-Left Testing do Motor Quantitativo:** Desenvolver cobertura de testes estrita para o Agente Graham e suas ferramentas associadas, comprovando a execução determinística da Álgebra sem alucinação do LLM.
+3. **Auditoria de DIP (Dependency Inversion Principle):** Aplicar varredura de código para garantir que nenhuma dependência de infraestrutura (ex: `import boto3`) exista dentro de `/src/agents/`.
 
-### 🛠️ Immediate Session Objectives
-1. **RAG Pipeline (HyDE):** Develop the logic within `src/agents/macro.py` to replace the current mock. Implement the HyDE strategy to generate hypothetical economic contexts before querying the Vector Database.
-2. **Document Ingestion:** Create the necessary tools (e.g., `src/tools/macro_fetcher.py`) to ingest, parse, and apply Semantic Chunking to official macroeconomic documents.
-3. **State Integration:** Ensure the `macro_agent` successfully returns a strictly typed `MacroAnalysis` Pydantic object to mutate the `AgentState`.
+## 📂 Arquivos-Alvo
+* `/src/core/state.py` (Refatoração de tipagem Pydantic V2).
+* `/tests/test_graham_agent.py` (Criação de testes unitários com `pytest`).
+* `/src/agents/` (Auditoria e limpeza de importações).
 
-### 🚫 Architectural Constraints (Risk Confinement)
-* **Zero Economic Hallucination:** The LLM is strictly forbidden from guessing or interpolating interest rates (e.g., Selic) or inflation metrics. All claims must be anchored in the retrieved context.
-* **Ethical Traceability:** The Macro Agent MUST return an array of URLs or Document IDs (`source_urls`) pointing to the specific COPOM/FED reports used for its analysis.
-* **Graceful Degradation:** If the Vector Database is unavailable or the retrieved context is insufficient, the agent must intercept the anomaly and return `None` (or an empty, neutral analysis) using the `Optional` typing, ensuring the graph does not break before reaching the Marks Agent.
-* **Vector DB Abstraction:** Database interactions must be abstracted, preparing for the OpenSearch Serverless integration provisioned in Sprint 3.1.
+## ⚖️ Dogmas a Aplicar
+* **Zero Numerical Hallucination:** O LLM atua apenas como "Cérebro" probabilístico. O cálculo do Valor Justo ($Valor Justo = \sqrt{22.5 \times VPA \times LPA}$) deve ser feito em Python puro.
+* **Degradação Controlada:** Na ausência de resolução de um Ticker ou métrica, o sistema não adivinha; ele retorna `None`.
+* **Separação de Preocupações (SRP):** SDKs de Cloud devem ficar restritos aos Adapters (ex: `BaseCheckpointSaver`).
 
-### ✅ Definition of Done (DoD) for Tomorrow
-- [ ] `macro_agent` fully implemented, replacing the temporary mock in `src/agents/macro.py`.
-- [ ] HyDE generation prompt and Semantic Chunking logic codified and validated.
-- [ ] Ethical Traceability enforced (sources are mapped to the final Pydantic schema).
-- [ ] Unit test coverage implemented in `tests/test_macro_agent.py` using `pytest-mock` to simulate LLM responses and Vector DB retrievals without real network calls.
+## ✅ Critérios de Aceite (Definition of Done)
+- [ ] O ficheiro `state.py` não contém `Decimal` para dados de mercado, utilizando apenas tipos base e `Optional[float] = None`.
+- [ ] O comando `poetry run pytest tests/test_graham_agent.py` retorna ✅ SUCESSO.
+- [ ] Uma busca literal por `import boto3` no diretório `src/agents/` retorna zero resultados.
 
-## **Context Dependency**
-Active Context Dependency: Consult the `[.context/agents/skills-index.md]` file for the correct routing of assistant competencies in this sprint.
+## 🚀 Passo 1 (Atómico) para Início de Sessão
+**Instrução para GCA:** "Inicie a sessão abrindo o ficheiro `src/core/state.py`. Verifique a classe de estado do LangGraph (modelada em Pydantic V2) e altere qualquer campo financeiro que viole a diretriz de Degradação Controlada para `Optional[float] = None`."
