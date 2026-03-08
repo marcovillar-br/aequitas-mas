@@ -1,14 +1,14 @@
 # 🎯 Project Status: Aequitas-MAS
 
-## 📌 Current Sprint: 3.2 - Finalização do Agente Macro
-**Foco Imediato:** Integrar a busca vetorial real e validar o fluxo completo do Grafo.
+## 📌 Current Sprint: 3.2 - Agente Macro e RAG HyDE (OpenSearch)
+**Foco Imediato:** Integrar a busca vetorial real e validar a injeção do contexto macroeconômico holístico no Grafo.
 
 ### 🛠️ Objetivos da Próxima Sessão (SOD)
-1.  **Integração OpenSearch (Prioridade 1):** Substituir a lista estática de fontes em `src/agents/macro.py` por uma chamada ao `OpenSearchVectorSearch` usando o documento hipotético gerado pelo HyDE.
-2.  **Validação de Rastreabilidade:** Garantir que o campo `source_urls` no estado seja preenchido com as URLs reais recuperadas do motor RAG.
-3.  **Teste de Integração de Grafo:** Executar `pytest tests/test_graph.py` para garantir que o Agente Marks recebe as entradas macroeconômicas sem erros de esquema.
+1.  **Integração OpenSearch (Prioridade 1):** Substituir a estrutura de *mock* em `src/agents/macro.py` por uma chamada ao adaptador vetorizado (ex: `OpenSearchVectorSearch`), utilizando o documento hipotético gerado pelo HyDE para buscar contexto real do FED/COPOM.
+2.  **Rastreabilidade Ética:** Garantir que o campo `source_urls` no *schema* Pydantic `MacroAnalysis` seja preenchido dinamicamente com as URLs ou IDs recuperados do OpenSearch.
+3.  **Confinamento de Infraestrutura (DIP):** Impedir que SDKs de nuvem (`boto3`, `opensearch-py`) vazem diretamente para o arquivo do agente. Eles devem vir encapsulados através da infraestrutura.
 
 ### ✅ Definition of Done (DoD)
-- [ ] `macro_agent` retornando fontes dinâmicas de documentos oficiais (BCB/CVM).
-- [ ] Logs estruturados demonstrando o fluxo: Pergunta -> HyDE -> OpenSearch -> Análise.
-- [ ] Cobertura de testes unitários para a nova lógica de busca vetorial.
+- [ ] `macro_agent` realizando *retrieval* dinâmico com base no vetor de similaridade.
+- [ ] Histórico de execução validado sem alucinações (uso restrito de `Optional[float] = None` caso os vetores não contenham dados quantitativos precisos).
+- [ ] Grafo executado de ponta a ponta (`pytest tests/test_graph.py`) confirmando a robustez sem degradação do estado.clea

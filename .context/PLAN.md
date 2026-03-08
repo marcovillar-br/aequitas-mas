@@ -1,8 +1,8 @@
-# 🗺️ PLAN: Execução de Engenharia (Sprint 3.1)
+# 🗺️ PLAN: Execução de Engenharia (Sprint 3.1 - GitHub Copilot)
 
-O desenvolvimento deve ser estritamente sequencial. O GCA não deve avançar para o próximo passo sem aprovação do Tech Lead.
+O desenvolvimento deve ser estritamente sequencial. O GitHub Copilot atuará como "Implementador Cirúrgico". Não avance para o próximo passo sem aprovação do Tech Lead.
 
-* [ ] **Passo 1 (Atómico):** Criar `src/infra/adapters/dynamo_saver.py`. Implementar a classe `DynamoDBSaver` (herdando de `BaseCheckpointSaver`). Fazer o setup do `boto3` no `__init__` respeitando a regra *Zero Trust*. Deixar os métodos `get_tuple` e `put` apenas com a assinatura (`pass`).
-* [ ] **Passo 2:** Implementar a lógica de leitura (`get_tuple`) e escrita em lote (`put`) no `dynamo_saver.py`, garantindo o mapeamento correto do `thread_id` para a chave de partição do DynamoDB.
-* [ ] **Passo 3:** Criar `tests/test_dynamo_saver.py`. Escrever testes unitários utilizando `pytest-mock` para simular o comportamento do `boto3.resource`, garantindo que não ocorram chamadas reais de rede.
-* [ ] **Passo 4:** Atualizar `src/core/graph.py` para incluir o nó do Agente Macro no roteamento (`router_map` e `Conditional Edges`). Atualizar o `personas.md` para refletir esta mudança topológica.
+* [ ] **Passo 1 (Atômico):** Criar `src/infra/adapters/dynamo_saver.py`. Implementar a classe `DynamoDBSaver` (herdando de `BaseCheckpointSaver`). A classe DEVE utilizar Injeção de Dependência em seu construtor (`__init__`) para receber a tabela alvo (ex: `table=None`), instanciando `boto3.resource` apenas se nenhuma tabela falsa for injetada. Deixar os métodos `get_tuple` e `put` apenas com a assinatura (`pass`).
+* [ ] **Passo 2:** Implementar a lógica de leitura (`get_tuple`) e escrita em lote (`put`) no `dynamo_saver.py`, mapeando o `thread_id` para a chave de partição do DynamoDB. **Atenção:** Os valores `None` oriundos da tipagem de Degradação Controlada do Pydantic V2 (`Optional[float] = None`) devem ser serializados adequadamente para evitar quebras no retorno do estado.
+* [ ] **Passo 3:** Criar `tests/test_dynamo_saver.py`. Escrever testes unitários utilizando `pytest-mock` para injetar um mock da tabela no construtor do `DynamoDBSaver`, garantindo zero interações com a rede (AWS).
+* [ ] **Passo 4:** Atualizar o arquivo `src/core/graph.py` para injetar dinamicamente o *checkpointer* na função `create_graph()`. Utilize `os.getenv("ENV", "local")` para decidir entre instanciar `MemorySaver()` (ambiente dev/local) e `DynamoDBSaver` (produção).
