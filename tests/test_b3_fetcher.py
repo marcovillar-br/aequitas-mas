@@ -42,6 +42,7 @@ def test_get_graham_data_success(mocker) -> None:
     assert isinstance(result, GrahamMetrics)
     assert result.ticker == "PETR4"
     assert isinstance(result.fair_value, float)
+    assert result.fair_value == 28.28
     assert isinstance(result.price_to_earnings, float)
     assert result.price_to_earnings == 7.5  # 30 / 4
 

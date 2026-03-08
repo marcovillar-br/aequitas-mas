@@ -8,7 +8,6 @@ ensuring finitude (no NaN/Inf) at the schema boundary.
 
 import math
 import re
-from typing import Optional
 
 import requests
 import yfinance as yf

@@ -59,7 +59,7 @@ The project rigorously separates intelligence (Agents) from adapters (Tools/Infr
 ## 6. State Contract Implementation (`src/core/state.py`)
 
 This is the core of the **Risk Confinement**. The state is not text; it is a validated Pydantic object that enforces two critical dogmas:
-1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa`) are strictly typed as `decimal.Decimal`, preventing floating-point errors and ensuring mathematical precision.
+1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa` e métricas derivadas) are typed as `Optional[float] = None` at the LangGraph state boundary, enabling controlled degradation without stochastic guessing.
 2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
 
 ## 7. Security & FinOps Protocol (Zero Trust)
@@ -85,5 +85,5 @@ poetry run pytest tests/
 | :--- | :--- | :--- | :--- |
 | **Infraestrutura AWS (Terraform)** | ✅ Concluído | N/A | Políticas IAM e DynamoDB configurados. |
 | **Agente Fisher (Qualitativo RAG)** | ✅ Concluído | 100% | Rastreabilidade ética operante (URLs). |
-| **Agente Graham (Quantitativo)** | ⚠️ Bloqueado | 0% | **PENDENTE:** Necessita de refatoração para garantir *Zero Numerical Hallucination* e testes com `pytest`. |
-| **Aequitas Core (Supervisor DAG)** | ⚠️ Em Revisão | Parcial | **ALERTA DE ESTADO:** Tipagem do Pydantic no LangGraph violou a regra de `Optional[float] = None`. Refatoração agendada. |
+| **Agente Graham (Quantitativo)** | ✅ Concluído | Ativa (`tests/test_graham_agent.py`) | Refatoração para contrato tipado e validação via `pytest` implementada. |
+| **Aequitas Core (Supervisor DAG)** | ✅ Concluído | Ativa (`tests/test_graph.py`) | Contrato de estado em Pydantic alinhado com `Optional[float] = None` e degradação controlada. |

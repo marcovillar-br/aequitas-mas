@@ -13,12 +13,15 @@ import structlog
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 try:
     from google.api_core.exceptions import ResourceExhausted
-except Exception:  # pragma: no cover - defensive import guard
-    ResourceExhausted = Exception
+except ImportError:  # pragma: no cover - defensive import guard
+    class _ResourceExhaustedFallback(Exception):
+        """Fallback exception used when google.api_core is unavailable."""
+
+    ResourceExhausted = _ResourceExhaustedFallback
 
 from src.core.state import AgentState, MacroAnalysis
 
@@ -26,6 +29,7 @@ logger = structlog.get_logger(__name__)
 
 
 @retry(
+    retry=retry_if_exception_type(ResourceExhausted),
     wait=wait_exponential(multiplier=1, min=4, max=60),
     stop=stop_after_attempt(5),
     reraise=True,

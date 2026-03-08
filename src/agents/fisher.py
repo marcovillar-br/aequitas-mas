@@ -83,7 +83,7 @@ def fisher_agent(state: AgentState) -> dict:
         prompt = (
             "System Prompt: Philip Fisher Qualitative Analyst (Scuttlebutt Framework). "
             "You are a rigorous qualitative equity analyst specialized in the Fisher/Scuttlebutt method. "
-            "Your task is to evaluate market sentiment and business risk using only the retrieved articles about {ticker}. "
+            f"Your task is to evaluate market sentiment and business risk using only the retrieved articles about {ticker}. "
             "Do not invent facts. If evidence is weak, remain conservative and explicitly highlight uncertainty. "
             "\n\n"
             "Analytical constraints:\n"

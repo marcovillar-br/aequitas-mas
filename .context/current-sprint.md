@@ -1,6 +1,6 @@
 # 🎯 Sprint Atual: Restabelecimento do Confinamento de Risco e Auditoria Arquitetural
 
-## 📌 Foco do Dia (Objetivos Atómicos)
+## 📌 Foco do Dia (Objetivos Atômicos)
 1. **Refatoração da Máquina de Estados (LangGraph):** Substituir implementações não-conformes de tipagem monetária pelo esquema Pydantic oficial (`Optional[float] = None`), assegurando a Degradação Controlada na ausência de dados.
 2. **Shift-Left Testing do Motor Quantitativo:** Desenvolver cobertura de testes estrita para o Agente Graham e suas ferramentas associadas, comprovando a execução determinística da Álgebra sem alucinação do LLM.
 3. **Auditoria de DIP (Dependency Inversion Principle):** Aplicar varredura de código para garantir que nenhuma dependência de infraestrutura (ex: `import boto3`) exista dentro de `/src/agents/`.

@@ -23,4 +23,7 @@ When utilizing the Gemini Code Assist (GCA) chat in the IDE, the Tech Lead will 
 
 > "GCA, read `.context/rules/coding-guidelines.md` for the strict project guidelines. Based on the attached `@SPEC.md` and `@PLAN.md`, execute exclusively **Step [Number]**. Focus only on this atomic task (following the RPI methodology). Remember the Risk Confinement: do not calculate metrics mentally, enforce `Optional[float] = None`, and do not use Cloud SDKs in Agents. Wait for my review before proceeding."
 
-**Directive to GCA:** If you receive the prompt above, you must initialize your response by confirming that your execution scope is aligned with Aequitas-MAS guidelines. Do not generate code for subsequent steps until explicitly
+**Directive to GCA:** If you receive the prompt above, you must initialize your response by confirming that your execution scope is aligned with Aequitas-MAS guidelines. Do not generate code for subsequent steps until explicitly authorized by the Tech Lead.
+
+**Required Output:**
+Start the session by providing the **[Context Activated]** audit block, citing the rules and skills loaded, followed by a brief summary of the current project state in pt-BR.
