@@ -22,12 +22,12 @@ logger = structlog.get_logger(__name__)
 
 def _format_news_for_prompt(news_items: List[NewsItem]) -> str:
     """Formats a list of NewsItem objects into a single string for the LLM."""
-    prompt_text = "Por favor, analise os seguintes artigos de notícias:\n\n"
+    prompt_text = "Please analyze the following news articles:\n\n"
     for i, item in enumerate(news_items, 1):
-        prompt_text += f"--- Artigo {i} ---\n"
-        prompt_text += f"Título: {item.title}\n"
+        prompt_text += f"--- Article {i} ---\n"
+        prompt_text += f"Title: {item.title}\n"
         prompt_text += f"URL: {item.url}\n"
-        prompt_text += f"Corpo: {item.body}\n\n"
+        prompt_text += f"Body: {item.body}\n\n"
     return prompt_text
 
 
@@ -81,12 +81,21 @@ def fisher_agent(state: AgentState) -> dict:
         structured_llm = llm.with_structured_output(FisherAnalysis)
 
         prompt = (
-            "Você é um analista financeiro incumbido de analisar notícias para a empresa {ticker}. "
-            f"Analise o sentimento e os riscos para a empresa com base *apenas* nos seguintes artigos de notícias. "
-            "Determine a pontuação geral de sentimento de -1.0 (muito negativo) a 1.0 (muito positivo). "
-            "Identifique uma lista de 3 a 5 principais riscos mencionados (ex: 'mudanças regulatórias', 'volatilidade de mercado'). "
-            "Sua resposta deve ser um JSON estruturado com os campos em português. "
-            f"Use estas URLs como fontes: {', '.join(urls)}\n\n"
+            "System Prompt: Philip Fisher Qualitative Analyst (Scuttlebutt Framework). "
+            "You are a rigorous qualitative equity analyst specialized in the Fisher/Scuttlebutt method. "
+            "Your task is to evaluate market sentiment and business risk using only the retrieved articles about {ticker}. "
+            "Do not invent facts. If evidence is weak, remain conservative and explicitly highlight uncertainty. "
+            "\n\n"
+            "Analytical constraints:\n"
+            "1. Use only the provided articles as evidence.\n"
+            "2. Produce a sentiment score between -1.0 and 1.0.\n"
+            "3. Extract 3 to 5 key risks grounded in article content.\n"
+            "4. Preserve ethical traceability with source URLs.\n"
+            "5. Return a structured JSON compatible with the required schema.\n"
+            "\n"
+            "CRITICAL: You must generate your final qualitative analysis, summaries, and output strings strictly in Portuguese (pt-BR)."
+            "\n\n"
+            f"Evidence URLs: {', '.join(urls)}\n\n"
             f"{formatted_news}"
         )
 
