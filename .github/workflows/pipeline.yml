@@ -108,7 +108,7 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -no-color
 
-      # 7. Controlled Deployment
+      # 7. Controlled Deployment: Only on Push to Main or Development
       - name: Terraform Apply
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
         run: terraform apply -lock-timeout=5m -auto-approve
