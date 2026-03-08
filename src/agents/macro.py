@@ -71,7 +71,10 @@ def macro_agent(state: AgentState) -> dict:
                 "the liquidity cycle and monetary direction, generate a hypothetical, "
                 "technically dense paragraph that perfectly simulates an excerpt from "
                 "official COPOM and FED minutes concerning the target financial asset. "
-                "Also, ensure to analyze inflation outlook and interest rate impact."
+                "Also, ensure to analyze inflation outlook and interest rate impact. "
+                "All analysis text (trend_summary, inflation_outlook) MUST be returned "
+                "strictly in Portuguese (pt-BR), even if the internal reasoning or sources "
+                "are in English."
             ),
             (
                 "human",
