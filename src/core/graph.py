@@ -21,12 +21,45 @@ from langgraph.graph.state import CompiledGraph
 
 from src.agents.fisher import fisher_agent
 from src.agents.graham import graham_agent
-from src.agents.macro import macro_agent
+from src.agents.macro import create_macro_agent
 from src.agents.marks import marks_agent
+from src.core.interfaces.vector_store import NullVectorStore
 from src.core.state import AgentState
 from src.infra.adapters.dynamo_saver import DynamoDBSaver
 
 logger = structlog.get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Dependency Resolution: Vector Store
+# ---------------------------------------------------------------------------
+def _resolve_vector_store():
+    """
+    Resolve the VectorStorePort implementation at startup.
+
+    Attempts to build an OpenSearchAdapter from environment variables.
+    Falls back to NullVectorStore (Controlled Degradation) when
+    OPENSEARCH_ENDPOINT is not configured — safe for local/offline execution.
+    """
+    try:
+        from src.infra.adapters.opensearch_client import OpenSearchAdapter  # noqa: PLC0415
+        store = OpenSearchAdapter.from_env()
+        logger.info("vector_store_resolved", adapter="OpenSearchAdapter")
+        return store
+    except (ValueError, RuntimeError) as exc:
+        logger.warning(
+            "vector_store_fallback_null",
+            reason=str(exc),
+            adapter="NullVectorStore",
+        )
+        return NullVectorStore()
+
+
+# Module-level wiring: resolves once at import time.
+# `macro_agent` preserves its name in this namespace so that
+# patch("src.core.graph.macro_agent") continues to work in tests.
+macro_agent = create_macro_agent(_resolve_vector_store())
+
 
 # 1. ROUTER DEFINITION (CONDITIONAL EDGES)
 def router(state: AgentState) -> Literal["graham", "fisher", "macro", "marks", "__end__"]:

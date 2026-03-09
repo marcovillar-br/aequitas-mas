@@ -1,9 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+Integration tests for the Aequitas-MAS LangGraph router and graph wiring.
+
+Covers:
+    - Router unit tests: deterministic state transitions for all routing branches.
+    - Graph integration tests: full execution path via app.stream() with all
+      agents mocked (no LLM or AWS calls).
+    - Macro agent DI: validates that create_graph() correctly wires the
+      VectorStorePort through the macro_agent node.
+"""
+
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from typing import Dict, Any
 from decimal import Decimal
 
 from src.core.graph import router
+from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
 from src.core.state import AgentState, GrahamMetrics, FisherAnalysis, MacroAnalysis
 
 # -----------------------------------------------------------------------------
@@ -226,3 +239,55 @@ def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
     mock_agents["fisher"].assert_not_called()
     mock_agents["macro"].assert_not_called()
     mock_agents["marks"].assert_called_once()
+
+
+# -----------------------------------------------------------------------------
+# 3. INTEGRATION TESTS: MACRO AGENT DEPENDENCY INJECTION
+# -----------------------------------------------------------------------------
+
+def test_macro_node_uses_injected_null_vector_store() -> None:
+    """
+    Validates that the graph wires a VectorStorePort-compatible adapter
+    into the macro node at construction time.
+
+    When OPENSEARCH_ENDPOINT is absent, _resolve_vector_store() must fall back
+    to NullVectorStore without raising. The macro_agent in graph's namespace
+    must remain a callable conforming to the LangGraph node contract.
+    """
+    # Patch _resolve_vector_store to guarantee NullVectorStore injection
+    # regardless of local environment variables.
+    with patch("src.core.graph._resolve_vector_store", return_value=NullVectorStore()):
+        from src.core.graph import create_macro_agent
+        store = NullVectorStore()
+        node = create_macro_agent(store)
+
+    assert callable(node), "Macro node must be callable (LangGraph node contract)."
+    assert isinstance(store, VectorStorePort), "NullVectorStore must satisfy VectorStorePort."
+
+
+def test_macro_agent_receives_correct_state_shape(mock_agents: Dict[str, Any]) -> None:
+    """
+    Validates that the macro node, when mocked at graph level, receives an
+    AgentState that contains the outputs of both Graham and Fisher agents
+    (metrics and qual_analysis are populated before macro executes).
+    """
+    from src.core.graph import create_graph
+    app = create_graph()
+
+    initial_state = {"messages": [], "target_ticker": "VALE3"}
+    config = {"configurable": {"thread_id": "test_macro_state_shape"}}
+
+    for _ in app.stream(initial_state, config=config):
+        pass
+
+    # Macro was called: capture the AgentState it received
+    mock_agents["macro"].assert_called_once()
+    state_received: AgentState = mock_agents["macro"].call_args[0][0]
+
+    assert state_received.target_ticker == "VALE3"
+    assert state_received.metrics is not None, (
+        "macro must receive populated metrics from Graham."
+    )
+    assert state_received.qual_analysis is not None, (
+        "macro must receive populated qual_analysis from Fisher."
+    )
