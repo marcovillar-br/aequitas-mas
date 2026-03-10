@@ -29,6 +29,10 @@ from src.infra.adapters.dynamo_saver import DynamoDBSaver
 
 logger = structlog.get_logger(__name__)
 
+# FinOps Circuit Breaker — passed via config={"recursion_limit": RECURSION_LIMIT}
+# in every app.invoke() or app.stream() call to prevent infinite LLM loops.
+RECURSION_LIMIT: int = 15
+
 
 # ---------------------------------------------------------------------------
 # Dependency Resolution: Vector Store
