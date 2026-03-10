@@ -315,20 +315,20 @@ def test_macro_agent_opensearch_connection_failure_degrades_gracefully(
     mock_llm_cls, mock_sleep, initial_state: AgentState
 ) -> None:
     """
-    Simula uma falha de conexão com o OpenSearch durante o retrieval vetorial.
+    Validates Controlled Degradation when OpenSearch raises ConnectionError during retrieval.
 
-    Cenário: HyDE gerado com sucesso, mas o VectorStorePort lança
-    ConnectionError (ex: timeout de rede ou cluster indisponível).
+    Scenario: HyDE generation succeeds, but VectorStorePort raises ConnectionError
+    (e.g., network timeout or cluster unavailable).
 
-    Expectativas de degradação controlada (Controlled Degradation):
-    1. O agente NÃO deve propagar a exceção — o grafo LangGraph não deve travar.
-    2. macro_analysis deve ser retornado com métricas numéricas em None
+    Expected Controlled Degradation behaviour:
+    1. Agent must NOT propagate the exception — LangGraph graph must not stall.
+    2. macro_analysis must be returned with numeric metrics set to None
        (interest_rate_impact=None) — Zero Numerical Hallucination enforced.
-    3. source_urls deve ser [] — sem URLs inventadas pelo LLM.
-    4. audit_log deve conter entrada com prefixo "ALERTA" sinalizando a falha.
-    5. messages deve conter um AIMessage de degradação para o histórico do grafo.
+    3. source_urls must be [] — no URLs hallucinated by the LLM.
+    4. audit_log must contain an entry prefixed with "ALERTA" signalling the failure.
+    5. messages must contain a degradation AIMessage for the graph conversation history.
     """
-    # Arrange: VectorStore que simula falha de rede no momento do retrieval.
+    # Arrange: VectorStore that raises a network error during retrieval.
     failing_store = MagicMock(spec=VectorStorePort)
     failing_store.search_macro_context.side_effect = ConnectionError(
         "OpenSearch cluster unavailable: connection timed out after 30s"
@@ -339,39 +339,39 @@ def test_macro_agent_opensearch_connection_failure_degrades_gracefully(
     with patch("src.agents.macro._invoke_hyde_chain", return_value=MOCK_HYDE_TEXT):
         result = agent(initial_state)
 
-    # --- Assert 1: retorno válido, sem exceção propagada ---
-    assert isinstance(result, dict), "O agente deve retornar um dict mesmo em falha."
+    # --- Assert 1: valid return dict, no exception propagated ---
+    assert isinstance(result, dict), "Agent must return a dict even on failure."
 
-    # --- Assert 2: MacroAnalysis presente com métricas em None ---
+    # --- Assert 2: MacroAnalysis present with numeric metrics set to None ---
     assert "macro_analysis" in result
     fallback: MacroAnalysis = result["macro_analysis"]
     assert isinstance(fallback, MacroAnalysis)
     assert fallback.interest_rate_impact is None, (
-        "interest_rate_impact deve ser None — Zero Numerical Hallucination."
+        "interest_rate_impact must be None — Zero Numerical Hallucination."
     )
     assert fallback.inflation_outlook is None, (
-        "inflation_outlook deve ser None após falha de retrieval."
+        "inflation_outlook must be None after retrieval failure."
     )
 
-    # --- Assert 3: source_urls vazio — sem alucinação de URLs ---
+    # --- Assert 3: source_urls empty — no URL hallucination ---
     assert fallback.source_urls == [], (
-        "source_urls deve ser [] após falha de conexão com OpenSearch."
+        "source_urls must be [] after OpenSearch connection failure."
     )
 
-    # --- Assert 4: audit_log com sinalização de falha ---
+    # --- Assert 4: audit_log contains failure signal ---
     assert "audit_log" in result
     assert len(result["audit_log"]) >= 1
     assert "ALERTA" in result["audit_log"][0], (
-        "audit_log deve conter 'ALERTA' para sinalizar degradação ao Agente Marks."
+        "audit_log must contain 'ALERTA' to signal degradation to the Marks Agent."
     )
 
-    # --- Assert 5: AIMessage de degradação no histórico do grafo ---
+    # --- Assert 5: degradation AIMessage present in graph history ---
     assert "messages" in result
     assert any(
         isinstance(m, AIMessage) for m in result["messages"]
-    ), "messages deve conter AIMessage de degradação para rastreabilidade no grafo."
+    ), "messages must contain a degradation AIMessage for graph traceability."
 
-    # --- Assert extra: VectorStore foi chamado (HyDE chegou até o retrieval) ---
+    # --- Extra assert: VectorStore was called (HyDE reached the retrieval stage) ---
     failing_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
 
 
@@ -381,11 +381,13 @@ def test_macro_agent_opensearch_timeout_does_not_stall_langgraph(
     mock_llm_cls, mock_sleep, initial_state: AgentState, mock_vector_store: MagicMock
 ) -> None:
     """
-    Valida que o macro_agent retorna um dict em todos os cenários de falha,
-    garantindo que o roteador do LangGraph possa sempre ler o próximo estado
-    e não entre em loop infinito (Death Loop).
+    Validates that macro_agent always returns a dict on failure, preventing LangGraph Death Loops.
 
-    Simula: timeout de rede (TimeoutError) no VectorStore após HyDE gerado.
+    The LangGraph node contract requires the node to return a dict on every execution path.
+    If macro_analysis is absent from the return value, the router cannot determine the next
+    node and will loop indefinitely (Death Loop).
+
+    Scenario: TimeoutError raised by the VectorStore after HyDE generation succeeds.
     """
     timeout_store = MagicMock(spec=VectorStorePort)
     timeout_store.search_macro_context.side_effect = TimeoutError(
@@ -397,13 +399,13 @@ def test_macro_agent_opensearch_timeout_does_not_stall_langgraph(
     with patch("src.agents.macro._invoke_hyde_chain", return_value=MOCK_HYDE_TEXT):
         result = agent(initial_state)
 
-    # O grafo LangGraph exige que o nó retorne um dict — nunca raise.
-    assert isinstance(result, dict), "Nó LangGraph deve retornar dict, nunca propagar exceção."
+    # LangGraph node contract: must return dict, never raise.
+    assert isinstance(result, dict), "LangGraph node must return dict, never propagate exceptions."
 
-    # macro_analysis deve estar presente para que o router prossiga para Marks.
+    # macro_analysis must be present so the router can advance to the Marks node.
     assert "macro_analysis" in result, (
-        "macro_analysis ausente: o router ficaria preso em loop infinito."
+        "macro_analysis absent: router would loop indefinitely (Death Loop)."
     )
 
-    # Confirma que é um fallback válido (Pydantic não levantou erro).
+    # Confirm the fallback is a valid Pydantic instance (no ValidationError raised).
     assert isinstance(result["macro_analysis"], MacroAnalysis)
