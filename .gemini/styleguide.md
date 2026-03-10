@@ -1,5 +1,8 @@
 # AEQUITAS-MAS: GEMINI CODE ASSIST (GCA) STYLEGUIDE
 
+> **Canonical architectural rules and full dogma definitions are maintained in `.ai/context.md`.**
+> Read that file before any task. The rules below are GCA-specific behavioral directives; they do not supersede `.ai/context.md` or `.context/rules/coding-guidelines.md`.
+
 ## 1. LINGUISTIC DIRECTIVE (MANDATORY ENFORCEMENT)
 * **Conversational Output:** All explanations, reasoning, and direct chat interactions with the human user MUST be in **Brazilian Portuguese (pt-BR)**.
 * **Code & Technical Output:** All generated code, variables, functions, classes, Docstrings, commit messages, and inline comments MUST be in **English**. Do not translate financial terms in code (e.g., use `price_to_earnings`, not `preco_lucro`).
@@ -10,7 +13,7 @@
 
 ## 3. LANGGRAPH & STATE MANAGEMENT (TYPE-SAFETY)
 * **State Immutability:** The LangGraph state must be defined using Pydantic (>=2.0). All state objects must use `ConfigDict(frozen=True)` to prevent accidental mutation outside of node transitions.
-* **Zero Numerical Hallucination:** Financial values (e.g., Fair Value, EPS, BVPS) must be typed as `decimal.Decimal`. **DO NOT** use native `float` to avoid floating-point representation errors.
+* **Zero Numerical Hallucination & Controlled Degradation (CRITICAL):** Financial values in `AgentState` (e.g., Fair Value, EPS, BVPS) MUST be typed as `Optional[float] = None`, combined with `ConfigDict(frozen=True)`. This is non-negotiable. `None` signals a missing or unresolvable data point and prevents the LLM from hallucinating a probabilistic substitute. `decimal.Decimal` is **STRICTLY FORBIDDEN** in state schemas: it breaks LangGraph's JSON serialization pipeline and is incompatible with DynamoDB-based checkpointers. Internal computation tools (`src/tools/`) MAY use `Decimal` for intermediate precision, but MUST cast the final result to `float | None` before returning the value to the Graph State.
 * **Graph Definition:** Always utilize `StateGraph` for cyclic orchestration. Linear `chains` are deprecated in this project.
 
 ## 4. SECURITY & FINOPS (ZERO TRUST)

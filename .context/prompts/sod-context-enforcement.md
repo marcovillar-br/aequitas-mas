@@ -15,7 +15,7 @@ Before responding, identify the nature of the task and consult the central routi
 * If it involves extraction/scraping: Apply `.context/skills/playwright.md`.
 * If it involves protection/Compliance: Apply `.context/skills/security.md`.
 * If it involves creating new agents: Apply `.context/skills/subagent-creator.md`.
-* If it involves testing (Mandatory for Tools): Apply `.context/skills/tdd-creator.md`.
+* If it involves pre-implementation design / testing (Mandatory for Tools): Apply `.context/skills/tech-design-doc.md`.
 * If it involves source code management (github): Apply `.context/skills/github-manager.md`.
 
 ## 3. Non-Negotiable Project Dogmas (Risk Confinement)

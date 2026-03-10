@@ -85,6 +85,21 @@ This project follows a technical evolution schedule focused on transitioning fro
 
 ---
 
+## AI-Driven Development Workflow
+This repository operates under a strict **Cognitive Hybridization** topology and **Risk Confinement** dogmas. It is designed to be built by a team of Human Tech Leads and AI Assistants.
+
+**For AI Assistants reading this file:**
+1. **STOP** and immediately read `.ai/context.md`. It is your Single Source of Truth (SSOT).
+2. Understand the "Zero Numerical Hallucination" dogma: Financial values in Graph State MUST use `Optional[float] = None`. `decimal.Decimal` is FORBIDDEN in state schemas.
+3. This project utilizes the RPI (Research, Plan, Implement) workflow. Check `.claude/commands/` for the entry points.
+4. **Topology Context:**
+   - **NotebookLM:** Generates Macro/Micro briefings (`.notebooklm/`).
+   - **Google AI Studio:** Semantic validation and prompt testing (`.ai-studio/`).
+   - **GEM (Web):** The System Architect mapping the Sprints (`.gemini/`).
+   - **VS Code (Claude/Copilot):** The Developer executing defensive coding.
+
+---
+
 ## 📝 License
 
 This project is strictly for academic purposes and software engineering study. **It does not constitute a recommendation to buy or sell assets.**
