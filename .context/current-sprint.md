@@ -2,33 +2,38 @@
 
 ---
 
+# 🎯 Project Status: Aequitas-MAS
+
+---
+
 ## 🔄 Sprint Ativa: 3.3 — Provisionamento OpenSearch e Teste End-to-End Real
 **Status:** IN PROGRESS — Iniciada em 10/03/2026. Branch: `feat/macro-hyde-opensearch-integration` (PR pendente para `development`).
 
 ### 🛠️ Objetivos da Sessão SOD (Amanhã)
 
 1. **Provisionamento AWS (Terraform):**
-   Criar domínio OpenSearch Serverless com collection `aequitas-macro-docs`, política de acesso OIDC restrita ao role de execução e pipeline de embedding (neural search) via AWS Bedrock ou SageMaker.
-   Arquivo-alvo: `infra/terraform/opensearch/` (novo módulo).
+   Refatorar e aplicar domínio OpenSearch Serverless. O script `opensearch.tf` atual mapeou o *Agente Fisher* (`aqm-fisher`), necessitando ajuste para a collection `aequitas-macro-docs` (Macro) ou abstração para suportar ambos.
    Restrição: Sem `terraform apply` automático em CI — execução manual supervisionada pelo Tech Lead.
 
 2. **Script de Ingestão (Isomorfismo BCB/FED):**
    Criar `src/tools/opensearch_indexer.py` — script Python isomorfo para indexar atas do COPOM (BCB) e *minutes* do FED com geração de embeddings.
    Campos obrigatórios por documento: `content`, `source_url`, `document_id`, `published_at`.
-   SDK: confinado em `/src/infra/` (DIP enforced).
 
 3. **Integração E2E Real:**
-   Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` (AWS Secrets Manager ou GitHub Actions env secrets) e executar `macro_agent` com retrieval real.
-   Validar que `source_urls` é preenchido com URLs reais do BCB/FED e que `audit_log` registra scores de cosseno > 0.0.
+   Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` e executar `macro_agent` com retrieval real.
+   Validar `source_urls` e `audit_log` registrando scores de cosseno > 0.0.
+
+### 🚧 Impedimentos / Débitos Técnicos (Check-out 10/03/2026)
+* **Desalinhamento Terraform:** O provisionamento AWS em `infra/terraform/opensearch.tf` foi construído visando o escopo do Fisher (`aqm-fisher`) em vez do Macro. Ação necessária no próximo SOD: duplicar/refatorar o `.tf` para garantir suporte à coleção `aequitas-macro-docs`.
+* **Script de Ingestão Pendente:** A estrutura da AWS está sendo levantada, mas o injetor de vetores não foi desenvolvido hoje.
 
 ### ✅ Definition of Done (DoD)
 
-- [ ] Domínio OpenSearch Serverless provisionado via Terraform (`dev`).
+- [ ] Domínio OpenSearch Serverless provisionado via Terraform (`dev`) com collection `macro` correta.
 - [ ] Ao menos 10 documentos indexados com embeddings (atas COPOM 2024-2025).
-- [ ] `macro_agent` executando com `OPENSEARCH_ENDPOINT` real e retornando `source_urls` de fontes oficiais (BCB/FED).
-- [ ] `pytest tests/` — 40+ testes passando após integração com OpenSearch real.
-- [ ] PR `feat/macro-hyde-opensearch-integration` → `development` aprovado pelo Tech Lead.
-
+- [ ] `macro_agent` executando com `OPENSEARCH_ENDPOINT` real.
+- [ ] `pytest tests/` — 40+ testes passando.
+- [ ] PR `feat/macro-hyde-opensearch-integration` → `development` aprovado.
 ---
 
 ## ✅ Histórico — Sprint 3.2: Agente Macro e RAG HyDE (OpenSearch)
