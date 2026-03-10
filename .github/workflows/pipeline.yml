@@ -47,7 +47,8 @@ jobs:
         run: |
           # Catches both `decimal.Decimal` and `from decimal import Decimal`
           if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal)" src/agents/ src/core/; then
-            echo "DOGMA VIOLATION: decimal.Decimal is FORBIDDEN in src/agents/ and src/core/."
+            echo "DOGMA VIOLATION: Decimal usage is FORBIDDEN in src/agents/ and src/core/."
+            echo "Detected forms: 'decimal.Decimal' or 'from decimal import Decimal'."
             echo "Use Optional[float] = None in all LangGraph state schemas."
             exit 1
           fi
