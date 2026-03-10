@@ -162,11 +162,20 @@ def create_graph() -> CompiledGraph:
             from src.infra.adapters.dynamo_saver import DynamoDBSaver  # noqa: PLC0415
             memory = DynamoDBSaver()
         except ImportError as exc:
-            raise RuntimeError(
-                f"DynamoDBSaver is required in ENVIRONMENT='{env}' but boto3 is not "
-                f"installed. Run `poetry install --with infra` or set ENVIRONMENT=local. "
-                f"Cause: {exc}"
-            ) from exc
+            missing_module = getattr(exc, "name", None)
+            base_msg = (
+                f"DynamoDBSaver is required in ENVIRONMENT='{env}' but could not be imported. "
+            )
+            if missing_module in {"boto3", "botocore"}:
+                guidance = (
+                    f"AWS SDK dependency '{missing_module}' is missing. "
+                    "Run `poetry install --with infra` or set ENVIRONMENT=local. "
+                )
+            else:
+                guidance = (
+                    "Check that all DynamoDBSaver dependencies are installed and importable. "
+                )
+            raise RuntimeError(base_msg + guidance + f"Cause: {exc}") from exc
 
     # Compile the graph into an executable application
     # NOTE: recursion_limit is passed at runtime via config parameter in invoke()
