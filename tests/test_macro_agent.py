@@ -302,3 +302,108 @@ def test_module_level_macro_agent_is_callable() -> None:
     ensuring backward compatibility with any code that imports it directly.
     """
     assert callable(macro_agent)
+
+
+# ---------------------------------------------------------------------------
+# 5. OPENSEARCH CONNECTION FAILURE — Controlled Degradation
+# ---------------------------------------------------------------------------
+
+
+@patch("src.agents.macro.time.sleep")
+@patch("src.agents.macro.ChatGoogleGenerativeAI")
+def test_macro_agent_opensearch_connection_failure_degrades_gracefully(
+    mock_llm_cls, mock_sleep, initial_state: AgentState
+) -> None:
+    """
+    Simula uma falha de conexão com o OpenSearch durante o retrieval vetorial.
+
+    Cenário: HyDE gerado com sucesso, mas o VectorStorePort lança
+    ConnectionError (ex: timeout de rede ou cluster indisponível).
+
+    Expectativas de degradação controlada (Controlled Degradation):
+    1. O agente NÃO deve propagar a exceção — o grafo LangGraph não deve travar.
+    2. macro_analysis deve ser retornado com métricas numéricas em None
+       (interest_rate_impact=None) — Zero Numerical Hallucination enforced.
+    3. source_urls deve ser [] — sem URLs inventadas pelo LLM.
+    4. audit_log deve conter entrada com prefixo "ALERTA" sinalizando a falha.
+    5. messages deve conter um AIMessage de degradação para o histórico do grafo.
+    """
+    # Arrange: VectorStore que simula falha de rede no momento do retrieval.
+    failing_store = MagicMock(spec=VectorStorePort)
+    failing_store.search_macro_context.side_effect = ConnectionError(
+        "OpenSearch cluster unavailable: connection timed out after 30s"
+    )
+
+    agent = create_macro_agent(failing_store)
+
+    with patch("src.agents.macro._invoke_hyde_chain", return_value=MOCK_HYDE_TEXT):
+        result = agent(initial_state)
+
+    # --- Assert 1: retorno válido, sem exceção propagada ---
+    assert isinstance(result, dict), "O agente deve retornar um dict mesmo em falha."
+
+    # --- Assert 2: MacroAnalysis presente com métricas em None ---
+    assert "macro_analysis" in result
+    fallback: MacroAnalysis = result["macro_analysis"]
+    assert isinstance(fallback, MacroAnalysis)
+    assert fallback.interest_rate_impact is None, (
+        "interest_rate_impact deve ser None — Zero Numerical Hallucination."
+    )
+    assert fallback.inflation_outlook is None, (
+        "inflation_outlook deve ser None após falha de retrieval."
+    )
+
+    # --- Assert 3: source_urls vazio — sem alucinação de URLs ---
+    assert fallback.source_urls == [], (
+        "source_urls deve ser [] após falha de conexão com OpenSearch."
+    )
+
+    # --- Assert 4: audit_log com sinalização de falha ---
+    assert "audit_log" in result
+    assert len(result["audit_log"]) >= 1
+    assert "ALERTA" in result["audit_log"][0], (
+        "audit_log deve conter 'ALERTA' para sinalizar degradação ao Agente Marks."
+    )
+
+    # --- Assert 5: AIMessage de degradação no histórico do grafo ---
+    assert "messages" in result
+    assert any(
+        isinstance(m, AIMessage) for m in result["messages"]
+    ), "messages deve conter AIMessage de degradação para rastreabilidade no grafo."
+
+    # --- Assert extra: VectorStore foi chamado (HyDE chegou até o retrieval) ---
+    failing_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
+
+
+@patch("src.agents.macro.time.sleep")
+@patch("src.agents.macro.ChatGoogleGenerativeAI")
+def test_macro_agent_opensearch_timeout_does_not_stall_langgraph(
+    mock_llm_cls, mock_sleep, initial_state: AgentState, mock_vector_store: MagicMock
+) -> None:
+    """
+    Valida que o macro_agent retorna um dict em todos os cenários de falha,
+    garantindo que o roteador do LangGraph possa sempre ler o próximo estado
+    e não entre em loop infinito (Death Loop).
+
+    Simula: timeout de rede (TimeoutError) no VectorStore após HyDE gerado.
+    """
+    timeout_store = MagicMock(spec=VectorStorePort)
+    timeout_store.search_macro_context.side_effect = TimeoutError(
+        "OpenSearch request timed out after 30s"
+    )
+
+    agent = create_macro_agent(timeout_store)
+
+    with patch("src.agents.macro._invoke_hyde_chain", return_value=MOCK_HYDE_TEXT):
+        result = agent(initial_state)
+
+    # O grafo LangGraph exige que o nó retorne um dict — nunca raise.
+    assert isinstance(result, dict), "Nó LangGraph deve retornar dict, nunca propagar exceção."
+
+    # macro_analysis deve estar presente para que o router prossiga para Marks.
+    assert "macro_analysis" in result, (
+        "macro_analysis ausente: o router ficaria preso em loop infinito."
+    )
+
+    # Confirma que é um fallback válido (Pydantic não levantou erro).
+    assert isinstance(result["macro_analysis"], MacroAnalysis)
