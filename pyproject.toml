@@ -24,6 +24,7 @@ langchain-google-genai = "^2.0.0"
 ddgs = "^9.10.0"
 structlog = "^25.5.0"
 boto3 = "^1.42.63"
+opensearch-py = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
