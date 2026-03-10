@@ -4,7 +4,14 @@ O desenvolvimento deve ser estritamente sequencial. O implementador atuará como
 
 ---
 
-## ✅ Sprint 3.1 — Persistência DynamoDB (GitHub Copilot SDD)
+## 📚 Histórico — Sprints Concluídas
+
+> Registro imutável do desenvolvimento executado. Reflete a ordem sequencial real de
+> implementação e serve como fonte de verdade para auditoria arquitetural e onboarding.
+
+---
+
+### ✅ Sprint 3.1 — Persistência DynamoDB (GitHub Copilot SDD)
 **Status:** CONCLUÍDA — Merge na `development` via PR #22 (commit `76acc5f`).
 
 * [x] **Passo 1 (Atômico):** Criar `src/infra/adapters/dynamo_saver.py`. Implementar a classe `DynamoDBSaver` (herdando de `BaseCheckpointSaver`). A classe utiliza Injeção de Dependência em seu construtor (`__init__`) para receber a tabela alvo (`table=None`), instanciando `boto3.resource` apenas se nenhuma tabela for injetada.
@@ -14,17 +21,17 @@ O desenvolvimento deve ser estritamente sequencial. O implementador atuará como
 
 ---
 
-## ✅ Sprint 3.2 — Agente Macro: RAG HyDE + OpenSearch (Claude Code)
-**Status:** CONCLUÍDA — Branch `feat/macro-hyde-opensearch-integration` (commits `1e27dea`, `10c7817`). Aguardando PR para `development`.
+### ✅ Sprint 3.2 — Agente Macro: RAG HyDE + OpenSearch (Claude Code)
+**Status:** CONCLUÍDA — Branch `feat/macro-hyde-opensearch-integration` (commits `1e27dea` → `e54017c`). Aguardando PR para `development`.
 
-* [x] **Passo 1 — Interface VectorStorePort (DIP Boundary):**
+* [x] **Passo 1 — Implementação da Interface VectorStore em `src/core/interfaces/` (DIP Boundary):**
   Criar `src/core/interfaces/__init__.py` e `src/core/interfaces/vector_store.py`.
   Definir `VectorStorePort` como `@runtime_checkable Protocol` com método
   `search_macro_context(query: str, top_k: int = 5) -> list[dict]`.
   Adicionar `NullVectorStore` (Null Object Pattern) como implementação de degradação
   controlada para execução local/offline sem OpenSearch configurado.
 
-* [x] **Passo 2 — OpenSearchAdapter (Confinamento de Infraestrutura):**
+* [x] **Passo 2 — Implementação do `OpenSearchAdapter` em `src/infra/adapters/` (Confinamento de Infraestrutura):**
   Criar `src/infra/adapters/opensearch_client.py`.
   Implementar `OpenSearchAdapter` satisfazendo `VectorStorePort` por subtipagem estrutural.
   Autenticação via `AWSV4SignerAuth` + `boto3.Session().get_credentials()` — cadeia padrão
@@ -35,7 +42,7 @@ O desenvolvimento deve ser estritamente sequencial. O implementador atuará como
   `search_macro_context` nunca propaga exceções — retorna `[]` com log estruturado
   (Controlled Degradation).
 
-* [x] **Passo 3 — Refatoração do `macro_agent` com Pipeline HyDE+RAG:**
+* [x] **Passo 3 — Refatoração do `macro_agent` para o Fluxo HyDE (Pipeline RAG):**
   Refatorar `src/agents/macro.py` introduzindo `create_macro_agent(vector_store: VectorStorePort)`
   como factory que retorna o nó LangGraph com DI por closure.
   Pipeline de três estágios:
@@ -73,7 +80,11 @@ O desenvolvimento deve ser estritamente sequencial. O implementador atuará como
 
 ---
 
-## 📌 Sprint 3.3 — Provisionamento OpenSearch Serverless + Indexação Real
+## 📌 Próxima Sprint — Em Execução
+
+---
+
+### 📌 Sprint 3.3 — Provisionamento OpenSearch Serverless + Indexação Real
 **Status:** PLANEJADA — Iniciar na próxima sessão SOD.
 
 * [ ] **Passo 1 — Terraform (AWS OpenSearch Serverless):**
