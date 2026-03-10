@@ -13,7 +13,6 @@ Covers:
 import pytest
 from unittest.mock import MagicMock, patch
 from typing import Dict, Any
-from decimal import Decimal
 
 from src.core.graph import router
 from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
@@ -38,11 +37,11 @@ def test_router_quant_state_goes_to_fisher() -> None:
     """Tests if a state with quantitative data routes to the qualitative analysis (Fisher)."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("8.0"),
-        price_to_earnings=Decimal("5.5"),
-        margin_of_safety=Decimal("30.0"),
-        fair_value=Decimal("45.0")
+        vpa=35.0,
+        lpa=8.0,
+        price_to_earnings=5.5,
+        margin_of_safety=30.0,
+        fair_value=45.0
     )
     
     state_with_quant = AgentState(
@@ -59,11 +58,11 @@ def test_router_full_context_goes_to_macro() -> None:
     """Tests if a state with both quant and qual data routes to the macro agent."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("8.0"),
-        price_to_earnings=Decimal("5.5"),
-        margin_of_safety=Decimal("30.0"),
-        fair_value=Decimal("45.0")
+        vpa=35.0,
+        lpa=8.0,
+        price_to_earnings=5.5,
+        margin_of_safety=30.0,
+        fair_value=45.0
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
@@ -82,11 +81,11 @@ def test_router_all_data_goes_to_marks() -> None:
     """Tests if a state with quant, qual, and macro data routes to the auditor (Marks)."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("8.0"),
-        price_to_earnings=Decimal("5.5"),
-        margin_of_safety=Decimal("30.0"),
-        fair_value=Decimal("45.0")
+        vpa=35.0,
+        lpa=8.0,
+        price_to_earnings=5.5,
+        margin_of_safety=30.0,
+        fair_value=45.0
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     mock_macro = MacroAnalysis(trend_summary="Bullish", interest_rate_impact=None, inflation_outlook=None)
@@ -107,11 +106,11 @@ def test_router_completed_state_ends_graph() -> None:
     """Tests if a fully populated state terminates the graph execution."""
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("8.0"),
-        price_to_earnings=Decimal("5.5"),
-        margin_of_safety=Decimal("30.0"),
-        fair_value=Decimal("45.0")
+        vpa=35.0,
+        lpa=8.0,
+        price_to_earnings=5.5,
+        margin_of_safety=30.0,
+        fair_value=45.0
     )
     mock_analysis = FisherAnalysis(sentiment_score=0.5, key_risks=["Political Risk"], source_urls=["http://test.com"])
     
@@ -143,8 +142,8 @@ def mock_agents() -> Dict[str, Any]:
 
         mock_graham.return_value = {
             "metrics": GrahamMetrics(
-                ticker="WEGE3", vpa=Decimal("10.0"), lpa=Decimal("1.5"),
-                fair_value=Decimal("40.0"), margin_of_safety=Decimal("10.0")
+                ticker="WEGE3", vpa=10.0, lpa=1.5,
+                fair_value=40.0, margin_of_safety=10.0
             ),
             "messages": [{"role": "assistant", "content": "Graham executed."}]
         }
@@ -212,8 +211,8 @@ def test_routing_skips_correctly(mock_agents: Dict[str, Any]) -> None:
         "messages": [],
         "target_ticker": "PETR4",
         "metrics": GrahamMetrics(
-            ticker="PETR4", vpa=Decimal("35.0"), lpa=Decimal("8.0"),
-            fair_value=Decimal("45.0"), margin_of_safety=Decimal("30.0")
+            ticker="PETR4", vpa=35.0, lpa=8.0,
+            fair_value=45.0, margin_of_safety=30.0
         ),
         "qual_analysis": FisherAnalysis(
             sentiment_score=0.5, key_risks=["Political Risk"],

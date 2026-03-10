@@ -9,7 +9,6 @@ graceful degradation when the tool fails.
 Tests are isolated from the network and LLM APIs by mocking the
 `get_graham_data` tool directly.
 """
-from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -41,10 +40,10 @@ def test_graham_agent_success_path(mock_get_data, initial_state: AgentState):
     # Arrange: Mock the tool to return a valid GrahamMetrics object
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("10.0"),
-        fair_value=Decimal("50.0"),
-        margin_of_safety=Decimal("25.0"),
+        vpa=35.0,
+        lpa=10.0,
+        fair_value=50.0,
+        margin_of_safety=25.0,
     )
     mock_get_data.return_value = mock_metrics
 

@@ -28,7 +28,7 @@ Environment variables:
 """
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 import boto3
 import structlog

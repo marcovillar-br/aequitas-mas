@@ -6,7 +6,6 @@ This file contains pytest tests for the `marks_agent` function, ensuring it
 correctly audits the outputs from prior agents and handles both success and
 failure scenarios gracefully.
 """
-from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 
@@ -17,11 +16,11 @@ from src.core.state import AgentState, FisherAnalysis, GrahamMetrics
 
 MOCK_GRAHAM_METRICS = GrahamMetrics(
     ticker="TEST4",
-    vpa=Decimal("20.00"),
-    lpa=Decimal("4.00"),
-    price_to_earnings=Decimal("7.50"),
-    margin_of_safety=Decimal("30.00"),
-    fair_value=Decimal("39.00"),
+    vpa=20.00,
+    lpa=4.00,
+    price_to_earnings=7.50,
+    margin_of_safety=30.00,
+    fair_value=39.00,
 )
 
 MOCK_FISHER_ANALYSIS = FisherAnalysis(

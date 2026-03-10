@@ -23,30 +23,38 @@ from src.agents.fisher import fisher_agent
 from src.agents.graham import graham_agent
 from src.agents.macro import create_macro_agent
 from src.agents.marks import marks_agent
-from src.core.interfaces.vector_store import NullVectorStore
+from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
 from src.core.state import AgentState
 from src.infra.adapters.dynamo_saver import DynamoDBSaver
 
 logger = structlog.get_logger(__name__)
 
+# FinOps Circuit Breaker — passed via config={"recursion_limit": RECURSION_LIMIT}
+# in every app.invoke() or app.stream() call to prevent infinite LLM loops.
+RECURSION_LIMIT: int = 15
+
 
 # ---------------------------------------------------------------------------
 # Dependency Resolution: Vector Store
 # ---------------------------------------------------------------------------
-def _resolve_vector_store():
+def _resolve_vector_store() -> VectorStorePort:
     """
     Resolve the VectorStorePort implementation at startup.
 
     Attempts to build an OpenSearchAdapter from environment variables.
     Falls back to NullVectorStore (Controlled Degradation) when
     OPENSEARCH_ENDPOINT is not configured — safe for local/offline execution.
+
+    Catches ImportError / ModuleNotFoundError so that missing optional
+    dependencies (e.g. opensearch-py not installed in CI) never break module
+    import and always degrade gracefully to NullVectorStore.
     """
     try:
         from src.infra.adapters.opensearch_client import OpenSearchAdapter  # noqa: PLC0415
         store = OpenSearchAdapter.from_env()
         logger.info("vector_store_resolved", adapter="OpenSearchAdapter")
         return store
-    except (ValueError, RuntimeError) as exc:
+    except (ImportError, ValueError, RuntimeError) as exc:
         logger.warning(
             "vector_store_fallback_null",
             reason=str(exc),
