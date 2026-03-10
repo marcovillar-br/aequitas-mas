@@ -15,9 +15,62 @@ permissions:
   contents: read  # Mandatory for checkout
 
 jobs:
+  quality:
+    name: "Quality Gate (Lint + Dogma Audit + Tests)"
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout and environment setup
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Dependencies
+        run: poetry install --without infra
+
+      # 2. Linting
+      - name: Lint (Ruff)
+        run: poetry run ruff check src/ tests/
+
+      # 3. Dogma Audit — architectural rule enforcement via static grep
+      - name: "Dogma Audit 1: Zero Numerical Hallucination (decimal.Decimal in agents/core)"
+        run: |
+          if grep -rn "decimal\.Decimal" src/agents/ src/core/; then
+            echo "DOGMA VIOLATION: decimal.Decimal is FORBIDDEN in src/agents/ and src/core/."
+            echo "Use Optional[float] = None in all LangGraph state schemas."
+            exit 1
+          fi
+          echo "Audit 1 passed: no decimal.Decimal found in agents/core."
+
+      - name: "Dogma Audit 2: Dependency Inversion / Risk Confinement (boto3 in agents/core)"
+        run: |
+          if grep -rn "import boto3" src/agents/ src/core/; then
+            echo "DOGMA VIOLATION: import boto3 is FORBIDDEN in src/agents/ and src/core/."
+            echo "Cloud SDK interactions belong exclusively in src/infra/adapters/."
+            exit 1
+          fi
+          echo "Audit 2 passed: no boto3 imports found in agents/core."
+
+      # 4. Test suite
+      - name: Run Test Suite (pytest)
+        env:
+          GOOGLE_API_KEY: "mock-key-for-tests"
+        run: poetry run pytest tests/ -v --tb=short
+
   terraform:
     name: "Terraform Execution"
     runs-on: ubuntu-latest
+    needs: quality
     concurrency:
       group: terraform-dev
       cancel-in-progress: false

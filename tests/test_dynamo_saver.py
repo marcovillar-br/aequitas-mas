@@ -3,10 +3,15 @@
 from unittest.mock import MagicMock
 
 import pytest
-from boto3.dynamodb.conditions import Key
-from boto3.dynamodb.types import Binary
 
-from src.infra.adapters.dynamo_saver import DynamoDBSaver
+# Skip the entire module gracefully when boto3 is not installed
+# (e.g. CI environments using `poetry install --without infra`).
+pytest.importorskip("boto3")
+
+from boto3.dynamodb.conditions import Key  # noqa: E402
+from boto3.dynamodb.types import Binary  # noqa: E402
+
+from src.infra.adapters.dynamo_saver import DynamoDBSaver  # noqa: E402
 
 
 @pytest.fixture

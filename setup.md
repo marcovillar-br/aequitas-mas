@@ -79,14 +79,6 @@ poetry run python -c "import platform; print(platform.python_version())"
 poetry run pytest tests/
 ```
 
-## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.3)
+## 9. Implementation Status
 
-| Phase | Component | Status | Traceability |
-| --- | --- | --- | --- |
-| **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
-| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | Refatoração Decimal → float concluída. `frozen=True` + `Optional[float] = None` enforced. |
-| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` — Fail-Fast, Zero Hallucination, mock isolado. |
-| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` — RAG news, rastreabilidade ética via `source_urls`. |
-| **3.1** | Persistência Serverless (DynamoDB) | ✅ Completed | `src/infra/adapters/dynamo_saver.py` — DI por construtor, isomorfismo Local-Cloud. |
-| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | ✅ Completed | `src/infra/adapters/opensearch_client.py` — Adaptador. |
-| **3.3** | Provisionamento AWS & Teste E2E | 🔄 In Progress | Draft do `opensearch.tf` gerado, porém focado no Fisher. Refatoração necessária para cobrir `aequitas-macro-docs`. Ingestor e E2E pendentes. |
+> Sprint status and Definition of Done tracking have been moved to `.context/current-sprint.md`, which is the single authoritative source for implementation progress. Refer to that file for up-to-date sprint objectives, DoD checklists, and impediment tracking.
