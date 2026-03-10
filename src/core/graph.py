@@ -144,18 +144,26 @@ def create_graph() -> CompiledGraph:
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()
-    if env == "local":
+    # Environments that are allowed to silently degrade to MemorySaver when
+    # boto3 is absent (e.g. CI quality gate running `--without infra`).
+    _SOFT_ENVS = {"local", "ci"}
+
+    if env in _SOFT_ENVS:
         memory = MemorySaver()
     else:
-        # Lazy import: boto3 belongs to the optional [infra] group and is not
-        # installed in local/CI environments. Import only when actually needed
-        # (cloud environments). Falls back to MemorySaver if unavailable.
+        # Cloud environments (dev, hom, prod): durable checkpointing is
+        # mandatory. Fail fast if DynamoDBSaver cannot be imported so that
+        # missing infrastructure is surfaced immediately rather than silently
+        # losing state across restarts.
         try:
             from src.infra.adapters.dynamo_saver import DynamoDBSaver  # noqa: PLC0415
             memory = DynamoDBSaver()
-        except ImportError:
-            logger.warning("dynamo_saver_unavailable", fallback="MemorySaver")
-            memory = MemorySaver()
+        except ImportError as exc:
+            raise RuntimeError(
+                f"DynamoDBSaver is required in ENVIRONMENT='{env}' but boto3 is not "
+                f"installed. Run `poetry install --with infra` or set ENVIRONMENT=local. "
+                f"Cause: {exc}"
+            ) from exc
 
     # Compile the graph into an executable application
     # NOTE: recursion_limit is passed at runtime via config parameter in invoke()
