@@ -229,3 +229,104 @@ workflow.add_node("macro", macro_agent)
 ```
 
 O nome `macro_agent` DEVE ser preservado como atributo de módulo em `graph.py` para que `patch("src.core.graph.macro_agent")` continue funcional nos testes de integração existentes.
+
+---
+
+### 6. Especificação 3.2 — Recuperação Vetorial HyDE: Contrato de Dados e Tipagem Defensiva
+
+Esta seção consolida, em formato de contrato formal, o fluxo de dados do pipeline HyDE+RAG
+e reafirma a aplicação do dogma `Optional[float] = None` em **cada elo** da cadeia de
+recuperação macroeconômica — desde a geração do documento hipotético até a persistência
+no `AgentState`.
+
+#### 6.1 Contrato de Dados: Três Fases Obrigatórias
+
+O Agente Macro DEVE executar as três fases abaixo na ordem exata. Nenhuma fase pode ser
+omitida, reordenada ou substituída por inferência direta do LLM.
+
+---
+
+**Fase A — Geração do Documento Hipotético (HyDE Generation)**
+
+| Item | Especificação |
+|---|---|
+| **Responsável** | LLM (`gemini-2.5-flash`, `temperature=0.0`) |
+| **Entrada** | `AgentState.target_ticker` (ex: `"PETR4"`) |
+| **Saída** | `hyde_text: str` — texto puro, denso, sem estrutura JSON |
+| **Formato** | Simulação de trecho de ata COPOM/FED em pt-BR |
+| **Restrição** | `with_structured_output` PROIBIDO — preserva máxima densidade semântica |
+| **Tipo retornado** | `str` (extraído de `AIMessage.content`) |
+
+O documento hipotético NÃO é armazenado no `AgentState`. É utilizado exclusivamente como
+vetor de consulta para a Fase B.
+
+---
+
+**Fase B — Recuperação Vetorial (Vector Retrieval)**
+
+| Item | Especificação |
+|---|---|
+| **Responsável** | `VectorStorePort` (injetado via DI) |
+| **Entrada** | `hyde_text: str` (saída da Fase A) |
+| **Chamada** | `vector_store.search_macro_context(hyde_text, top_k=5)` |
+| **Saída** | `retrieved_docs: list[dict]` |
+| **Campos obrigatórios por doc** | `document_id: str`, `source_url: str`, `content: str`, `score: float` |
+| **Comportamento em falha** | Retorna `[]` — NUNCA propaga exceção |
+| **Metadados para rastreabilidade** | `source_url` e `score` extraídos de cada hit do OpenSearch |
+
+O critério de seleção dos documentos é **exclusivamente** a distância vetorial (similaridade
+de cosseno) entre o embedding do `hyde_text` e os embeddings dos chunks indexados.
+Nenhum filtro heurístico ou regra de negócio adicional é aplicado nesta fase.
+
+---
+
+**Fase C — Síntese Grounded (Grounded Synthesis)**
+
+| Item | Especificação |
+|---|---|
+| **Responsável** | LLM com `with_structured_output(MacroAnalysis)` |
+| **Entradas** | `ticker: str` + `context_block: str` (chunks formatados da Fase B) |
+| **Saída (LLM)** | `MacroAnalysis` com `source_urls=[]` (instrução explícita no prompt) |
+| **Saída (pós-injeção)** | `MacroAnalysis` com `source_urls=dynamic_urls` (do retrieval) |
+| **Mecanismo de injeção** | `raw_result.model_copy(update={"source_urls": dynamic_urls})` |
+| **Garantia** | `source_urls` NUNCA alucinados pelo LLM — sempre extraídos da Fase B |
+
+---
+
+#### 6.2 Tipagem Defensiva `Optional[float] = None` — Reafirmação por Elo da Cadeia
+
+O dogma `Optional[float] = None` é aplicado em **quatro pontos distintos** da cadeia de
+recuperação macroeconômica. A falha em qualquer ponto NÃO deve produzir valores numéricos
+estimados — deve produzir `None`.
+
+```
+Cadeia de Recuperação                   Ponto de aplicação de Optional[float] = None
+─────────────────────────────────────   ──────────────────────────────────────────────────────────
+[1] Fase B — retrieval retorna []       → context_block = fallback text sem dados numéricos
+                                          LLM não encontra valores → interest_rate_impact = None ✓
+
+[2] Fase C — LLM não encontra valor     → Prompt instrui: "se ausente, retorne null"
+    numérico explícito no contexto        interest_rate_impact = None ✓
+
+[3] Fase C — LLM retorna valor inválido → Pydantic field_validator: math.isfinite() rejeita
+    (NaN, Inf, não-numérico)               → ValidationError → Controlled Degradation = None ✓
+
+[4] Fallback crítico (exceção LLM/rede) → MacroAnalysis instanciado diretamente com
+                                           interest_rate_impact=None, inflation_outlook=None ✓
+```
+
+**Regra de ouro:** Se houver qualquer dúvida sobre a proveniência de um valor numérico,
+o campo DEVE ser `None`. A narrativa qualitativa (`trend_summary`) é o único canal
+permitido para informação macroeconômica quando dados quantitativos não estão disponíveis.
+
+#### 6.3 Invariantes do Schema `MacroAnalysis` ao Longo da Cadeia
+
+| Campo | Fase A | Fase B | Fase C (LLM) | Fase C (pós-injeção) | Fallback |
+|---|---|---|---|---|---|
+| `trend_summary` | — | — | **obrigatório** (str) | inalterado | texto fixo de fallback |
+| `interest_rate_impact` | — | — | `float \| None` (se explícito) | inalterado | `None` |
+| `inflation_outlook` | — | — | `str \| None` (se presente) | inalterado | `None` |
+| `source_urls` | — | `dynamic_urls` extraídas | `[]` (instrução) | **`dynamic_urls`** | `[]` |
+
+A coluna "Fase C (pós-injeção)" representa o estado final que entra no `AgentState`.
+É o único estado autorizado a ser gravado no grafo LangGraph.
