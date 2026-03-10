@@ -1,18 +1,33 @@
 # 🎯 Project Status: Aequitas-MAS
 
-## ✅ Sprint Concluída: 3.2 - Agente Macro e RAG HyDE (OpenSearch)
-**Status:** DONE — Entregue em 09/03/2026. Branch: `feat/macro-hyde-opensearch-integration`. Commit: `1e27dea`.
+## ✅ Sprint 3.2 Concluída — Pronta para Integração do Agente Marks
+**Status:** DONE — Entregue em 09/03/2026. Branch: `feat/macro-hyde-opensearch-integration`. Commits: `1e27dea` → `f43a765`.
 
 ### 🛠️ Objetivos Entregues
 
-1. **[x] Integração OpenSearch (Prioridade 1):** Pipeline HyDE de dois estágios implementado em `src/agents/macro.py`.
-   - Stage 1: LLM gera documento hipotético COPOM/FED (`_HYDE_PROMPT` — texto puro, sem *structured output*).
-   - Stage 2: Documento hipotético usado como query semântica via `VectorStorePort.search_macro_context(hyde_text, top_k=5)`.
-   - Stage 3: LLM sintetiza `MacroAnalysis` grounded no contexto recuperado.
+- [x] **Integração OpenSearch (Substituição de mocks por adaptador real):**
+  Pipeline HyDE de três estágios implementado em `src/agents/macro.py`. O mock generativo
+  foi substituído por chamada real ao adaptador vetorizado via `VectorStorePort`:
+  - Stage 1: LLM gera documento hipotético COPOM/FED (`_HYDE_PROMPT` — texto puro, sem *structured output*).
+  - Stage 2: Documento hipotético usado como query k-NN via `VectorStorePort.search_macro_context(hyde_text, top_k=5)`.
+  - Stage 3: LLM sintetiza `MacroAnalysis` grounded no contexto recuperado do OpenSearch.
+  `OpenSearchAdapter.from_env()` consome `OPENSEARCH_ENDPOINT` e autentica via AWS SigV4.
+  `NullVectorStore` garante execução local sem infraestrutura (Controlled Degradation).
 
-2. **[x] Rastreabilidade Ética:** `source_urls` preenchido deterministicamente via `_extract_source_urls(retrieved_docs)` e injetado com `model_copy(update={"source_urls": dynamic_urls})` — nunca alucinado pelo LLM. `audit_log` registra score de cosseno e URL de cada documento selecionado.
+- [x] **Rastreabilidade Ética (Preenchimento de `source_urls` no schema `MacroAnalysis`):**
+  `source_urls` preenchido deterministicamente a partir dos metadados do retrieval via
+  `_extract_source_urls(retrieved_docs)` e injetado com
+  `raw_result.model_copy(update={"source_urls": dynamic_urls})` — nunca alucinado pelo LLM.
+  `audit_log` registra score de cosseno e URL de cada documento selecionado pelo critério HyDE,
+  com prévia do documento hipotético usado como query semântica.
 
-3. **[x] Confinamento de Infraestrutura (DIP):** `boto3` e `opensearch-py` confinados exclusivamente em `src/infra/adapters/opensearch_client.py`. O agente depende apenas de `VectorStorePort` (`src/core/interfaces/vector_store.py`). Varredura confirmou zero SDKs de infra em `src/agents/`.
+- [x] **Confinamento de Infraestrutura (DIP aplicado via `/src/infra/adapters/`):**
+  `import boto3` e `from opensearchpy import ...` confinados exclusivamente em
+  `src/infra/adapters/opensearch_client.py`. O agente em `src/agents/macro.py` depende
+  apenas de `VectorStorePort` definido em `src/core/interfaces/vector_store.py`.
+  Auditoria estática confirmou zero SDKs de infraestrutura em `src/agents/`.
+  `VectorStorePort` injetado em `macro_agent` via factory `create_macro_agent(vector_store)`
+  e resolvido em `src/core/graph.py` por `_resolve_vector_store()`.
 
 ### ✅ Definition of Done (DoD)
 
