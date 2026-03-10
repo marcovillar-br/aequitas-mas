@@ -25,8 +25,6 @@ from src.agents.macro import create_macro_agent
 from src.agents.marks import marks_agent
 from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
 from src.core.state import AgentState
-from src.infra.adapters.dynamo_saver import DynamoDBSaver
-
 logger = structlog.get_logger(__name__)
 
 # FinOps Circuit Breaker — passed via config={"recursion_limit": RECURSION_LIMIT}
@@ -149,8 +147,15 @@ def create_graph() -> CompiledGraph:
     if env == "local":
         memory = MemorySaver()
     else:
-        # This safely covers cloud environments such as dev, hom, and prod.
-        memory = DynamoDBSaver()
+        # Lazy import: boto3 belongs to the optional [infra] group and is not
+        # installed in local/CI environments. Import only when actually needed
+        # (cloud environments). Falls back to MemorySaver if unavailable.
+        try:
+            from src.infra.adapters.dynamo_saver import DynamoDBSaver  # noqa: PLC0415
+            memory = DynamoDBSaver()
+        except ImportError:
+            logger.warning("dynamo_saver_unavailable", fallback="MemorySaver")
+            memory = MemorySaver()
 
     # Compile the graph into an executable application
     # NOTE: recursion_limit is passed at runtime via config parameter in invoke()
