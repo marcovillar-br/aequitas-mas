@@ -88,5 +88,5 @@ poetry run pytest tests/
 | **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` — Fail-Fast, Zero Hallucination, mock isolado. |
 | **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` — RAG news, rastreabilidade ética via `source_urls`. |
 | **3.1** | Persistência Serverless (DynamoDB) | ✅ Completed | `src/infra/adapters/dynamo_saver.py` — DI por construtor, isomorfismo Local-Cloud. |
-| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | ✅ Completed | `src/infra/adapters/opensearch_client.py` — Adaptador OpenSearch via DIP (`VectorStorePort`). Pipeline HyDE 3 estágios. 40 testes passando. Branch: `feat/macro-hyde-opensearch-integration`. |
-| **3.3** | Provisionamento AWS & Teste E2E | 🔄 In Progress | Pendente: Terraform OpenSearch Serverless, script de ingestão BCB/FED, teste E2E com `OPENSEARCH_ENDPOINT` real. |
+| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | ✅ Completed | `src/infra/adapters/opensearch_client.py` — Adaptador. |
+| **3.3** | Provisionamento AWS & Teste E2E | 🔄 In Progress | Draft do `opensearch.tf` gerado, porém focado no Fisher. Refatoração necessária para cobrir `aequitas-macro-docs`. Ingestor e E2E pendentes. |
