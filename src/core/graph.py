@@ -144,8 +144,11 @@ def create_graph() -> CompiledGraph:
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()
-    # Environments that are allowed to silently degrade to MemorySaver when
-    # boto3 is absent (e.g. CI quality gate running `--without infra`).
+    # Soft environments always use MemorySaver unconditionally:
+    #   - "local": developer machine — no AWS credentials expected.
+    #   - "ci":    quality gate (`--without infra`) — boto3 not installed.
+    # DynamoDBSaver is never attempted here; MemorySaver is the correct
+    # and intentional checkpointer for these environments.
     _SOFT_ENVS = {"local", "ci"}
 
     if env in _SOFT_ENVS:
