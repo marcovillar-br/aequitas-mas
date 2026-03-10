@@ -79,13 +79,14 @@ poetry run python -c "import platform; print(platform.python_version())"
 poetry run pytest tests/
 ```
 
-## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.2)
+## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.3)
 
 | Phase | Component | Status | Traceability |
 | --- | --- | --- | --- |
 | **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
-| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | Resolvido: Refatoração Decimal -> float concluída. |
-| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` (Aligned) |
-| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` |
-| **3.1** | Persistência Serverless (DynamoDB) | ✅ Completed | `src/infra/adapters/dynamo_saver.py` (Isomorfismo Local-Cloud) |
-| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | 🔄 In Progress | Pendente: Substituição de mock por chamadas reais via OpenSearchVectorSearch. |
+| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | Refatoração Decimal → float concluída. `frozen=True` + `Optional[float] = None` enforced. |
+| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/b3_fetcher.py` — Fail-Fast, Zero Hallucination, mock isolado. |
+| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/fisher.py` — RAG news, rastreabilidade ética via `source_urls`. |
+| **3.1** | Persistência Serverless (DynamoDB) | ✅ Completed | `src/infra/adapters/dynamo_saver.py` — DI por construtor, isomorfismo Local-Cloud. |
+| **3.2** | Macro Agent & RAG HyDE (OpenSearch) | ✅ Completed | `src/infra/adapters/opensearch_client.py` — Adaptador OpenSearch via DIP (`VectorStorePort`). Pipeline HyDE 3 estágios. 40 testes passando. Branch: `feat/macro-hyde-opensearch-integration`. |
+| **3.3** | Provisionamento AWS & Teste E2E | 🔄 In Progress | Pendente: Terraform OpenSearch Serverless, script de ingestão BCB/FED, teste E2E com `OPENSEARCH_ENDPOINT` real. |

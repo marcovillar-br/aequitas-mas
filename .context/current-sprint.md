@@ -1,7 +1,38 @@
 # 🎯 Project Status: Aequitas-MAS
 
-## ✅ Sprint 3.2 Concluída — Pronta para Integração do Agente Marks
-**Status:** DONE — Entregue em 09/03/2026. Branch: `feat/macro-hyde-opensearch-integration`. Commits: `1e27dea` → `f43a765`.
+---
+
+## 🔄 Sprint Ativa: 3.3 — Provisionamento OpenSearch e Teste End-to-End Real
+**Status:** IN PROGRESS — Iniciada em 10/03/2026. Branch: `feat/macro-hyde-opensearch-integration` (PR pendente para `development`).
+
+### 🛠️ Objetivos da Sessão SOD (Amanhã)
+
+1. **Provisionamento AWS (Terraform):**
+   Criar domínio OpenSearch Serverless com collection `aequitas-macro-docs`, política de acesso OIDC restrita ao role de execução e pipeline de embedding (neural search) via AWS Bedrock ou SageMaker.
+   Arquivo-alvo: `infra/terraform/opensearch/` (novo módulo).
+   Restrição: Sem `terraform apply` automático em CI — execução manual supervisionada pelo Tech Lead.
+
+2. **Script de Ingestão (Isomorfismo BCB/FED):**
+   Criar `src/tools/opensearch_indexer.py` — script Python isomorfo para indexar atas do COPOM (BCB) e *minutes* do FED com geração de embeddings.
+   Campos obrigatórios por documento: `content`, `source_url`, `document_id`, `published_at`.
+   SDK: confinado em `/src/infra/` (DIP enforced).
+
+3. **Integração E2E Real:**
+   Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` (AWS Secrets Manager ou GitHub Actions env secrets) e executar `macro_agent` com retrieval real.
+   Validar que `source_urls` é preenchido com URLs reais do BCB/FED e que `audit_log` registra scores de cosseno > 0.0.
+
+### ✅ Definition of Done (DoD)
+
+- [ ] Domínio OpenSearch Serverless provisionado via Terraform (`dev`).
+- [ ] Ao menos 10 documentos indexados com embeddings (atas COPOM 2024-2025).
+- [ ] `macro_agent` executando com `OPENSEARCH_ENDPOINT` real e retornando `source_urls` de fontes oficiais (BCB/FED).
+- [ ] `pytest tests/` — 40+ testes passando após integração com OpenSearch real.
+- [ ] PR `feat/macro-hyde-opensearch-integration` → `development` aprovado pelo Tech Lead.
+
+---
+
+## ✅ Histórico — Sprint 3.2: Agente Macro e RAG HyDE (OpenSearch)
+**Status:** DONE — Entregue em 09/03/2026. Branch: `feat/macro-hyde-opensearch-integration`. Commits: `1e27dea` → `d94ab5b`.
 
 ### 🛠️ Objetivos Entregues
 
@@ -18,46 +49,34 @@
   `source_urls` preenchido deterministicamente a partir dos metadados do retrieval via
   `_extract_source_urls(retrieved_docs)` e injetado com
   `raw_result.model_copy(update={"source_urls": dynamic_urls})` — nunca alucinado pelo LLM.
-  `audit_log` registra score de cosseno e URL de cada documento selecionado pelo critério HyDE,
-  com prévia do documento hipotético usado como query semântica.
+  `audit_log` registra score de cosseno e URL de cada documento selecionado pelo critério HyDE.
 
 - [x] **Confinamento de Infraestrutura (DIP aplicado via `/src/infra/adapters/`):**
   `import boto3` e `from opensearchpy import ...` confinados exclusivamente em
-  `src/infra/adapters/opensearch_client.py`. O agente em `src/agents/macro.py` depende
-  apenas de `VectorStorePort` definido em `src/core/interfaces/vector_store.py`.
-  Auditoria estática confirmou zero SDKs de infraestrutura em `src/agents/`.
-  `VectorStorePort` injetado em `macro_agent` via factory `create_macro_agent(vector_store)`
-  e resolvido em `src/core/graph.py` por `_resolve_vector_store()`.
+  `src/infra/adapters/opensearch_client.py`. Auditoria estática confirmou zero SDKs de
+  infraestrutura em `src/agents/`. `VectorStorePort` injetado via `create_macro_agent(vector_store)`.
 
-### ✅ Definition of Done (DoD)
+- [x] **Correções de Code Review (GitHub Copilot):**
+  Prompts HyDE e síntese reescritos em English (`coding-guidelines §1`). `Optional` não
+  utilizado removido (`Ruff F401`). `-> VectorStorePort` e `ImportError` adicionados ao
+  `_resolve_vector_store()`. Docstrings de testes traduzidos para English.
 
-- [x] `macro_agent` realizando *retrieval* dinâmico com base no vetor de similaridade via `OpenSearchAdapter` (produção) ou `NullVectorStore` (local/offline).
-- [x] Histórico de execução validado sem alucinações: `Optional[float] = None` enforced para `interest_rate_impact` e `inflation_outlook` quando não há dados explícitos no contexto recuperado. Testado em `test_macro_agent_empty_retrieval_controlled_degradation` e `test_macro_agent_opensearch_connection_failure_degrades_gracefully`.
-- [x] Grafo executado de ponta a ponta (`pytest tests/test_graph.py`) — **9 passed**, incluindo testes de DI do nó macro. Suite completa: **40 passed, 0 regressões** (09/03/2026).
+- [x] **Correções de Auditoria SOTA:**
+  `Decimal` erradicado dos fixtures de teste (substituído por `float` literal).
+  `RECURSION_LIMIT: int = 15` formalizado como constante nomeada em `graph.py`.
+  `pytest-asyncio` adicionado ao grupo `dev`. `boto3`/`opensearch-py` movidos para grupo
+  opcional `[infra]` em `pyproject.toml`.
+
+### ✅ Definition of Done (DoD) — CONCLUÍDA
+
+- [x] `macro_agent` realizando *retrieval* dinâmico via `OpenSearchAdapter` (produção) ou `NullVectorStore` (local/offline).
+- [x] `Optional[float] = None` enforced para campos numéricos ausentes. Testado em 2 cenários de falha de conexão OpenSearch.
+- [x] Suite completa: **40 passed, 0 regressões** (09/03/2026).
+- [x] Auditoria SOTA aprovada: zero `🚨 Critical Blockers`, zero `⚠️ Warnings` remanescentes.
 
 ### 📊 Cobertura de Testes Adicionada
 
 | Arquivo | Testes | Cobertura |
 |---|---|---|
-| `tests/test_macro_agent.py` | 13 | Pipeline HyDE, degradação, falha de conexão, helpers privados, conformidade de protocolo |
+| `tests/test_macro_agent.py` | 13 | Pipeline HyDE, degradação, falha OpenSearch, helpers privados, protocolo |
 | `tests/test_graph.py` | +2 | DI do VectorStorePort, shape do AgentState recebido pelo macro |
-
----
-
-## 📌 Próxima Sprint: 3.3 - Provisionamento OpenSearch e Teste End-to-End Real
-
-**Foco:** Configurar o índice OpenSearch Serverless, indexar documentos reais (atas BCB/FED) e executar o pipeline HyDE+RAG com retrieval real.
-
-### 🛠️ Objetivos da Próxima Sessão (SOD)
-
-1. **Provisionamento AWS (Terraform):** Criar domínio OpenSearch Serverless com collection `aequitas-macro-docs`, política de acesso OIDC e pipeline de embedding (neural search).
-2. **Indexação Inicial:** Script de ingestão das atas do COPOM (BCB) e FED com geração de embeddings via SageMaker ou Bedrock.
-3. **Teste E2E Real:** Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` e executar `macro_agent` com retrieval real, validando `source_urls` preenchidos com URLs reais do BCB/FED.
-4. **Validação de `audit_log`:** Confirmar que o score de cosseno retornado pelo OpenSearch real é registrado corretamente no `audit_log`.
-
-### ✅ Definition of Done (DoD)
-
-- [ ] Domínio OpenSearch Serverless provisionado via Terraform (`dev`).
-- [ ] Ao menos 10 documentos indexados com embeddings (atas COPOM 2024-2025).
-- [ ] `macro_agent` executando com `OPENSEARCH_ENDPOINT` configurado e retornando `source_urls` com URLs reais.
-- [ ] `pytest tests/` — 40+ testes passando após integração com OpenSearch real.
