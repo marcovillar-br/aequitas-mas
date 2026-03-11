@@ -40,3 +40,14 @@ This document defines the operational nodes of the Aequitas-MAS Directed Acyclic
   1. Evaluate the current phase of the Market Pendulum (Market Cycle).
   2. Challenge Graham's thesis: "Does the margin of safety compensate for the governance risk pointed out by Fisher?".
   3. Generate the final audit log that approves or vetoes the recommendation, adding restrictions focused on capital protection (Drawdown).
+
+---
+
+## 🌐 5. Macro Agent (The Holistic)
+**Architectural Function:** Avaliação holística do ambiente macroeconômico.
+- **Objective:** Compreender os ciclos de liquidez e direcionamento macro que afetam o valuation.
+- **Mechanism:** *Geração Aumentada por Recuperação baseada em Hypothetical Dense Embeddings (HyDE)* para ingestão de atas do COPOM e relatórios do FED.
+- **Action Rules:**
+  1. Avaliar vetores de política monetária (ex: tendências da taxa Selic e Fed Funds).
+  2. Emitir sínteses curtas indicando impacto e riscos sistêmicos em nível de índice/mercado.
+  3. Preservar "Degradação Controlada" assumindo None/Neutral caso atas ou documentações oficiais estejam indisponíveis.

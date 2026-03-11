@@ -14,3 +14,7 @@ Use this skill to design, review, and implement the Q3/Q4 AWS architecture for t
 ## 3. Observability & Costs
 - Architecture designs must integrate with AWS CloudWatch for ingesting JSON streams.
 - Always provide a conservative cost estimate for any new AWS service proposed.
+
+## 4. Language Constraints
+- All infrastructure code (Terraform/CDK), variable names, and internal comments MUST be in English.
+- Any architectural proposal, cost estimate, or report presented to the user MUST be strictly in Portuguese (PT-BR).

@@ -10,7 +10,7 @@ invoking a deterministic tool to perform calculations, thus adhering to the
 import structlog
 from langchain_core.messages import AIMessage
 
-from src.core.state import AgentState
+from src.core.state import AgentState, GrahamMetrics
 from src.tools.b3_fetcher import get_graham_data
 
 # Initialize structured logger for observability
@@ -31,7 +31,7 @@ def graham_agent(state: AgentState) -> dict:
     Returns:
         A dictionary with the mutated state keys (`metrics` or `audit_log`).
     """
-    ticker = state["target_ticker"]
+    ticker = state.target_ticker
     logger.info("graham_agent_invoked", ticker=ticker)
 
     try:
@@ -56,12 +56,11 @@ def graham_agent(state: AgentState) -> dict:
 
     except RuntimeError as e:
         # Graceful degradation and circuit breaking
-        error_message = f"Graham tool failed for {ticker}: {e}"
         logger.error("graham_tool_error", ticker=ticker, error=str(e))
 
         # Append a critical note to the audit log for Marks Agent to see
         audit_message = (
-            f"CRITICAL: O motor quantitativo falhou para '{ticker}'. "
+            f"CRÍTICO: Motor quantitativo falhou para '{ticker}'. "
             "Causa: Dados insuficientes ou inválidos (LPA/VPA negativos?)."
         )
         
@@ -69,4 +68,12 @@ def graham_agent(state: AgentState) -> dict:
             content=f"Não foi possível concluir a análise quantitativa para {ticker} devido a dados inconsistentes."
         )
 
-        return {"audit_log": [audit_message], "messages": [user_message]}
+        # Cria um objeto de métricas de falha para quebrar o loop do roteador,
+        # garantindo que state.metrics não seja mais None.
+        failed_metrics = GrahamMetrics(ticker=ticker)
+
+        return {
+            "metrics": failed_metrics,
+            "audit_log": [audit_message],
+            "messages": [user_message],
+        }

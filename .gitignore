@@ -15,3 +15,14 @@ htmlcov/
 
 # Logs do sistema
 *.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Variáveis de Ambiente e Segredos
+.env
+.env.local
+

@@ -59,12 +59,12 @@ The project rigorously separates intelligence (Agents) from adapters (Tools/Infr
 ## 6. State Contract Implementation (`src/core/state.py`)
 
 This is the core of the **Risk Confinement**. The state is not text; it is a validated Pydantic object that enforces two critical dogmas:
-1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa`) are strictly typed as `decimal.Decimal`, preventing floating-point errors and ensuring mathematical precision.
+1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa` e métricas derivadas) are typed as `Optional[float] = None` at the LangGraph state boundary, enabling controlled degradation without stochastic guessing.
 2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
 
 ## 7. Security & FinOps Protocol (Zero Trust)
 
-* **API Keys**: Usage of `.env` files is strictly prohibited. Keys are injected via the IDE's Secret Manager (Google IDX) or runtime environment variables.
+* **API Keys**: In a local VS Code environment, developers MUST use a strictly local `.env` file for runtime environment variables. **WARNING:** This `.env` file MUST remain listed in the `.gitignore` to prevent secret leakage. Never commit keys to the repository.
 * **Recursion Limit**: Every LangGraph compilation MUST include `recursion_limit=15` to prevent infinite cost loops in case of agent divergence.
 
 ## 8. Validation Criteria (Definition of Done - DoD)
@@ -79,12 +79,6 @@ poetry run python -c "import platform; print(platform.python_version())"
 poetry run pytest tests/
 ```
 
-## 9. Implementation Status Table (Sync: PME v5.0 / Sprint 3.1)
+## 9. Implementation Status
 
-| Phase | Component | Status | Traceability |
-| --- | --- | --- | --- |
-| **1.1** | Agnostic Environment (Nix/Poetry) | ✅ Completed | ETD v5, Cap 3 |
-| **1.2** | State Isomorphism (`state.py`) | ✅ Completed | DDE v4.2, Sec 1 |
-| **1.3** | Quantitative Engine (Tools) | ✅ Completed | `src/tools/` |
-| **2.1** | Graham-Fisher Orchestration | ✅ Completed | `src/agents/` |
-| **3.1** | Cloud Infrastructure (DynamoDB/OpenSearch) | 🔄 In Progress | `infra/*.tf` |
+> Sprint status and Definition of Done tracking have been moved to `.context/current-sprint.md`, which is the single authoritative source for implementation progress. Refer to that file for up-to-date sprint objectives, DoD checklists, and impediment tracking.

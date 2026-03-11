@@ -9,7 +9,6 @@ graceful degradation when the tool fails.
 Tests are isolated from the network and LLM APIs by mocking the
 `get_graham_data` tool directly.
 """
-from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -41,10 +40,10 @@ def test_graham_agent_success_path(mock_get_data, initial_state: AgentState):
     # Arrange: Mock the tool to return a valid GrahamMetrics object
     mock_metrics = GrahamMetrics(
         ticker="PETR4",
-        vpa=Decimal("35.0"),
-        lpa=Decimal("10.0"),
-        fair_value=Decimal("50.0"),
-        margin_of_safety=Decimal("25.0"),
+        vpa=35.0,
+        lpa=10.0,
+        fair_value=50.0,
+        margin_of_safety=25.0,
     )
     mock_get_data.return_value = mock_metrics
 
@@ -70,7 +69,7 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
     when the tool raises a RuntimeError.
     """
     # Arrange: Mock the tool to simulate a failure
-    error_text = "Dados insuficientes ou inválidos (LPA/VPA negativos?)"
+    error_text = "Insufficient or invalid data (negative EPS/BVPS?)"
     mock_get_data.side_effect = RuntimeError(error_text)
 
     # Act: Invoke the agent
@@ -78,12 +77,14 @@ def test_graham_agent_failure_path(mock_get_data, initial_state: AgentState):
 
     # Assert: Check that the agent handled the error correctly
     mock_get_data.assert_called_once_with("PETR4")
-    assert "metrics" not in result  # The metrics should not be populated
+    # Assert that the agent returned a placeholder metric to break the graph loop
+    assert "metrics" in result
+    assert isinstance(result["metrics"], GrahamMetrics)
+    assert result["metrics"].fair_value is None  # Critical value is None on failure
     assert "audit_log" in result
     assert len(result["audit_log"]) == 1
-    assert "CRITICAL: O motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
-
+    assert "CRÍTICO: Motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
     # Assert that a user-facing error message is returned
     assert "messages" in result
     assert isinstance(result["messages"][0], AIMessage)
-    assert "Não foi possível concluir a análise quantitativa para PETR4" in result["messages"][0].content
+    assert "Não foi possível concluir a análise quantitativa para PETR4 devido a dados inconsistentes" in result["messages"][0].content

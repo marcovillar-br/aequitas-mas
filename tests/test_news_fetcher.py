@@ -15,14 +15,14 @@ from src.tools.news_fetcher import get_ticker_news, NewsItem
 # Mock data simulating the output from the ddgs.news() API
 MOCK_DDGS_NEWS_RESPONSE = [
     {
-        "title": "Petrobras (PETR4) anuncia dividendos",
+        "title": "Petrobras (PETR4) announces dividends",
         "url": "https://example.com/petr4-news-1",
-        "body": "A Petrobras anunciou o pagamento de dividendos extraordinários...",
+        "body": "Petrobras announced the payment of extraordinary dividends...",
     },
     {
-        "title": "Lucro da Petrobras sobe 20% no trimestre",
+        "title": "Petrobras profit rises 20% in the quarter",
         "url": "https://example.com/petr4-news-2",
-        "body": "O resultado foi impulsionado pela alta do petróleo...",
+        "body": "The result was driven by the rise in oil prices...",
     },
 ]
 
@@ -46,12 +46,12 @@ def test_get_ticker_news_success(mock_ddgs_class):
     # Assert: Check the results
     assert len(news_items) == 2
     assert all(isinstance(item, NewsItem) for item in news_items)
-    assert news_items[0].title == "Petrobras (PETR4) anuncia dividendos"
+    assert news_items[0].title == "Petrobras (PETR4) announces dividends"
     assert news_items[1].url == "https://example.com/petr4-news-2"
 
     # Assert that the mock was called with the correct parameters
     mock_ddgs_instance.news.assert_called_once_with(
-        "PETR4 finanças notícias fatos relevantes",
+        "PETR4 notícias fatos relevantes financeiro",
         region="br-pt",
         safesearch="off",
         timelimit="w",
@@ -72,7 +72,7 @@ def test_get_ticker_news_invalid_ticker_fails_fast():
         get_ticker_news(invalid_ticker)
 
     # Check that the error message clearly indicates the cause
-    assert "Invalid ticker format" in str(excinfo.value)
+    assert "Formato de ticker inválido" in str(excinfo.value)
     assert "PETROBRAS" in str(excinfo.value)
 
 

@@ -6,11 +6,8 @@ This file contains pytest tests for the `marks_agent` function, ensuring it
 correctly audits the outputs from prior agents and handles both success and
 failure scenarios gracefully.
 """
-from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
-import pytest
-from langchain_core.messages import AIMessage
 
 from src.agents.marks import MarksVerdict, marks_agent
 from src.core.state import AgentState, FisherAnalysis, GrahamMetrics
@@ -19,11 +16,11 @@ from src.core.state import AgentState, FisherAnalysis, GrahamMetrics
 
 MOCK_GRAHAM_METRICS = GrahamMetrics(
     ticker="TEST4",
-    vpa=Decimal("20.00"),
-    lpa=Decimal("4.00"),
-    price_to_earnings=Decimal("7.50"),
-    margin_of_safety=Decimal("30.00"),
-    fair_value=Decimal("39.00"),
+    vpa=20.00,
+    lpa=4.00,
+    price_to_earnings=7.50,
+    margin_of_safety=30.00,
+    fair_value=39.00,
 )
 
 MOCK_FISHER_ANALYSIS = FisherAnalysis(
@@ -32,7 +29,7 @@ MOCK_FISHER_ANALYSIS = FisherAnalysis(
     source_urls=["http://example.com/news1"],
 )
 
-MOCK_VERDICT = "Veredito de teste: A margem de segurança parece adequada, mas os riscos regulatórios exigem cautela. APROVADO com ressalvas."
+MOCK_VERDICT = "Test verdict: The margin of safety seems adequate, but regulatory risks require caution. APPROVED with reservations."
 
 
 # 2. TEST CASES
