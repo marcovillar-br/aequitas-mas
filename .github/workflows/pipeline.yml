@@ -43,19 +43,22 @@ jobs:
         run: poetry run ruff check src/ tests/
 
       # 3. Dogma Audit — architectural rule enforcement via static grep
-      - name: "Dogma Audit 1: Zero Numerical Hallucination (decimal.Decimal in agents/core)"
+      - name: "Dogma Audit 1: Zero Numerical Hallucination (Decimal usage in agents/core)"
         run: |
-          if grep -rn "decimal\.Decimal" src/agents/ src/core/; then
-            echo "DOGMA VIOLATION: decimal.Decimal is FORBIDDEN in src/agents/ and src/core/."
+          # Catches both `decimal.Decimal` and `from decimal import Decimal`
+          if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal)" src/agents/ src/core/; then
+            echo "DOGMA VIOLATION: Decimal usage is FORBIDDEN in src/agents/ and src/core/."
+            echo "Detected forms: 'decimal.Decimal' or 'from decimal import Decimal'."
             echo "Use Optional[float] = None in all LangGraph state schemas."
             exit 1
           fi
-          echo "Audit 1 passed: no decimal.Decimal found in agents/core."
+          echo "Audit 1 passed: no Decimal usage found in agents/core."
 
       - name: "Dogma Audit 2: Dependency Inversion / Risk Confinement (boto3 in agents/core)"
         run: |
-          if grep -rn "import boto3" src/agents/ src/core/; then
-            echo "DOGMA VIOLATION: import boto3 is FORBIDDEN in src/agents/ and src/core/."
+          # Catches both `import boto3` and `from boto3 import ...`
+          if grep -rn -E "(import boto3|from boto3\b)" src/agents/ src/core/; then
+            echo "DOGMA VIOLATION: boto3 is FORBIDDEN in src/agents/ and src/core/."
             echo "Cloud SDK interactions belong exclusively in src/infra/adapters/."
             exit 1
           fi

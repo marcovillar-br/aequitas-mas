@@ -144,18 +144,38 @@ def create_graph() -> CompiledGraph:
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()
-    if env == "local":
+    # Soft environments always use MemorySaver unconditionally:
+    #   - "local": developer machine — no AWS credentials expected.
+    #   - "ci":    quality gate (`--without infra`) — boto3 not installed.
+    # DynamoDBSaver is never attempted here; MemorySaver is the correct
+    # and intentional checkpointer for these environments.
+    _SOFT_ENVS = {"local", "ci"}
+
+    if env in _SOFT_ENVS:
         memory = MemorySaver()
     else:
-        # Lazy import: boto3 belongs to the optional [infra] group and is not
-        # installed in local/CI environments. Import only when actually needed
-        # (cloud environments). Falls back to MemorySaver if unavailable.
+        # Cloud environments (dev, hom, prod): durable checkpointing is
+        # mandatory. Fail fast if DynamoDBSaver cannot be imported so that
+        # missing infrastructure is surfaced immediately rather than silently
+        # losing state across restarts.
         try:
             from src.infra.adapters.dynamo_saver import DynamoDBSaver  # noqa: PLC0415
             memory = DynamoDBSaver()
-        except ImportError:
-            logger.warning("dynamo_saver_unavailable", fallback="MemorySaver")
-            memory = MemorySaver()
+        except ImportError as exc:
+            missing_module = getattr(exc, "name", None)
+            base_msg = (
+                f"DynamoDBSaver is required in ENVIRONMENT='{env}' but could not be imported. "
+            )
+            if missing_module in {"boto3", "botocore"}:
+                guidance = (
+                    f"AWS SDK dependency '{missing_module}' is missing. "
+                    "Run `poetry install --with infra` or set ENVIRONMENT=local. "
+                )
+            else:
+                guidance = (
+                    "Check that all DynamoDBSaver dependencies are installed and importable. "
+                )
+            raise RuntimeError(base_msg + guidance + f"Cause: {exc}") from exc
 
     # Compile the graph into an executable application
     # NOTE: recursion_limit is passed at runtime via config parameter in invoke()
