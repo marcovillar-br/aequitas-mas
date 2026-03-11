@@ -1,41 +1,41 @@
 # 1. Política de Criptografia
-resource "aws_opensearchserverless_security_policy" "AQM_FISHER_ENCRYPTION_POLICY" {
-  name        = "aqm-fisher-enc-${terraform.workspace}"
+resource "aws_opensearchserverless_security_policy" "AQM_VECTOR_STORE_ENCRYPTION_POLICY" {
+  name        = "aqm-vector-store-enc-${terraform.workspace}"
   type        = "encryption"
-  description = "Encryption policy for Fisher Agent Vector Store"
+  description = "Encryption policy for Aequitas-MAS shared Vector Store collection"
   policy = jsonencode({
     Rules = [{
       ResourceType = "collection",
-      Resource     = ["collection/aqm-fisher-${terraform.workspace}"]
+      Resource     = ["collection/aequitas-vector-store-${terraform.workspace}"]
     }],
     AWSOwnedKey = true
   })
 }
 
 # 2. Política de Rede (Acesso Público para MVP)
-resource "aws_opensearchserverless_security_policy" "AQM_FISHER_NETWORK_POLICY" {
-  name        = "aqm-fisher-net-${terraform.workspace}"
+resource "aws_opensearchserverless_security_policy" "AQM_VECTOR_STORE_NETWORK_POLICY" {
+  name        = "aqm-vector-store-net-${terraform.workspace}"
   type        = "network"
-  description = "Network access policy for Fisher Agent Vector Store"
+  description = "Network access policy for Aequitas-MAS shared Vector Store collection"
   policy = jsonencode([{
     Rules = [
-      { ResourceType = "collection", Resource = ["collection/aqm-fisher-${terraform.workspace}"] },
-      { ResourceType = "dashboard", Resource = ["collection/aqm-fisher-${terraform.workspace}"] }
+      { ResourceType = "collection", Resource = ["collection/aequitas-vector-store-${terraform.workspace}"] },
+      { ResourceType = "dashboard", Resource = ["collection/aequitas-vector-store-${terraform.workspace}"] }
     ],
     AllowFromPublic = true
   }])
 }
 
-# 3. Política de Acesso aos Dados (CORRIGIDA)
-resource "aws_opensearchserverless_access_policy" "AQM_FISHER_ACCESS_POLICY" {
-  name        = "aqm-fisher-acc-${terraform.workspace}"
+# 3. Política de Acesso aos Dados
+resource "aws_opensearchserverless_access_policy" "AQM_VECTOR_STORE_ACCESS_POLICY" {
+  name        = "aqm-vector-store-acc-${terraform.workspace}"
   type        = "data"
-  description = "Data access policy for Fisher Agent Vector Store"
+  description = "Data access policy for Aequitas-MAS shared Vector Store collection"
   policy = jsonencode([{
     Rules = [
       {
         ResourceType = "index",
-        Resource     = ["index/aqm-fisher-${terraform.workspace}/*"],
+        Resource     = ["index/aequitas-vector-store-${terraform.workspace}/*"],
         Permission   = [
           "aoss:ReadDocument",
           "aoss:WriteDocument",
@@ -47,7 +47,7 @@ resource "aws_opensearchserverless_access_policy" "AQM_FISHER_ACCESS_POLICY" {
       },
       {
         ResourceType = "collection",
-        Resource     = ["collection/aqm-fisher-${terraform.workspace}"],
+        Resource     = ["collection/aequitas-vector-store-${terraform.workspace}"],
         Permission   = [
           "aoss:CreateCollectionItems",
           "aoss:DeleteCollectionItems",
@@ -62,14 +62,14 @@ resource "aws_opensearchserverless_access_policy" "AQM_FISHER_ACCESS_POLICY" {
   }])
 }
 
-# 4. A Coleção OpenSearch Serverless
-resource "aws_opensearchserverless_collection" "AQM_FISHER_VECTOR_STORE" {
-  name        = "aqm-fisher-${terraform.workspace}"
+# 4. A Coleção OpenSearch Serverless (Shared Collection — ADR 006)
+resource "aws_opensearchserverless_collection" "AQM_VECTOR_STORE" {
+  name        = "aequitas-vector-store-${terraform.workspace}"
   type        = "VECTORSEARCH"
-  description = "Vector storage for the Fisher Agent - Aequitas-MAS"
+  description = "Shared vector store for all Aequitas-MAS agents (Fisher + Macro) - see ADR 006"
 
   tags = {
-    Name         = "aqm-fisher-${terraform.workspace}"
+    Name         = "aequitas-vector-store-${terraform.workspace}"
     Environment  = terraform.workspace
     Project      = "Aequitas"
     Service      = "MAS"
@@ -80,8 +80,8 @@ resource "aws_opensearchserverless_collection" "AQM_FISHER_VECTOR_STORE" {
   }
 
   depends_on = [
-    aws_opensearchserverless_security_policy.AQM_FISHER_ENCRYPTION_POLICY,
-    aws_opensearchserverless_security_policy.AQM_FISHER_NETWORK_POLICY,
-    aws_opensearchserverless_access_policy.AQM_FISHER_ACCESS_POLICY
+    aws_opensearchserverless_security_policy.AQM_VECTOR_STORE_ENCRYPTION_POLICY,
+    aws_opensearchserverless_security_policy.AQM_VECTOR_STORE_NETWORK_POLICY,
+    aws_opensearchserverless_access_policy.AQM_VECTOR_STORE_ACCESS_POLICY
   ]
 }
