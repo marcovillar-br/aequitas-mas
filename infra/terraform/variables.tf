@@ -48,12 +48,3 @@ variable "AQM_ENABLE_DELETION_PROTECTION" {
     prod = true
   }
 }
-
-# 4. OpenSearch Index Routing (ADR 006 — Shared Collection, Separate Indices)
-# Each agent targets its own index within the shared `aequitas-vector-store` collection.
-# Runtime selection is done via the OPENSEARCH_INDEX environment variable.
-variable "opensearch_indices" {
-  description = "List of OpenSearch index names provisioned within the shared aequitas-vector-store collection, one per agent domain"
-  type        = list(string)
-  default     = ["fisher-index", "macro-index"]
-}
