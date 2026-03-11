@@ -10,6 +10,8 @@ Covers:
       VectorStorePort through the macro_agent node.
 """
 
+import sys
+
 import pytest
 from unittest.mock import patch
 from typing import Dict, Any
@@ -290,3 +292,35 @@ def test_macro_agent_receives_correct_state_shape(mock_agents: Dict[str, Any]) -
     assert state_received.qual_analysis is not None, (
         "macro must receive populated qual_analysis from Fisher."
     )
+
+
+# -----------------------------------------------------------------------------
+# 4. UNIT TESTS: CHECKPOINTER SELECTION (Environment-Dependent Persistence)
+# -----------------------------------------------------------------------------
+
+def test_create_graph_uses_memory_saver_in_soft_envs(
+    monkeypatch: pytest.MonkeyPatch, mock_agents: Dict[str, Any]
+) -> None:
+    """In local and ci environments, create_graph() must unconditionally use MemorySaver."""
+    from langgraph.checkpoint.memory import MemorySaver
+    from src.core.graph import create_graph
+
+    for soft_env in ("local", "ci"):
+        monkeypatch.setenv("ENVIRONMENT", soft_env)
+        app = create_graph()
+        assert isinstance(app.checkpointer, MemorySaver), (
+            f"Expected MemorySaver in ENVIRONMENT='{soft_env}', "
+            f"got {type(app.checkpointer).__name__}"
+        )
+
+
+def test_create_graph_fails_fast_when_dynamo_unavailable_in_cloud_env(
+    monkeypatch: pytest.MonkeyPatch, mock_agents: Dict[str, Any]
+) -> None:
+    """In cloud environments, a missing DynamoDBSaver must raise RuntimeError immediately."""
+    monkeypatch.setenv("ENVIRONMENT", "dev")
+    # Shadow the module with None to simulate an ImportError at the lazy-import site.
+    with patch.dict(sys.modules, {"src.infra.adapters.dynamo_saver": None}):
+        from src.core.graph import create_graph
+        with pytest.raises(RuntimeError, match=r"ENVIRONMENT='dev'.*could not be imported"):
+            create_graph()
