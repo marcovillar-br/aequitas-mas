@@ -23,6 +23,18 @@
    Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` e executar `macro_agent` com retrieval real.
    Validar `source_urls` e `audit_log` registrando scores de cosseno > 0.0.
 
+### Concluído Hoje (10/03/2026)
+* **SSOT (Single Source of Truth) Agnóstico:** Criação do diretório central `.ai/context.md` como repositório canônico de dogmas de arquitetura para todos os assistentes IA (Claude, Copilot, Gemini, NotebookLM).
+* **Limpeza de Diretórios RPI:** Reestruturação topológica dos *slash commands* (`/research`, `/plan`, `/implement`, `/eod`) em `.claude/commands/`.
+* **CI/CD Quality Gates:** Implementação do job `quality` no `pipeline.yml` com bloqueio estrito contra violações de dogma arquitetural (`decimal.Decimal` e `boto3` fora dos limites permitidos).
+* **Degradação Controlada de Persistência:** Refatoração de `src/core/graph.py` com *lazy import* de `DynamoDBSaver` e introdução de `_SOFT_ENVS = {"local", "ci"}` para fallback automático ao `MemorySaver`.
+* **Testes de Resiliência:** Adição de cobertura (`test_graph.py`) e mecanismo de pulo amigável no CI (`pytest.importorskip("boto3")` em `test_dynamo_saver.py`).
+* **Dívida Arquitetural Liquidada:** Geração dos ADRs formais 005, 006 e 007 mapeando o pipeline HyDE RAG, a estratégia de Shared Collection OpenSearch e as limitações dos Dogma Audits via grep estático.
+* **Refatoração IaC:** Refatoração da configuração Terraform (`opensearch.tf`, `variables.tf`) para provisionar a collection compartilhada `aequitas-vector-store`, desbloqueando a Sprint 3.3 sem aumento de footprint de custo AWS.
+
+### Próximos Passos
+* Ready for Macro Agent vector ingestion and OpenSearch `terraform apply` review.
+
 ### 🚧 Impedimentos / Débitos Técnicos (Check-out 10/03/2026)
 * **Desalinhamento Terraform:** O provisionamento AWS em `infra/terraform/opensearch.tf` foi construído visando o escopo do Fisher (`aqm-fisher`) em vez do Macro. Ação necessária no próximo SOD: duplicar/refatorar o `.tf` para garantir suporte à coleção `aequitas-macro-docs`.
 * **Script de Ingestão Pendente:** A estrutura da AWS está sendo levantada, mas o injetor de vetores não foi desenvolvido hoje.
