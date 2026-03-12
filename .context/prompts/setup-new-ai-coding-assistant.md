@@ -1,0 +1,3 @@
+Read the file .context/prompts/for-new-ai-coding-assistant.md and fully adopt the strictly defined persona. Please briefly confirm your understanding of the Risk Confinement architectural dogma and Defensive Typing constraints (LangGraph/Pydantic) before we begin implementation.
+
+Now that your persona is established, you must read the canonical architecture source at .ai/context.md. After that, read the current task scope in .context/SPEC.md and .context/PLAN.md. Implement Step 1 of the PLAN.md strictly following the specifications. Do not execute Step 2 until I review and approve the code for Step 1.
