@@ -50,10 +50,39 @@ variable "AQM_ENABLE_DELETION_PROTECTION" {
 }
 
 # 4. OpenSearch Index Routing (ADR 006 — Shared Collection, Separate Indices)
-# Each agent targets its own index within the shared `aequitas-vector-store` collection.
-# Runtime selection is done via the OPENSEARCH_INDEX environment variable.
-variable "opensearch_indices" {
-  description = "List of OpenSearch index names provisioned within the shared aequitas-vector-store collection, one per agent domain"
-  type        = list(string)
-  default     = ["fisher-index", "macro-index"]
+# Defines logical routing per bounded context in the shared collection.
+variable "opensearch_index" {
+  description = "OpenSearch index names per agent domain for the shared aequitas-vector-store collection"
+  type        = map(string)
+  default = {
+    fisher = "fisher-index"
+    macro  = "macro-index"
+  }
+
+  validation {
+    condition = (
+      can(var.opensearch_index.fisher) &&
+      can(var.opensearch_index.macro) &&
+      trimspace(var.opensearch_index.fisher) != "" &&
+      trimspace(var.opensearch_index.macro) != "" &&
+      var.opensearch_index.fisher != var.opensearch_index.macro
+    )
+    error_message = "opensearch_index must define non-empty and distinct values for keys 'fisher' and 'macro'."
+  }
+}
+
+# 5. Optional developer SSO principal for OpenSearch write tests in dev.
+# Keep empty by default; when provided, it is applied only in workspace `dev`.
+variable "developer_sso_arn" {
+  description = "Optional IAM role/user ARN for developer SSO access in dev workspace (OpenSearch data policy)"
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      trimspace(var.developer_sso_arn) == "" ||
+      can(regex("^arn:aws:iam::[0-9]{12}:(role|user)/.+$", trimspace(var.developer_sso_arn)))
+    )
+    error_message = "developer_sso_arn must be empty or a valid IAM role/user ARN (arn:aws:iam::<account-id>:role/... or :user/...)."
+  }
 }
