@@ -9,6 +9,8 @@ as `Optional[float]` and validated to avoid non-finite values (NaN/Inf).
 Classes:
     GrahamMetrics: Pydantic schema for the Graham Agent's metrics.
     FisherAnalysis: Pydantic schema for the Fisher Agent's qualitative analysis.
+    PortfolioWeight: Pydantic schema for optimized ticker weights.
+    CoreAnalysis: Pydantic schema for supervisor optimization output.
     AgentState: Pydantic BaseModel representing the complete graph state.
 """
 
@@ -153,6 +155,72 @@ class MacroAnalysis(BaseModel):
         return value
 
 
+class PortfolioWeight(BaseModel):
+    """Deterministic portfolio weight recommendation per ticker."""
+
+    model_config = ConfigDict(frozen=True)
+
+    ticker: str = Field(
+        ...,
+        description="The B3 ticker receiving a portfolio allocation.",
+        pattern=r"^[A-Z0-9]{5,6}$",
+    )
+    weight: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Normalized portfolio weight between 0 and 1.",
+    )
+
+    @field_validator("weight", mode="before")
+    @classmethod
+    def validate_finite_float(cls, v: Any) -> float:
+        """Safely coerces numeric values and rejects NaN/Inf."""
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
+class CoreAnalysis(BaseModel):
+    """Supervisor-level deterministic portfolio optimization output."""
+
+    model_config = ConfigDict(frozen=True)
+
+    recommended_weights: List[PortfolioWeight] = Field(
+        ...,
+        description="Optimized portfolio allocations for each analyzed ticker.",
+    )
+    total_risk_score: float = Field(
+        ...,
+        ge=0.0,
+        description="Aggregate portfolio risk score derived from the optimizer output.",
+    )
+    rational: str = Field(
+        ...,
+        description="Deterministic rationale for the optimized allocation.",
+    )
+
+    @field_validator("total_risk_score", mode="before")
+    @classmethod
+    def validate_finite_float(cls, v: Any) -> float:
+        """Safely coerces numeric values and rejects NaN/Inf."""
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
 # 2. GRAPH STATE DEFINITION (LANGGRAPH)
 # The state is the "living object" that circulates among the agents.
 
@@ -184,6 +252,7 @@ class AgentState(BaseModel):
     metrics: Optional[GrahamMetrics] = None
     qual_analysis: Optional[FisherAnalysis] = None
     macro_analysis: Optional[MacroAnalysis] = None
+    core_analysis: Optional[CoreAnalysis] = None
 
     # Audit Log from the Marks Agent (The Devil's Advocate).
     # Annotated + operator.add allows accumulating critiques without overwriting.
