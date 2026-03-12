@@ -36,8 +36,14 @@
 Implement the **Aequitas Core (Supervisor)** agent and its strictly deterministic
 **Markowitz Efficient Frontier** optimization tool.
 
-### Sprint 4 Mission Focus
-1. Add a deterministic portfolio optimization tool in `src/tools/`.
-2. Keep all portfolio mathematics outside the LLM (Risk Confinement).
-3. Route multi-agent consensus through Aequitas Core before optimization.
-4. Return optimization output through strict Pydantic V2 schemas.
+### Delivered Scope (In-Progress)
+1. ADR 008 formalized: portfolio weighting delegated to deterministic math tool.
+2. `PortfolioWeight` and `CoreAnalysis` Pydantic V2 models implemented in `src/core/state.py`.
+3. Deterministic optimizer implemented in `src/tools/portfolio_optimizer.py` using SciPy (SLSQP).
+4. Risk Confinement verified: no portfolio math in `src/agents/` or `src/core/` layers.
+
+### Sprint 4 Mission Focus / Definition of Done
+- [x] Implement deterministic portfolio optimization tool in `src/tools/`.
+- [x] Keep all portfolio mathematics outside the LLM (Risk Confinement).
+- [ ] Route multi-agent consensus through Aequitas Core before optimization.
+- [x] Return optimization output through strict Pydantic V2 schemas.
