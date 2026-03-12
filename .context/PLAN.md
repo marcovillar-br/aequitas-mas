@@ -124,32 +124,72 @@ Formalizar decisões arquiteturais descobertas na auditoria de 10/03/2026 criand
 
 ---
 
-## 📌 Próxima Sprint — Em Execução
+## Next Sprint Execution
 
 ---
 
-### 📌 Sprint 3.3 — Provisionamento OpenSearch Serverless + Indexação Real
-**Status:** PLANEJADA — Iniciar na próxima sessão SOD.
+### ✅ Sprint 3.3 — OpenSearch Serverless + Real Indexing
+**Status:** DELIVERED
 
-* [ ] **Passo 1 — Terraform (AWS OpenSearch Serverless):**
-  Criar módulo Terraform em `infra/terraform/opensearch/` com collection `aequitas-macro-docs`,
-  política de acesso OIDC restrita ao role de execução e pipeline de embedding (neural search).
-  Target environment: `dev`. Sem `terraform apply` automático em CI (Observação aws-advisor §4).
+#### Completed Tasks
+* [x] **Step 1 — Terraform (AWS OpenSearch Serverless):**
+  Refactored Terraform for shared collection strategy (`aequitas-vector-store`) with
+  separate logical indices and policy hardening for dev validation.
 
-* [ ] **Passo 2 — Script de Indexação Inicial:**
-  Criar `src/tools/opensearch_indexer.py`. Script de ingestão das atas do COPOM 2024-2025
-  (BCB) e minutes do FED, com geração de embeddings via Bedrock ou SageMaker.
-  Campos obrigatórios: `content`, `source_url`, `document_id`, `published_at`.
+* [x] **Step 2 — Initial Indexing Script:**
+  Implemented `src/tools/opensearch_indexer.py` with deterministic payload structure and
+  mandatory fields: `content`, `source_url`, `document_id`, `published_at`.
 
-* [ ] **Passo 3 — Configuração de Ambiente `dev`:**
-  Adicionar `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `OPENSEARCH_REGION` nas variáveis
-  de ambiente do ambiente `dev` (AWS Secrets Manager ou GitHub Actions env secrets).
+* [x] **Step 3 — dev Environment Configuration:**
+  Standardized local/dev setup via `scripts/setup_env.sh` and documented environment variables
+  (`OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `OPENSEARCH_REGION`, `GEMINI_API_KEY`).
 
-* [ ] **Passo 4 — Teste E2E com Retrieval Real:**
-  Executar `macro_agent` com `OpenSearchAdapter` real apontando para o índice `dev`.
-  Validar que `source_urls` retorna URLs reais do BCB/FED e que `audit_log` registra
-  scores de cosseno reais (> 0.0).
+* [x] **Step 4 — Real E2E Retrieval Test:**
+  Validated Macro Agent retrieval against OpenSearch Serverless with real cosine scores
+  logged in `audit_log`, plus deterministic `source_urls` injection.
 
-* [ ] **Passo 5 — Validação Final da Suite e PR:**
-  `pytest tests/` com 40+ testes passando após integração com OpenSearch real.
-  Abrir PR `feat/macro-hyde-opensearch-integration` → `development` para revisão do Tech Lead.
+* [x] **Step 5 — Final Validation and Integration Readiness:**
+  Confirmed retrieval stability after migrating from neural query mode to explicit `knn`
+  query mode using local Gemini query vectorization.
+
+#### Key Achievements
+1. ADR 005, ADR 006, and ADR 007 were implemented and operationalized.
+2. AWS OpenSearch `500` retrieval failure was resolved by explicit index mapping:
+   `content_embedding` as `knn_vector` with dimension `3072` and `cosinesimil`.
+3. Retrieval architecture migrated to explicit `knn` queries with local Gemini embedding
+   generation for HyDE query text.
+4. E2E fallback behavior validated Zero Hallucination (`Optional[float] = None`) when
+   numeric evidence is not explicitly present in retrieved context.
+
+---
+
+### 📌 Sprint 4 — Core Agent & Portfolio Optimization
+**Status:** PLANNED
+
+#### Step 1 — ADR 008: Portfolio Optimization Tool Strategy
+- **File(s):** `.ai/adr/008-portfolio-optimization-tool-strategy.md`
+- **Change:** Formalize the deterministic optimization strategy (e.g., `scipy.optimize`
+  or PyPortfolioOpt), trade-offs, and strict Risk Confinement boundaries.
+- **Dogma check:** Documentation only. CLEAN.
+- **Tests:** N/A.
+
+#### Step 2 — Deterministic Tool Implementation
+- **File(s):** `src/tools/portfolio_optimizer.py`
+- **Change:** Implement a pure Python deterministic optimizer for Markowitz Efficient
+  Frontier calculations.
+- **Dogma check:** LLM MUST NOT perform portfolio mathematics; tool executes all math.
+- **Tests:** Required in Step 4.
+
+#### Step 3 — Aequitas Core Node Integration
+- **File(s):** `src/core/graph.py`, `src/agents/` (core supervisor integration points)
+- **Change:** Implement Aequitas Core (Supervisor) routing to gather consensus from
+  Graham, Fisher, Macro, and Marks, then invoke `portfolio_optimizer`.
+- **Dogma check:** Preserve DIP and immutable state transitions.
+- **Tests:** Routing behavior validated without real LLM API calls.
+
+#### Step 4 — Shift-Left Testing for Math Tool
+- **File(s):** `tests/test_portfolio_optimizer.py` (new)
+- **Change:** Add isolated pytest coverage for deterministic optimizer behavior,
+  constraints, edge cases, and controlled degradation outputs.
+- **Dogma check:** No stochastic dependencies in math tests.
+- **Tests:** Mandatory before merge.

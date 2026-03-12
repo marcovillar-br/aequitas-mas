@@ -82,3 +82,45 @@ poetry run pytest tests/
 ## 9. Implementation Status
 
 > Sprint status and Definition of Done tracking have been moved to `.context/current-sprint.md`, which is the single authoritative source for implementation progress. Refer to that file for up-to-date sprint objectives, DoD checklists, and impediment tracking.
+
+## 10. Local Environment Setup (Required)
+
+For local execution, developers MUST generate `.env` using:
+
+```bash
+bash scripts/setup_env.sh
+```
+
+The generated `.env` must include, at minimum:
+- `OPENSEARCH_ENDPOINT`
+- `OPENSEARCH_INDEX`
+- `GEMINI_API_KEY`
+
+Recommended additional runtime variables:
+- `OPENSEARCH_REGION`
+- `OPENSEARCH_SERVICE`
+- `ENVIRONMENT`
+
+Security rule: `.env` is local-only and MUST NOT be committed.
+
+## 11. Terraform SSO Requirement for OpenSearch Data Plane Access
+
+To run Terraform with OpenSearch Serverless Data Plane permissions in `dev`, developers must:
+
+1. Export an authenticated AWS profile:
+```bash
+export AWS_PROFILE=aqm-dev
+```
+
+2. Provide the developer SSO IAM ARN when planning/applying:
+```bash
+terraform plan -var="developer_sso_arn=<your-dev-sso-arn>"
+terraform apply -var="developer_sso_arn=<your-dev-sso-arn>"
+```
+
+Equivalent environment-based approach:
+```bash
+export TF_VAR_developer_sso_arn=<your-dev-sso-arn>
+```
+
+This variable is consumed by Terraform policy logic to grant dev-only Data Plane access to the shared OpenSearch Serverless collection without hardcoding personal ARNs in source code.

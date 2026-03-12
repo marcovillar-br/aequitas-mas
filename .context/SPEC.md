@@ -330,3 +330,107 @@ permitido para informação macroeconômica quando dados quantitativos não est�
 
 A coluna "Fase C (pós-injeção)" representa o estado final que entra no `AgentState`.
 É o único estado autorizado a ser gravado no grafo LangGraph.
+
+---
+
+## ✅ Specification 3.3: OpenSearch Infrastructure Hardening (Delivered)
+**Sprint:** 3.3 | **Status:** DELIVERED
+**Objective:** Stabilize real HyDE retrieval on OpenSearch Serverless with explicit vector mapping and deterministic indexing/retrieval behavior.
+
+### 1. Mandatory OpenSearch Mapping Contract
+
+The target index (e.g., `macro-index`) MUST define the following vector field:
+
+```json
+{
+  "content_embedding": {
+    "type": "knn_vector",
+    "dimension": 3072,
+    "method": {
+      "name": "hnsw",
+      "engine": "nmslib",
+      "space_type": "cosinesimil"
+    }
+  }
+}
+```
+
+Required companion fields:
+- `content: text`
+- `source_url: keyword`
+- `document_id: keyword`
+- `published_at: date`
+
+### 2. Retrieval Contract Update
+
+`OpenSearchAdapter.search_macro_context(...)` MUST use explicit `knn` queries with local query vectorization:
+
+```json
+{
+  "size": 5,
+  "query": {
+    "knn": {
+      "content_embedding": {
+        "vector": [ ... ],
+        "k": 5
+      }
+    }
+  }
+}
+```
+
+`neural` query mode is NOT the default runtime path for this architecture.
+
+### 3. Index Creation and Validation Guardrails
+
+Before indexing, adapter logic MUST:
+1. Check whether the target index exists.
+2. Create it with the exact `knn_vector` mapping if absent.
+3. Fail fast if `content_embedding` exists with an incompatible type (e.g., `float`).
+
+This requirement eliminates the previous OpenSearch `500` retrieval failure caused by invalid vector field mapping.
+
+---
+
+## 📌 Specification 4.0: Aequitas Core (Supervisor) + Portfolio Optimization
+**Sprint:** 4 | **Status:** PLANNED
+**Objective:** Implement the Core Supervisor agent and deterministic portfolio optimization workflow.
+
+### 1. Agent Topology: Core Supervisor
+
+The **Aequitas Core** node is the orchestration authority in LangGraph and MUST:
+1. Route execution across specialist agents (Graham, Fisher, Macro, Marks).
+2. Gather consensus-ready outputs from all sub-agents.
+3. Invoke deterministic optimization via `src/tools/portfolio_optimizer.py`.
+4. Return structured output through strict Pydantic V2 schemas.
+
+### 2. Output Schema Requirement (Pydantic V2)
+
+Aequitas Core output MUST include an optimized portfolio allocation array, for example:
+
+```python
+class OptimizedWeight(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    ticker: str
+    weight: float
+
+class PortfolioOptimizationResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    weights: list[OptimizedWeight]
+    expected_return: Optional[float] = None
+    expected_volatility: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+```
+
+If optimization inputs are incomplete, quantitative fields MUST degrade to `None` under Defensive Typing rules.
+
+### 3. Risk Confinement Requirement
+
+Portfolio mathematics (covariance matrix, efficient frontier optimization, constraints) MUST be executed exclusively by deterministic Python tooling in `src/tools/portfolio_optimizer.py`.
+
+The LLM MUST NOT:
+- compute allocations,
+- derive optimized weights,
+- perform probabilistic numeric estimation.
+
+The LLM may only orchestrate tool calls and summarize deterministic outputs.
