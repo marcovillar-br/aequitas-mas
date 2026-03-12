@@ -21,8 +21,8 @@ htmlcov/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+infra/terraform/tfplan*
 
 # Variáveis de Ambiente e Segredos
 .env
 .env.local
-
