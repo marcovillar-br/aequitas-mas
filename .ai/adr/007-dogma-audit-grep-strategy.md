@@ -1,74 +1,67 @@
-# ADR 007: Dogma Audit Strategy — Static Grep in CI/CD
+# ADR 007: Dogma Audit Strategy (MVP) — Static Grep in CI/CD
+
+## Status
+Accepted (Sprint 3.3 preparation, 2026-03-10).
 
 ## 1. Context
 
-The Aequitas-MAS architecture enforces two non-negotiable Risk Confinement dogmas:
+Aequitas-MAS enforces two non-negotiable architectural dogmas at code level:
 
-1. **Dogma 3.2 (Controlled Degradation):** `decimal.Decimal` is forbidden in LangGraph state
-   schemas (`src/agents/`, `src/core/`). Violations break JSON serialization with DynamoDB.
-2. **Dogma 3.3 (DIP):** Cloud SDK imports (`boto3`) are forbidden in `src/agents/` and
-   `src/core/`. Infrastructure interactions must be abstracted behind `src/infra/adapters/`.
+1. **Controlled Degradation dogma:** `decimal.Decimal` is forbidden in `src/agents/` and
+   `src/core/` state-facing layers.
+2. **Dependency Inversion dogma:** `boto3` imports are forbidden in `src/agents/` and
+   `src/core/`; cloud SDKs must stay in `src/infra/adapters/`.
 
-These rules must be enforced automatically at every pull request. Two approaches were evaluated:
+These constraints must be enforced automatically in every PR, with minimal CI overhead.
+For MVP, the team evaluated:
 
 | Approach | Pros | Cons |
 |---|---|---|
-| **Static `grep` in GitHub Actions** | Zero dependencies, portable, fast, human-readable | Cannot detect dynamic imports or aliased imports |
-| Custom Ruff plugin / AST analysis | Full import graph analysis, catches all alias forms | Requires plugin development; significant complexity for MVP |
+| **Static `grep -E` in GitHub Actions** | Zero dependencies, fast, transparent | Limited semantic awareness (no AST) |
+| AST/linter custom rule | Stronger semantic coverage | Higher implementation/maintenance cost for current sprint |
 
 ## 2. Decision
 
-We adopt **static `grep -E` patterns in the `quality` job of `.github/workflows/pipeline.yml`**
-as the dogma enforcement mechanism for the MVP phase.
+For MVP, we keep dogma audits in CI as **static `grep -E` checks** inside the
+`quality` job of `.github/workflows/pipeline.yml`.
 
-The patterns are expanded beyond the initial implementation to explicitly catch alias imports,
-reducing the known false-negative surface:
+Additionally, this sprint records and addresses a known blind spot: explicit alias import forms.
+The decision is to **expand the regex set in the current sprint** to include alias-oriented
+patterns, specifically:
 
-**Dogma Audit 1 (Decimal):**
-```
-(decimal\.Decimal|from decimal import.*Decimal)
-```
+- Decimal alias pattern: `from decimal import.*Decimal.*as`
+- boto3 alias pattern: `import boto3.*as`
 
-**Dogma Audit 2 (boto3):**
-```
-(import boto3|from boto3\b)
-```
+This keeps enforcement lightweight while reducing false negatives without introducing new tools.
 
-This approach is **pragmatic for MVP**: it covers the primary import forms used in this
-codebase, adds zero dependencies, and executes in under 1 second in CI.
+## 3. Technical Debt Registration
 
-**Known limitations (registered as technical debt):**
-- Dynamic imports: `__import__('boto3')` — not caught.
-- Module alias: `import boto3 as b3` — the `import boto3` pattern catches `import boto3 as b3`
-  since the pattern matches the prefix. `from boto3 as` is not a valid Python syntax, so this
-  is a non-issue.
-- Wildcard re-export: `from src.infra.adapters import boto3_client` — not caught, but this
-  form would violate the naming convention and be caught in code review.
+Static grep remains an intentional compromise. Even with expanded regex, the following
+limitations are documented as technical debt:
 
-## 3. Consequences
+- Dynamic imports (`__import__`, `importlib`) are not reliably detectable via regex.
+- Indirect re-export patterns can bypass simple text matching.
+- Regex checks do not understand Python scope or execution semantics.
 
-**Positive:**
-- Dogma violations are blocked at PR merge time — no manual review dependency.
-- Zero additional packages or plugins required in the CI environment (`poetry install --without infra`).
-- Patterns are human-readable and auditable by any team member.
-- CI execution overhead: < 1 second per audit step.
+## 4. Consequences
 
-**Negative:**
-- Limited coverage of advanced import patterns (see Known Limitations above).
-- As the agent count grows, `src/agents/` expands — each new agent module is automatically
-  covered by the existing `grep` scope (no maintenance required per agent).
+**Positive**
+- Fast and deterministic dogma gate in CI for every PR.
+- No extra dependency/plugin burden in the pipeline.
+- Immediate mitigation of alias-import blind spots in the current sprint.
 
-## 4. Migration Path (Technical Debt)
+**Negative**
+- Coverage is still lexical, not semantic.
+- Long-term robustness may require migration to AST-based enforcement.
 
-When the codebase grows beyond **6 agent modules**, or if a dogma violation is discovered
-in production that was missed by grep, migrate to one of:
+## 5. Migration Trigger
 
-- **Ruff custom rule** (`src/` plugin): AST-based, catches all import forms.
-- **`import-linter`** (pre-commit + CI): contract-based import graph enforcement.
+Migrate from grep to AST-level enforcement (Ruff custom rule or equivalent) when either:
+- a real violation escapes CI due to regex limitations, or
+- repository scale/complexity makes lexical checks insufficient.
 
-This migration requires no architectural changes — only the `quality` job step changes.
+## 6. Implementation Reference
 
-## 5. Implementation Reference
-
-- `.github/workflows/pipeline.yml` — Steps "Dogma Audit 1" and "Dogma Audit 2".
-- Patterns audited in: `src/agents/` and `src/core/` (not `src/infra/`, where boto3 is allowed).
+- `.github/workflows/pipeline.yml` — `quality` job, "Dogma Audit" steps.
+- Scope audited: `src/agents/` and `src/core/` only.
+- Allowed exception zone: `src/infra/adapters/` for infrastructure SDK imports.

@@ -45,8 +45,8 @@ jobs:
       # 3. Dogma Audit — architectural rule enforcement via static grep
       - name: "Dogma Audit 1: Zero Numerical Hallucination (Decimal usage in agents/core)"
         run: |
-          # Catches `decimal.Decimal`, `from decimal import Decimal`, and alias forms
-          if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal)" src/agents/ src/core/; then
+          # Catches `decimal.Decimal`, `from decimal import Decimal`, and explicit alias forms
+          if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal|from decimal import.*Decimal.*as)" src/agents/ src/core/; then
             echo "DOGMA VIOLATION: The use of the 'decimal' module (including 'decimal.Decimal', 'from decimal import Decimal', and aliases) is strictly forbidden in agents/core. Use float with math.isfinite() validation."
             exit 1
           fi
@@ -55,7 +55,7 @@ jobs:
       - name: "Dogma Audit 2: Dependency Inversion / Risk Confinement (boto3 in agents/core)"
         run: |
           # Catches `import boto3`, `import boto3 as ...`, and `from boto3 import ...`
-          if grep -rn -E "(import boto3|from boto3\b)" src/agents/ src/core/; then
+          if grep -rn -E "(import boto3|from boto3\b|import boto3.*as)" src/agents/ src/core/; then
             echo "DOGMA VIOLATION: boto3 is FORBIDDEN in src/agents/ and src/core/."
             echo "Cloud SDK interactions belong exclusively in src/infra/adapters/."
             exit 1
