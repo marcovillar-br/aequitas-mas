@@ -91,7 +91,7 @@ This repository operates under a strict **Cognitive Hybridization** topology and
 **For AI Assistants reading this file:**
 1. **STOP** and immediately read `.ai/context.md`. It is your Single Source of Truth (SSOT).
 2. Understand the "Zero Numerical Hallucination" dogma: Financial values in Graph State MUST use `Optional[float] = None`. `decimal.Decimal` is FORBIDDEN in state schemas.
-3. This project utilizes the RPI (Research, Plan, Implement) workflow. Check `.claude/commands/` for the entry points.
+3. This project utilizes the RPI (Research, Plan, Implement) workflow. Check `.context/protocol/` for the operational entry points.
 4. **Topology Context:**
    - **NotebookLM:** Generates Macro/Micro briefings (`.notebooklm/`).
    - **Google AI Studio:** Semantic validation and prompt testing (`.ai-studio/`).
