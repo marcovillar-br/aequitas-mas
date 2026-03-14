@@ -1,0 +1,71 @@
+{
+    "python-envs.pythonProjects": [],
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+
+    /* MCP WSL Configuration */
+    "mcp.servers": {
+        "aequitas-local-server": {
+            "command": "npx",
+            "args": [
+                "-y", 
+                "@modelcontextprotocol/server-filesystem", 
+                "/home/marco/projects/aequitas-mas"
+            ]
+        }
+    },
+
+    /* Resource Mapping */
+    "mcp.resources": {
+        "repository": "file:///home/marco/projects/aequitas-mas/",
+        "allowed_extensions": [".py", ".tf", ".md"]
+    },
+    
+    /* --- CONFIGURAÇÕES AEQUITAS-MAS & GPT CODEX --- */
+
+    // 1. Model Context Protocol (MCP) - Ponte de Contexto Local
+    "mcp.roots": ["file:///home/marco/projects/aequitas-mas/"], 
+    "mcp.permissions": {
+        "files": ["*.py", "*.tf", "*.md"], 
+        "execution": true 
+    },
+
+    // 2. Mapeamento de Slash Commands (Fluxo RPI)
+    "gpt.codex.slashCommands": {
+        "research": {
+            "description": "Busca técnica externa via DDGS v2026",
+            "instruction": "Follow the SOP in .context/protocol/research.md. Use 'from ddgs import DDGS' to find documentation for: {query}. Focus on technical accuracy."
+        },
+        "plan": {
+            "description": "Geração de Blueprint técnico (Architecture/Data Flow)",
+            "instruction": "Follow the SOP in .context/protocol/plan.md. Analyze local context via MCP and generate a structured technical spec."
+        },
+        "implement": {
+            "description": "Geração de Clean Code seguindo o RPI",
+            "instruction": "Follow the SOP in .context/protocol/implement.md. Generate type-hinted Python code (en-US). Ensure SOLID/DRY and include pytest unit tests."
+        },
+        "clean": {
+            "description": "Auditoria de violações SOLID/DRY no arquivo ativo",
+            "instruction": "Scan current file for architectural bottlenecks or Clean Code violations. Suggest refactoring."
+        },
+        "eod": {
+            "description": "Executa o protocolo de encerramento de dia e auditoria de dogmas",
+            "instruction": "Follow the SOP in .context/protocol/eod.md to audit code and generate the technical summary."
+        },
+        "mcp-sync": {
+            "description": "Força re-escaneamento do repositório pelo MCP",
+            "instruction": "Re-index the Aequitas-MAS repository context for updated logic or modules."
+        }
+    },
+
+    // 3. Diretrizes de Prompting e Constraints
+    "gpt.codex.customInstructions": [
+        "Always reference Aequitas-MAS core protocols before generating agent logic.",
+        "Every generated agent MUST include status() and get_context() methods.",
+        "Use English (en-US) for all technical output and Portuguese (pt-BR) for explanations.",
+        "Stop generation immediately after the logic block to avoid redundant comments.",
+        "Strictly adhere to the Zero Numerical Hallucination dogma: Financial metrics MUST be Optional[float] = None if not explicitly found in context. NEVER guess or perform mental math."
+    ],
+
+    // 4. Integração GitHub & Commits
+    "github.copilot.commitMessageGeneration.template": "feat/fix/refactor: brief description following Conventional Commits"
+}
