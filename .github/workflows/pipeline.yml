@@ -123,7 +123,7 @@ jobs:
             -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
-            -backend-config="dynamodb_table=aqm-terraform-state-lock"
+            -backend-config="use_lockfile=true"
 
       # 5. Workspace Selection (Native implementation for idempotency)
       - name: Select Workspace
@@ -184,7 +184,7 @@ jobs:
             -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
-            -backend-config="dynamodb_table=aqm-terraform-state-lock"
+            -backend-config="use_lockfile=true"
 
       - name: Select Workspace
         run: terraform workspace select -or-create ${{ steps.context.outputs.WORKSPACE }}
