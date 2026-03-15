@@ -61,7 +61,8 @@ class OpenSearchAuditAdapter(AuditSinkPort):
         )
         if not endpoint:
             raise ValueError(
-                "OPENSEARCH_AUDIT_ENDPOINT environment variable is required but not set."
+                "Either OPENSEARCH_AUDIT_ENDPOINT or OPENSEARCH_ENDPOINT must be set "
+                "for the audit adapter."
             )
 
         region = os.environ.get("OPENSEARCH_AUDIT_REGION", _DEFAULT_REGION)

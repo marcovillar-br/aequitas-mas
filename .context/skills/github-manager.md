@@ -10,14 +10,20 @@ Activate this skill when the user requests assistance with Git commands, creatin
 * Open PRs to `main` only for controlled release promotion approved by the Tech Lead.
 * For CI-only fixes (workflow/OIDC), prefer short-lived branches such as `fix/ci-<brief-description>` and PR into `development`.
 
-### 2.1. Branch Naming Convention
+### 2.1. Branch Management Protocol
+* **Mandatory Isolation:** Never write implementation code directly on the `main` or `development` branches.
+* **Naming Convention:** Always create a new branch using semantic prefixes: `feat/`, `fix/`, `chore/`, or `docs/`.
+* **Branch Format:** `<prefix>/sprint<X>-<feature-name>`.
+* **Timing:** A new branch must be checked out immediately after `PLAN.md` is approved and BEFORE any code is written in the Implement phase.
+
+### 2.2. Branch Naming Convention
 * Enforce a structured, standard naming convention for all branches: `<type>/<scope>-<brief-description>`.
 * **Valid types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
 * **Example:** `feat/graham-valuation-tool`, `test/b3-fetcher-mocks`, `docs/academic-methodology`.
 * NEVER suggest committing directly to the `main` or `master` branch. Always suggest working on a specific branch.
 * If a user opens a PR with wrong base branch, instruct to edit PR base to `development` (when in implementation stage) before merge.
 
-### 2.2. Conventional Commits (Semantic Commits)
+### 2.3. Conventional Commits (Semantic Commits)
 * All commit messages MUST follow the Conventional Commits specification.
 * **Format:** `<type>(<scope>): <description>`
 * **Language Rule for Commits:** Use English for the `<type>` and `<scope>` to maintain compatibility with standard CI/CD release tools. However, the `<description>` and any extended body MUST be in **Brazilian Portuguese (pt-BR)** to align with the UFG academic documentation.
@@ -25,18 +31,18 @@ Activate this skill when the user requests assistance with Git commands, creatin
   - `test(graham_agent): adiciona cobertura de mocks para cálculo de P/L`
   - `docs(readme): atualiza estrutura da arquitetura hexagonal`
 
-### 2.3. Zero Trust & Security (Pre-Commit Audit)
+### 2.4. Zero Trust & Security (Pre-Commit Audit)
 * **CRITICAL SECURITY RULE:** Before providing `git add` or `git commit` commands, explicitly remind the user to verify that NO secrets, API keys (AWS, Anthropic, OpenAI), or `.env` files are included in the staging area.
 * Remind the user of the "Secret Management" dogma (Section 4.2 of ETD v5.0) which dictates the exclusive use of Google IDX Secret Manager or local environment variables injected at runtime.
 * For GitHub OIDC troubleshooting, prefer temporary debug logs and remove them after 1-2 successful runs.
 * During early development stage, avoid automatic `terraform apply` in CI to prevent accidental deployment and unnecessary cloud costs.
 
-### 2.4. Definition of Done (DoD) Verification
+### 2.5. Definition of Done (DoD) Verification
 * Before suggesting a merge or creating a Pull Request template, verify if the DoD from `.context/current-sprint.md` is met.
 * If the commit involves the `/src/tools/` or `/src/agents/` directories, ask the user if the `pytest` mathematical validations have passed successfully.
 * For infrastructure/workflow changes, confirm CI status and target environment (`dev`/`hom`/`prod`) before merge recommendation.
 
-### 2.5. Push and Merge Safety
+### 2.6. Push and Merge Safety
 * Do not push or merge automatically unless the user explicitly requests it.
 * Before any push, summarize staged files and intended target branch in one short confirmation line.
 * If there are unrelated local changes, avoid bundling them in the same commit unless user explicitly asks.

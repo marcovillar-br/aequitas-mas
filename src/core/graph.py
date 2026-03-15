@@ -272,7 +272,7 @@ def _build_instrumented_node(
                         thread_id=thread_id,
                         target_ticker=state.target_ticker,
                         node_name=node_name,
-                        phase="failure",
+                        phase="degraded",
                         executed_nodes_snapshot=_ordered_unique(
                             list(state.executed_nodes) + [node_name]
                         ),
