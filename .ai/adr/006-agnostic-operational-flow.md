@@ -1,4 +1,4 @@
-# ADR 009: Agnostic Operational Flow
+# ADR 006: Agnostic Operational Flow
 
 ## Status
 Accepted and Implemented (Sprint 3.4, 2026-03-14).

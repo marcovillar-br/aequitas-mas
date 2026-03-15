@@ -3,18 +3,30 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypedDict
 
 import structlog
 from langchain_core.messages import AIMessage
+from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
+from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState, CoreAnalysis
 from src.tools.portfolio_optimizer import optimize_portfolio
 
 logger = structlog.get_logger(__name__)
+
+
+class CoreConsensusNodeResult(TypedDict, total=False):
+    """Structured LangGraph patch returned by the supervisor node."""
+
+    core_analysis: CoreAnalysis
+    audit_log: list[str]
+    messages: list[BaseMessage]
+    executed_nodes: list[str]
+    optimization_blocked: bool
 
 
 class ConsensusDecision(BaseModel):
@@ -83,7 +95,7 @@ def _collect_source_urls(state: AgentState) -> list[str]:
     return urls
 
 
-def core_consensus_node(state: AgentState) -> dict:
+def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
     """Aggregate specialist checkpoints and optionally hand off to the optimizer."""
     ticker = state.target_ticker
     logger.info("core_consensus_started", ticker=ticker)
@@ -93,6 +105,7 @@ def core_consensus_node(state: AgentState) -> dict:
         model="gemini-2.5-flash",
         temperature=0.0,
         max_retries=1,
+        google_api_key=require_gemini_api_key(),
     )
     chain = _CONSENSUS_PROMPT | llm.with_structured_output(ConsensusDecision)
 
@@ -188,12 +201,26 @@ def core_consensus_node(state: AgentState) -> dict:
             "executed_nodes": ["core_consensus"],
         }
 
+    if optimization is None:
+        rationale = (
+            f"{decision.rationale} A etapa determinística de otimização degradou para "
+            "None devido a dados numéricos inválidos ou matriz de covariância singular."
+        )
+        return {
+            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
+                update={"source_urls": source_urls}
+            ),
+            "audit_log": [f"[Core/Consensus] {rationale}"],
+            "messages": [AIMessage(content=rationale, name="core_consensus")],
+            "executed_nodes": ["core_consensus"],
+        }
+
     core_analysis = CoreAnalysis(
-        recommended_weights=optimization["weights"],
-        total_risk_score=optimization["portfolio_volatility"],
+        recommended_weights=optimization.weights,
+        total_risk_score=optimization.expected_volatility,
         rational=(
             f"{decision.rationale} Otimização determinística concluída com "
-            f"{len(optimization['weights'])} ativo(s)."
+            f"{len(optimization.weights)} ativo(s)."
         ),
         source_urls=source_urls,
     )
@@ -204,7 +231,7 @@ def core_consensus_node(state: AgentState) -> dict:
     logger.info(
         "core_consensus_completed",
         ticker=ticker,
-        assets=len(optimization["weights"]),
+        assets=len(optimization.weights),
     )
     return {
         "core_analysis": core_analysis,

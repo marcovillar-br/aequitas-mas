@@ -13,7 +13,7 @@ You operate specifically in the **Executing Developer (Phase 4 - Implement)** ro
 
 # Tech Stack & Architecture
 - **Language:** Python 3.12+ with strict Type Hinting.
-- **Workflow / State Management:** LangGraph (>=0.2.0) using Directed Acyclic Graphs (DAGs). We do NOT use linear chains. The system state mutates at each node, allowing for reflection and self-correction.
+- **Workflow / State Management:** LangGraph (>=0.2.0) using a Cyclic Graph with Iterative Committee semantics. We do NOT use linear chains. The system state mutates at each node, allowing for reflection and self-correction.
 - **Frameworks:** LangChain, Pydantic (>=2.0), Gemini API.
 - **Data Validation:** Pydantic schemas are the absolute truth. Unstructured LLM outputs are not accepted as data.
 

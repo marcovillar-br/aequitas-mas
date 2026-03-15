@@ -43,7 +43,12 @@ except ImportError:  # pragma: no cover - defensive import guard
 
     ResourceExhausted = _ResourceExhaustedFallback
 
-from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
+from src.core.llm import require_gemini_api_key
+from src.core.interfaces.vector_store import (
+    NullVectorStore,
+    VectorSearchResult,
+    VectorStorePort,
+)
 from src.core.state import AgentState, MacroAnalysis
 
 logger = structlog.get_logger(__name__)
@@ -143,12 +148,12 @@ def _invoke_synthesis_chain(chain: Any, ticker: str, context: str) -> MacroAnaly
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _format_retrieved_context(docs: list[dict]) -> str:
+def _format_retrieved_context(docs: list[VectorSearchResult]) -> str:
     """
     Format retrieved OpenSearch hits into a readable block for the synthesis prompt.
 
     Args:
-        docs: List of result dicts conforming to the VectorStorePort contract.
+        docs: List of typed results conforming to the VectorStorePort contract.
 
     Returns:
         A formatted string with numbered excerpts and source attribution.
@@ -163,17 +168,14 @@ def _format_retrieved_context(docs: list[dict]) -> str:
 
     lines: list[str] = []
     for i, doc in enumerate(docs, start=1):
-        source = doc.get("source_url") or doc.get("document_id") or "fonte desconhecida"
-        content = doc.get("content", "").strip()
-        score = doc.get("score", 0.0)
-        lines.append(
-            f"[{i}] Fonte: {source} (score={score:.4f})\n{content}"
-        )
+        source = doc.source_url or doc.document_id or "fonte desconhecida"
+        content = doc.content.strip()
+        lines.append(f"[{i}] Fonte: {source} (score={doc.score:.4f})\n{content}")
 
     return "\n\n".join(lines)
 
 
-def _extract_source_urls(docs: list[dict]) -> list[str]:
+def _extract_source_urls(docs: list[VectorSearchResult]) -> list[str]:
     """
     Extract non-empty source_url values from retrieved documents.
 
@@ -182,14 +184,18 @@ def _extract_source_urls(docs: list[dict]) -> list[str]:
     seen: set[str] = set()
     urls: list[str] = []
     for doc in docs:
-        url = doc.get("source_url", "").strip()
+        url = doc.source_url.strip()
         if url and url not in seen:
             seen.add(url)
             urls.append(url)
     return urls
 
 
-def _build_audit_trace(ticker: str, hyde_text: str, docs: list[dict]) -> str:
+def _build_audit_trace(
+    ticker: str,
+    hyde_text: str,
+    docs: list[VectorSearchResult],
+) -> str:
     """
     Build a structured reasoning trace for the audit_log.
 
@@ -216,9 +222,8 @@ def _build_audit_trace(ticker: str, hyde_text: str, docs: list[dict]) -> str:
 
     doc_lines: list[str] = []
     for i, doc in enumerate(docs, start=1):
-        score = doc.get("score", 0.0)
-        source = doc.get("source_url") or doc.get("document_id") or "desconhecido"
-        doc_lines.append(f"  [{i}] score={score:.4f} | fonte={source}")
+        source = doc.source_url or doc.document_id or "desconhecido"
+        doc_lines.append(f"  [{i}] score={doc.score:.4f} | fonte={source}")
 
     docs_block = "\n".join(doc_lines)
     return (
@@ -273,6 +278,7 @@ def create_macro_agent(
             model="gemini-2.5-flash",
             temperature=0.0,
             max_retries=1,  # Tenacity handles robust retry logic.
+            google_api_key=require_gemini_api_key(),
         )
 
         try:

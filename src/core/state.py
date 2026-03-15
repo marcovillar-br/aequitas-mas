@@ -10,6 +10,7 @@ Classes:
     GrahamMetrics: Pydantic schema for the Graham Agent's metrics.
     FisherAnalysis: Pydantic schema for the Fisher Agent's qualitative analysis.
     PortfolioWeight: Pydantic schema for optimized ticker weights.
+    PortfolioOptimizationResult: Pydantic schema for deterministic optimizer output.
     CoreAnalysis: Pydantic schema for supervisor optimization output.
     AgentState: Pydantic BaseModel representing the complete graph state.
 """
@@ -176,6 +177,46 @@ class PortfolioWeight(BaseModel):
     @classmethod
     def validate_finite_float(cls, v: Any) -> float:
         """Safely coerces numeric values and rejects NaN/Inf."""
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
+class PortfolioOptimizationResult(BaseModel):
+    """Deterministic optimizer output with controlled-degradation semantics."""
+
+    model_config = ConfigDict(frozen=True)
+
+    weights: List[PortfolioWeight] = Field(
+        default_factory=list,
+        description="Normalized optimized portfolio weights per ticker.",
+    )
+    expected_return: Optional[float] = Field(
+        default=None,
+        description="Expected portfolio return derived from the deterministic optimizer.",
+    )
+    expected_volatility: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Expected portfolio volatility derived from the covariance matrix.",
+    )
+    sharpe_ratio: Optional[float] = Field(
+        default=None,
+        description="Optional Sharpe-like ratio derived deterministically when feasible.",
+    )
+
+    @field_validator("expected_return", "expected_volatility", "sharpe_ratio", mode="before")
+    @classmethod
+    def validate_finite_optional_float(cls, v: Any) -> Optional[float]:
+        """Safely coerce optional optimizer metrics and reject NaN/Inf."""
+        if v is None:
+            return None
         try:
             value = float(v)
         except (TypeError, ValueError) as exc:

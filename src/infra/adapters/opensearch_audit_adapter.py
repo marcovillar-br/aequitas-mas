@@ -24,6 +24,8 @@ logger = structlog.get_logger(__name__)
 _DEFAULT_AUDIT_INDEX = "aequitas-decision-path"
 _DEFAULT_REGION = "us-east-1"
 _DEFAULT_SERVICE = "aoss"
+_DEFAULT_TIMEOUT_SECONDS = 30
+_DEFAULT_MAX_RETRIES = 3
 
 
 class OpenSearchAuditAdapter(AuditSinkPort):
@@ -86,6 +88,9 @@ class OpenSearchAuditAdapter(AuditSinkPort):
             verify_certs=True,
             connection_class=RequestsHttpConnection,
             pool_maxsize=10,
+            timeout=_DEFAULT_TIMEOUT_SECONDS,
+            retry_on_timeout=True,
+            max_retries=_DEFAULT_MAX_RETRIES,
         )
 
         logger.info(

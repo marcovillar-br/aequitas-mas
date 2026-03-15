@@ -20,5 +20,5 @@ Use this skill to model financial complexity, ensuring that investment logic (Gr
 - **Implementation:** Always use `model_config = ConfigDict(frozen=True)` in Pydantic V2 models. If an agent needs to change a value, it must return a completely new instance to the LangGraph state.
 
 ## 3. Golden Rules of Design
-1. **Logic Isolation:** Graham's mathematical calculation must remain ignorant of Fisher's qualitative sentiment. They only cross paths at the `AequitasState` level.
+1. **Logic Isolation:** Graham's mathematical calculation must remain ignorant of Fisher's qualitative sentiment. They only cross paths at the `AgentState` level.
 2. **Fail Fast at Boundaries:** Use `@field_validator` in Pydantic to block invalid data (like wrong ticker formats or negative EPS) *before* it enters the LLM context window.

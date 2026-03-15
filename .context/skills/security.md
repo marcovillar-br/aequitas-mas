@@ -6,8 +6,8 @@ Activate this skill during infrastructure setup, code reviews, environment confi
 ## 2. Infrastructure & FinOps Constraints
 
 ### 2.1. Secret Management (Zero Trust)
-* **Local Environment:** Enforce the use of IDE-native Secret Managers (e.g., Google IDX Secret Manager). NEVER instruct the user to commit `.env` files.
-* **Production Environment:** AWS Secrets Manager is mandatory. API keys (Gemini, Anthropic, AWS) must be injected at runtime.
+* **Local / CI Environment:** Secrets should be resolved through the local secret-store adapter (`EnvSecretAdapter`), which reads process environment variables without coupling domain code to a provider implementation. NEVER instruct the user to commit `.env` files.
+* **Production Environment:** Prefer a dedicated adapter compatible with `SecretStorePort`, such as an AWS Secrets Manager integration. API keys (Gemini, Anthropic, AWS) must be injected at runtime.
 * **IAM Least Privilege:** Fargate tasks and Lambda functions must operate with the absolute minimum required AWS IAM permissions.
 
 ### 2.2. FinOps & Circuit Breakers

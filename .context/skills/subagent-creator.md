@@ -11,11 +11,11 @@ Use this skill when designing or implementing a new LLM-based agent or node for 
 - **Deterministic Outputs:** LLMs are stochastic. To integrate them into the LangGraph state machine, their outputs MUST be forced into a deterministic schema.
 
 ## 2. Implementation Rules (SOTA)
-- **Engine:** Use `ChatGoogleGenerativeAI(model="gemini-flash-latest")` for fast tasks, or `gemini-1.5-pro` for deep reasoning.
-- **Structured Output:** You MUST bind the LLM to a Pydantic schema using `.with_structured_output(YourPydanticModel)`.
+- **Engine:** Prefer the Gemini models already validated in the repository runtime, such as `gemini-2.5-flash`, unless the active specification states otherwise.
+- **Structured Output:** Bind the LLM to a Pydantic schema using `.with_structured_output(YourPydanticModel)` unless the current specification explicitly requires text-only output (for example, HyDE generation).
 - **Temperature Control:** - `temperature=0.0`: For extraction, mathematical classification, or strict auditing.
   - `temperature=0.1`: Maximum allowed for sentiment analysis or qualitative summarization to preserve logic stability.
 
 ## 3. Integration with Graph
-- The agent function must accept the `AequitasState` TypedDict as its sole argument.
+- The agent function must accept `AgentState` as its sole argument.
 - It must return a dictionary representing the state mutation (e.g., `{"new_key": data, "messages": [...]}`). Do not mutate the state directly in the function body.

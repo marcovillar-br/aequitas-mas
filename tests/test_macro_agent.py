@@ -26,7 +26,11 @@ from src.agents.macro import (
     create_macro_agent,
     macro_agent,
 )
-from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
+from src.core.interfaces.vector_store import (
+    NullVectorStore,
+    VectorSearchResult,
+    VectorStorePort,
+)
 from src.core.state import AgentState, MacroAnalysis
 
 # ---------------------------------------------------------------------------
@@ -41,18 +45,18 @@ MOCK_HYDE_TEXT = (
 )
 
 MOCK_RETRIEVED_DOCS = [
-    {
-        "document_id": "bcb-copom-2025-12",
-        "source_url": "https://www.bcb.gov.br/publicacoes/atascopom/cronologico",
-        "content": "A taxa Selic permanece em 10,75% ao ano conforme deliberação do COPOM.",
-        "score": 0.9231,
-    },
-    {
-        "document_id": "fed-minutes-2025-11",
-        "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
-        "content": "The Federal Open Market Committee maintained the target range at 5.25-5.50%.",
-        "score": 0.8874,
-    },
+    VectorSearchResult(
+        document_id="bcb-copom-2025-12",
+        source_url="https://www.bcb.gov.br/publicacoes/atascopom/cronologico",
+        content="A taxa Selic permanece em 10,75% ao ano conforme deliberação do COPOM.",
+        score=0.9231,
+    ),
+    VectorSearchResult(
+        document_id="fed-minutes-2025-11",
+        source_url="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        content="The Federal Open Market Committee maintained the target range at 5.25-5.50%.",
+        score=0.8874,
+    ),
 ]
 
 MOCK_MACRO_ANALYSIS = MacroAnalysis(
@@ -135,7 +139,7 @@ def test_macro_agent_success_path(
     assert analysis.interest_rate_impact == MOCK_MACRO_ANALYSIS.interest_rate_impact
 
     # Assert: source_urls come from retrieval metadata, NOT from LLM output
-    expected_urls = [doc["source_url"] for doc in MOCK_RETRIEVED_DOCS]
+    expected_urls = [doc.source_url for doc in MOCK_RETRIEVED_DOCS]
     assert analysis.source_urls == expected_urls
 
     # Assert: audit_log has exactly one traceability entry
@@ -193,9 +197,24 @@ def test_macro_agent_source_urls_deduplication(
     deduplicate them preserving retrieval order.
     """
     duplicate_docs = [
-        {"document_id": "d1", "source_url": "https://bcb.gov.br/ata1", "content": "...", "score": 0.95},
-        {"document_id": "d2", "source_url": "https://bcb.gov.br/ata1", "content": "...", "score": 0.91},
-        {"document_id": "d3", "source_url": "https://fed.gov/minutes", "content": "...", "score": 0.88},
+        VectorSearchResult(
+            document_id="d1",
+            source_url="https://bcb.gov.br/ata1",
+            content="...",
+            score=0.95,
+        ),
+        VectorSearchResult(
+            document_id="d2",
+            source_url="https://bcb.gov.br/ata1",
+            content="...",
+            score=0.91,
+        ),
+        VectorSearchResult(
+            document_id="d3",
+            source_url="https://fed.gov/minutes",
+            content="...",
+            score=0.88,
+        ),
     ]
     store = MagicMock(spec=VectorStorePort)
     store.search_macro_context.return_value = duplicate_docs
@@ -248,11 +267,11 @@ def test_macro_agent_llm_failure_controlled_degradation(
 
 def test_extract_source_urls_deduplication() -> None:
     docs = [
-        {"source_url": "https://bcb.gov.br/a"},
-        {"source_url": "https://bcb.gov.br/a"},  # duplicate
-        {"source_url": "https://fed.gov/b"},
-        {"source_url": ""},  # empty — must be excluded
-        {"source_url": "https://bcb.gov.br/c"},
+        VectorSearchResult(document_id="1", source_url="https://bcb.gov.br/a", content="", score=0.9),
+        VectorSearchResult(document_id="2", source_url="https://bcb.gov.br/a", content="", score=0.8),
+        VectorSearchResult(document_id="3", source_url="https://fed.gov/b", content="", score=0.7),
+        VectorSearchResult(document_id="4", source_url="", content="", score=0.6),
+        VectorSearchResult(document_id="5", source_url="https://bcb.gov.br/c", content="", score=0.5),
     ]
     result = _extract_source_urls(docs)
     assert result == ["https://bcb.gov.br/a", "https://fed.gov/b", "https://bcb.gov.br/c"]

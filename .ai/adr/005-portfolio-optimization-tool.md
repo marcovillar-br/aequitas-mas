@@ -1,4 +1,4 @@
-# ADR 008: Portfolio Optimization via Deterministic Math Tool
+# ADR 005: Portfolio Optimization via Deterministic Math Tool
 
 ## Status
 Accepted and Implemented (Sprint 4, 2026-03-11).
