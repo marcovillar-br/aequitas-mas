@@ -129,6 +129,7 @@ def core_consensus_node(state: AgentState) -> dict:
             "audit_log": [f"[Core/Consensus] {rationale}"],
             "messages": [AIMessage(content=rationale, name="core_consensus")],
             "executed_nodes": ["core_consensus"],
+            "optimization_blocked": True,
         }
 
     if decision.approval_status == "block":
@@ -143,6 +144,7 @@ def core_consensus_node(state: AgentState) -> dict:
             "audit_log": [f"[Core/Consensus] {rationale}"],
             "messages": [AIMessage(content=rationale, name="core_consensus")],
             "executed_nodes": ["core_consensus"],
+            "optimization_blocked": True,
         }
 
     portfolio_tickers = state.portfolio_tickers or [ticker]
@@ -209,4 +211,5 @@ def core_consensus_node(state: AgentState) -> dict:
         "audit_log": [audit_entry],
         "messages": [AIMessage(content=core_analysis.rational, name="core_consensus")],
         "executed_nodes": ["core_consensus"],
+        "optimization_blocked": False,
     }

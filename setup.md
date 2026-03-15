@@ -98,6 +98,7 @@ bash scripts/setup_env.sh
 The generated `.env` must include, at minimum:
 - `OPENSEARCH_ENDPOINT`
 - `OPENSEARCH_INDEX`
+- `OPENSEARCH_AUDIT_INDEX`
 - `GEMINI_API_KEY`
 
 Recommended additional runtime variables:

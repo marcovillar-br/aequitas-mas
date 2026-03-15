@@ -276,6 +276,7 @@ class AgentState(BaseModel):
     macro_rag_score: Optional[float] = None
     marks_verdict: Optional[str] = None
     core_analysis: Optional[CoreAnalysis] = None
+    optimization_blocked: bool = False
 
     # Audit Log from the Marks Agent (The Devil's Advocate).
     # Annotated + operator.add allows accumulating critiques without overwriting.

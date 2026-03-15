@@ -71,7 +71,7 @@ def print_report(final_state: dict) -> None:
     if qual_analysis:
         print("\n📰 ANÁLISE QUALITATIVA (Fisher Agent):")
         print(f"   • Score de Sentimento: {qual_analysis.sentiment_score:.2f} (escala -1 a 1)")
-        print(f"   • Riscos Identificados:")
+        print("   • Riscos Identificados:")
         for risk in qual_analysis.key_risks:
             print(f"     - {risk}")
         if qual_analysis.source_urls:
@@ -98,15 +98,22 @@ def print_report(final_state: dict) -> None:
     # Section 4: Final Verdict (Marks - Risk Auditor)
     print("\n⚖️  VEREDITO FINAL (Marks Agent - Auditor de Risco):")
     print("-" * 80)
-    
-    audit_log = final_state.get("audit_log", [])
-    if audit_log and len(audit_log) > 0:
-        # The last entry in audit_log is the final verdict from Marks
-        final_verdict = audit_log[-1]
+
+    final_verdict = final_state.get("marks_verdict")
+    if final_verdict:
         print(f"\n{final_verdict}\n")
     else:
         print("\n⚠️  ERRO: Veredito final não disponível. A análise de risco não foi concluída.\n")
         logger.error("final_verdict_missing", ticker=ticker)
+
+    print("\n🧠 CORE CONSENSUS RATIONALE:")
+    print("-" * 80)
+
+    core_analysis = final_state.get("core_analysis")
+    if core_analysis:
+        print(f"\n{core_analysis.rational}\n")
+    else:
+        print("\nℹ️  Rationale do Core Consensus indisponível.\n")
     
     print("=" * 80)
     print("Análise concluída. Sistema Aequitas-MAS v2.0")

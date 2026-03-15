@@ -4,7 +4,8 @@ locals {
     "index/${local.opensearch_collection_name}/${var.opensearch_index.fisher}",
     "index/${local.opensearch_collection_name}/${var.opensearch_index.macro}"
   ]
-  developer_sso_arn_trimmed = trimspace(var.developer_sso_arn)
+  opensearch_audit_index_resource = "index/${local.opensearch_collection_name}/${var.opensearch_index.audit}"
+  developer_sso_arn_trimmed       = trimspace(var.developer_sso_arn)
   enable_developer_sso_access = (
     terraform.workspace == "dev" &&
     local.developer_sso_arn_trimmed != ""
@@ -62,6 +63,14 @@ resource "aws_opensearchserverless_access_policy" "AQM_VECTOR_STORE_ACCESS_POLIC
               ]
             },
             {
+              ResourceType = "index",
+              Resource     = [local.opensearch_audit_index_resource],
+              Permission = [
+                "aoss:WriteDocument",
+                "aoss:CreateIndex"
+              ]
+            },
+            {
               ResourceType = "collection",
               Resource     = ["collection/${local.opensearch_collection_name}"],
               Permission = [
@@ -90,6 +99,14 @@ resource "aws_opensearchserverless_access_policy" "AQM_VECTOR_STORE_ACCESS_POLIC
                 "aoss:DeleteIndex",
                 "aoss:UpdateIndex",
                 "aoss:DescribeIndex"
+              ]
+            },
+            {
+              ResourceType = "index",
+              Resource     = [local.opensearch_audit_index_resource],
+              Permission = [
+                "aoss:WriteDocument",
+                "aoss:CreateIndex"
               ]
             },
             {
