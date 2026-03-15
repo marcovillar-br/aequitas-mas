@@ -327,9 +327,16 @@ def create_macro_agent(
                 sources_count=len(dynamic_urls),
             )
 
+            success_message = AIMessage(
+                content=f"Análise macroeconômica (Macro) para {ticker} concluída.",
+                name="macro",
+            )
+
             return {
                 "macro_analysis": result,
+                "messages": [success_message],
                 "audit_log": [audit_entry],
+                "executed_nodes": ["macro"],
             }
 
         except ResourceExhausted as error:
@@ -374,6 +381,7 @@ def create_macro_agent(
             "macro_analysis": fallback_analysis,
             "messages": [failure_msg],
             "audit_log": [audit_failure],
+            "executed_nodes": ["macro"],
         }
 
     return macro_agent

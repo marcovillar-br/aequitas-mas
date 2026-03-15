@@ -193,11 +193,11 @@ class CoreAnalysis(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     recommended_weights: List[PortfolioWeight] = Field(
-        ...,
+        default_factory=list,
         description="Optimized portfolio allocations for each analyzed ticker.",
     )
-    total_risk_score: float = Field(
-        ...,
+    total_risk_score: Optional[float] = Field(
+        default=None,
         ge=0.0,
         description="Aggregate portfolio risk score derived from the optimizer output.",
     )
@@ -205,11 +205,17 @@ class CoreAnalysis(BaseModel):
         ...,
         description="Deterministic rationale for the optimized allocation.",
     )
+    source_urls: List[str] = Field(
+        default_factory=list,
+        description="Consolidated source URLs from specialist agents.",
+    )
 
     @field_validator("total_risk_score", mode="before")
     @classmethod
-    def validate_finite_float(cls, v: Any) -> float:
+    def validate_finite_float(cls, v: Any) -> Optional[float]:
         """Safely coerces numeric values and rejects NaN/Inf."""
+        if v is None:
+            return None
         try:
             value = float(v)
         except (TypeError, ValueError) as exc:
@@ -246,14 +252,48 @@ class AgentState(BaseModel):
         pattern=r"^[A-Z0-9]{5,6}$",
     )
 
+    # Deterministic portfolio optimization inputs.
+    portfolio_tickers: List[str] = Field(
+        default_factory=list,
+        description="Ordered asset universe used by the deterministic optimizer.",
+    )
+    portfolio_returns: List[List[float]] = Field(
+        default_factory=list,
+        description="Historical returns aligned with portfolio_tickers.",
+    )
+    risk_appetite: Optional[float] = Field(
+        default=None,
+        description="Supervisor-provided risk appetite in the [0, 1] interval.",
+    )
+
     # Decision Tensors (Structured Data).
     # Optional because they are filled progressively.
     # None can indicate 'controlled failure' or 'not yet executed'.
     metrics: Optional[GrahamMetrics] = None
     qual_analysis: Optional[FisherAnalysis] = None
     macro_analysis: Optional[MacroAnalysis] = None
+    marks_verdict: Optional[str] = None
     core_analysis: Optional[CoreAnalysis] = None
 
     # Audit Log from the Marks Agent (The Devil's Advocate).
     # Annotated + operator.add allows accumulating critiques without overwriting.
     audit_log: Annotated[List[str], operator.add] = Field(default_factory=list)
+
+    # Explicit execution ledger used by the router to avoid re-running nodes.
+    executed_nodes: Annotated[List[str], operator.add] = Field(default_factory=list)
+
+    @field_validator("risk_appetite", mode="before")
+    @classmethod
+    def validate_risk_appetite(cls, v: Any) -> Optional[float]:
+        """Safely coerces risk appetite values and rejects NaN/Inf."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value

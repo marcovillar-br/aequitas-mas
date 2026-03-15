@@ -393,8 +393,19 @@ This requirement eliminates the previous OpenSearch `500` retrieval failure caus
 ---
 
 ## 📌 Specification 4.0: Aequitas Core (Supervisor) + Portfolio Optimization
-**Sprint:** 4 | **Status:** PLANNED
+**Sprint:** 4 | **Status:** CONCLUÍDA
 **Objective:** Implement the Core Supervisor agent and deterministic portfolio optimization workflow.
+
+### Delivered Scope
+1. Explicit execution ledger delivered in `src/core/state.py` via `executed_nodes`,
+   plus dedicated supervisor checkpoints such as `marks_verdict`, `portfolio_tickers`,
+   `portfolio_returns`, and `risk_appetite`.
+2. `core_consensus` node delivered in `src/agents/core.py` and integrated into
+   `src/core/graph.py` for structured synthesis of specialist outputs before the final
+   optimization handoff.
+3. Deterministic portfolio weighting delivered through `src/tools/portfolio_optimizer.py`
+   using `scipy.optimize.minimize(method="SLSQP")`, preserving full math isolation from
+   the LLM path.
 
 ### 1. Agent Topology: Core Supervisor
 
@@ -434,3 +445,16 @@ The LLM MUST NOT:
 - perform probabilistic numeric estimation.
 
 The LLM may only orchestrate tool calls and summarize deterministic outputs.
+
+### 4. Delivered Implementation Notes
+
+The implemented supervisor flow is:
+
+```
+graham -> fisher -> macro -> marks -> core_consensus -> __end__
+```
+
+Routing is controlled by explicit state checkpoints rather than implicit `audit_log`
+side effects. Controlled degradation remains valid at every step: a specialist may fail
+gracefully, record execution in the ledger, and still allow the Core Supervisor to reach
+structured consensus without inventing numeric values.
