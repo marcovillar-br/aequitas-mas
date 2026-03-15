@@ -419,6 +419,7 @@ def test_node_exceptions_record_error_span_and_degrade() -> None:
     from src.core.graph import create_graph
 
     exported_spans: list[dict[str, Any]] = []
+    mock_audit_sink = MagicMock(spec=AuditSinkPort)
     telemetry_runtime = TelemetryRuntime(
         tracer_provider=RecordingTracerProvider(exported_spans),
         enabled=True,
@@ -454,7 +455,7 @@ def test_node_exceptions_record_error_span_and_degrade() -> None:
         }
 
         app = create_graph(
-            audit_sink=MagicMock(spec=AuditSinkPort),
+            audit_sink=mock_audit_sink,
             telemetry_runtime=telemetry_runtime,
         )
         initial_state = {
@@ -473,6 +474,9 @@ def test_node_exceptions_record_error_span_and_degrade() -> None:
     assert path == ["graham", "fisher", "macro", "marks", "core_consensus"]
     graham_span = next(span for span in exported_spans if span["name"] == "node.graham")
     assert graham_span["error_recorded"] is True
+    graham_event = mock_audit_sink.record_decision_event.call_args_list[0].args[0]
+    assert graham_event.node_name == "graham"
+    assert graham_event.phase == "degraded"
 
 
 def test_routing_skips_specialists_and_goes_to_marks(mock_agents: dict[str, Any]) -> None:

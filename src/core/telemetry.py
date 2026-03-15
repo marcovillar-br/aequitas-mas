@@ -123,6 +123,10 @@ def _configure_structlog(force: bool = False) -> None:
     if _DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED and not force:
         return
 
+    if structlog.is_configured() and not force:
+        _DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = True
+        return
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -203,4 +207,3 @@ def mark_span_error(span: SpanLike, exception: BaseException) -> None:
         span.set_status(Status(StatusCode.ERROR, str(exception)))
     except ImportError:
         return None
-
