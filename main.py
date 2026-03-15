@@ -20,6 +20,7 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
+_DEFAULT_TICKER = "BBAS3"
 
 # Ensures Python finds the 'src' directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
@@ -161,6 +162,13 @@ def run_analysis(ticker: str) -> None:
         structlog.get_logger().error("graph_execution_failed", error=str(e), exc_info=True)
         print("\n⚠️  ERRO CRÍTICO: A execução do grafo falhou. Verifique os logs para detalhes.\n")
 
+
+def _resolve_ticker(argv: list[str]) -> str:
+    """Return the CLI ticker argument or the project default."""
+    if len(argv) > 1 and argv[1].strip():
+        return argv[1].strip().upper()
+    return _DEFAULT_TICKER
+
 if __name__ == "__main__":
     logger.info("script_started", file="main.py")
 
@@ -174,4 +182,4 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    run_analysis("PETR4")
+    run_analysis(_resolve_ticker(sys.argv))
