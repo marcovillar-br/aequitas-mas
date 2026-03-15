@@ -46,8 +46,12 @@ Activate this skill when the user requests assistance with Git commands, creatin
 * Do not push or merge automatically unless the user explicitly requests it.
 * Before any push, summarize staged files and intended target branch in one short confirmation line.
 * If there are unrelated local changes, avoid bundling them in the same commit unless user explicitly asks.
-* **Mandatory Pre-Delivery Gate:** Before any remote delivery (`git push`), run `./scripts/validate_delivery.sh` and confirm it passed successfully.
-* **Extended Runtime Validation:** If the delivery touches entrypoints, graph wrappers, adapters, runtime configuration, or environment loading, prefer `./scripts/validate_delivery.sh --live-smoke` before push.
+* **Mandatory Pre-Delivery Gate:** Before any remote delivery (`git push`), run `./scripts/validate_delivery.sh --mode auto` and confirm it passed successfully.
+* **Risk-Based Validation:** Allow the gate to scale by changed-file risk:
+  - `full` for `src/core/`, `src/agents/`, `src/tools/`, `src/api/`, or `main.py`
+  - `standard` for `tests/`, `scripts/`, `infra/terraform/`, and `.github/workflows/`
+  - `light` for documentation-only changes
+* **Extended Runtime Validation:** If the delivery touches entrypoints, graph wrappers, adapters, runtime configuration, or environment loading, prefer `./scripts/validate_delivery.sh --mode full --live-smoke` before push.
 * If the validation script fails, STOP immediately. Do not recommend commit or push until the failure is resolved.
 
 ## 3. Pull Request Template Generation

@@ -9,13 +9,6 @@ on:
   pull_request:
     branches:
       - development
-  workflow_dispatch:
-    inputs:
-      apply_dev:
-        description: "Apply Terraform changes to the dev workspace after a successful plan"
-        required: true
-        default: true
-        type: boolean
 
 permissions:
   id-token: write # Mandatory for OIDC authentication
@@ -143,7 +136,7 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -no-color
 
-      # 7. Controlled deployment is handled only by the manual workflow_dispatch path below.
+      # 7. Controlled deployment to dev is handled by the push-to-development job below.
 
   terraform-apply-dev:
     name: "Terraform Apply (dev only)"
@@ -151,7 +144,7 @@ jobs:
     needs:
       - quality
       - terraform
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_dev == true }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/development' }}
     concurrency:
       group: terraform-dev-apply
       cancel-in-progress: false
