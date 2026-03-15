@@ -85,6 +85,8 @@ jobs:
     env:
       # Sincronização global de região (mapeia para var.AQM_REGION)
       TF_VAR_AQM_REGION: "us-east-1"
+      # Optional developer SSO principal for dev OpenSearch Data Plane access.
+      TF_VAR_developer_sso_arn: ${{ vars.DEVELOPER_SSO_ARN }}
       DEV_ACCOUNT: "355316257214"
 
     defaults:
@@ -151,6 +153,7 @@ jobs:
 
     env:
       TF_VAR_AQM_REGION: "us-east-1"
+      TF_VAR_developer_sso_arn: ${{ vars.DEVELOPER_SSO_ARN }}
       DEV_ACCOUNT: "355316257214"
 
     defaults:
