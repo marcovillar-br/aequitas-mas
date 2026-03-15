@@ -20,7 +20,7 @@
 * Check for any cloud dependency leakage. Specifically, ensure the absolute prohibition of infrastructure SDKs (e.g., `import boto3`) within the domain logic (`src/agents/` and `src/core/`).
 * Does the `src/core/graph.py` compilation include a FinOps Circuit Breaker (e.g., `recursion_limit=15`) to prevent infinite LLM loops and control API billing costs?
 * Are "Zero Trust" secret management practices followed (strict absence of local `.env` file loading for API credentials)?
-* Do `pyproject.toml` reflect the Isomorphism protocol?
+* Does `pyproject.toml` reflect the Isomorphism protocol?
 
 **Please categorize the report into: ✅ Compliant, ⚠️ Warnings (Technical Debt), and 🚨 Critical Blockers (Dogma Violation). Finally, suggest the immediate next line of code or refactoring needed to achieve the Definition of Done (DoD).**
 

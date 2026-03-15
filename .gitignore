@@ -4,7 +4,9 @@ __pycache__/
 *.pyc
 
 # IDEs e Ferramentas
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/mcp.json
 .idx/
 .idea/
 

@@ -1,0 +1,12 @@
+{
+    "servers": {
+        "aequitas-local-server": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "${workspaceFolder}"
+            ]
+        }
+    }
+}

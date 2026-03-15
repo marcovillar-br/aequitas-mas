@@ -35,4 +35,4 @@ Violation of any rule below is a hard architectural error. Stop and correct befo
 
 ## RPI Workflow (Slash Commands)
 
-Use `/research` → `/plan` → `/implement` for all non-trivial tasks. Each phase has an explicit approval gate. See `.claude/commands/` for full protocol.
+Use `/research` → `/plan` → `/implement` for all non-trivial tasks. Each phase has an explicit approval gate. See `.context/protocol/` for the canonical workflow.

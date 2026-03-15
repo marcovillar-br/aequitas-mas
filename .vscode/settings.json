@@ -2,34 +2,9 @@
     "python-envs.pythonProjects": [],
     "python-envs.defaultEnvManager": "ms-python.python:system",
 
-    /* MCP WSL Configuration */
-    "mcp.servers": {
-        "aequitas-local-server": {
-            "command": "npx",
-            "args": [
-                "-y", 
-                "@modelcontextprotocol/server-filesystem", 
-                "/home/marco/projects/aequitas-mas"
-            ]
-        }
-    },
+    /* Shared MCP server configuration lives in .vscode/mcp.json */
 
-    /* Resource Mapping */
-    "mcp.resources": {
-        "repository": "file:///home/marco/projects/aequitas-mas/",
-        "allowed_extensions": [".py", ".tf", ".md"]
-    },
-    
-    /* --- CONFIGURAÇÕES AEQUITAS-MAS & GPT CODEX --- */
-
-    // 1. Model Context Protocol (MCP) - Ponte de Contexto Local
-    "mcp.roots": ["file:///home/marco/projects/aequitas-mas/"], 
-    "mcp.permissions": {
-        "files": ["*.py", "*.tf", "*.md"], 
-        "execution": true 
-    },
-
-    // 2. Mapeamento de Slash Commands (Fluxo RPI)
+    // 1. Slash command mapping (RPI flow)
     "gpt.codex.slashCommands": {
         "research": {
             "description": "Busca técnica externa via DDGS v2026",
@@ -57,7 +32,7 @@
         }
     },
 
-    // 3. Diretrizes de Prompting e Constraints
+    // 2. Prompting guidelines and constraints
     "gpt.codex.customInstructions": [
         "Always reference Aequitas-MAS core protocols before generating agent logic.",
         "Every generated agent MUST include status() and get_context() methods.",
@@ -66,6 +41,6 @@
         "Strictly adhere to the Zero Numerical Hallucination dogma: Financial metrics MUST be Optional[float] = None if not explicitly found in context. NEVER guess or perform mental math."
     ],
 
-    // 4. Integração GitHub & Commits
+    // 3. GitHub and commit integration
     "github.copilot.commitMessageGeneration.template": "feat/fix/refactor: brief description following Conventional Commits"
 }
