@@ -1,0 +1,67 @@
+"""Unit tests for the OpenSearch audit adapter using injected mocks."""
+
+from unittest.mock import MagicMock
+
+from src.core.interfaces.audit import DecisionPathEvent
+from src.infra.adapters.opensearch_audit_adapter import OpenSearchAuditAdapter
+
+
+def test_record_decision_event_indexes_expected_schema() -> None:
+    """The adapter must forward the full Decision Path schema to OpenSearch."""
+    mock_client = MagicMock()
+    adapter = OpenSearchAuditAdapter(client=mock_client, index="audit-events")
+    event = DecisionPathEvent(
+        timestamp="2026-03-14T12:00:00Z",
+        thread_id="thread-123",
+        target_ticker="PETR4",
+        node_name="macro",
+        phase="degraded",
+        executed_nodes_snapshot=["graham", "fisher", "macro"],
+        degradation_reason="No documents were retrieved.",
+        source_urls=["https://example.com/bcb", "https://example.com/fed"],
+        latency_ms=183.4,
+        optimizer_invoked=False,
+    )
+
+    adapter.record_decision_event(event)
+
+    mock_client.index.assert_called_once_with(
+        index="audit-events",
+        body={
+            "timestamp": "2026-03-14T12:00:00Z",
+            "thread_id": "thread-123",
+            "target_ticker": "PETR4",
+            "node_name": "macro",
+            "phase": "degraded",
+            "executed_nodes_snapshot": ["graham", "fisher", "macro"],
+            "degradation_reason": "No documents were retrieved.",
+            "source_urls": ["https://example.com/bcb", "https://example.com/fed"],
+            "latency_ms": 183.4,
+            "optimizer_invoked": False,
+        },
+        refresh=False,
+    )
+
+
+def test_record_decision_event_swallows_indexing_failures() -> None:
+    """Observability failures must not raise back into the graph execution path."""
+    mock_client = MagicMock()
+    mock_client.index.side_effect = RuntimeError("OpenSearch unavailable")
+
+    adapter = OpenSearchAuditAdapter(client=mock_client)
+    event = DecisionPathEvent(
+        timestamp="2026-03-14T12:00:00Z",
+        thread_id="thread-456",
+        target_ticker="VALE3",
+        node_name="core_consensus",
+        phase="failure",
+        executed_nodes_snapshot=["graham", "fisher", "macro", "marks"],
+        degradation_reason="Audit sink degraded.",
+        source_urls=[],
+        latency_ms=None,
+        optimizer_invoked=False,
+    )
+
+    adapter.record_decision_event(event)
+
+    mock_client.index.assert_called_once()

@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """Deterministic router and graph-flow tests for consensus-based routing."""
 
+from contextlib import contextmanager
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
 
 from src.core.graph import router
+from src.core.interfaces.audit import AuditSinkPort, DecisionPathEvent
+from src.core.telemetry import TelemetryRuntime
 from src.core.state import (
     AgentState,
     CoreAnalysis,
@@ -15,6 +18,64 @@ from src.core.state import (
     GrahamMetrics,
     MacroAnalysis,
 )
+from src.tools.rag_evaluator import calculate_c_rag_score
+
+
+class RecordingSpan:
+    """In-memory span representation for deterministic telemetry tests."""
+
+    def __init__(self, name: str, exporter: list[dict[str, Any]]) -> None:
+        self.name = name
+        self.attributes: dict[str, Any] = {}
+        self.error_recorded = False
+        self._exporter = exporter
+
+    def __enter__(self) -> "RecordingSpan":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, exc_tb: Any) -> None:
+        self._exporter.append(
+            {
+                "name": self.name,
+                "attributes": dict(self.attributes),
+                "error_recorded": self.error_recorded,
+            }
+        )
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        self.attributes[key] = value
+
+    def record_exception(self, exception: BaseException) -> None:
+        self.error_recorded = True
+        self.attributes["exception.type"] = type(exception).__name__
+
+    def set_status(self, status: Any) -> None:
+        self.attributes["status"] = str(status)
+
+
+class RecordingTracer:
+    """Tracer that exports spans into an in-memory list."""
+
+    def __init__(self, exporter: list[dict[str, Any]]) -> None:
+        self._exporter = exporter
+
+    @contextmanager
+    def start_as_current_span(self, name: str) -> Any:
+        span = RecordingSpan(name, self._exporter)
+        try:
+            yield span.__enter__()
+        finally:
+            span.__exit__(None, None, None)
+
+
+class RecordingTracerProvider:
+    """Tracer provider used to validate graph instrumentation deterministically."""
+
+    def __init__(self, exporter: list[dict[str, Any]]) -> None:
+        self._exporter = exporter
+
+    def get_tracer(self, name: str) -> RecordingTracer:
+        return RecordingTracer(self._exporter)
 
 
 def _build_metrics() -> GrahamMetrics:
@@ -50,6 +111,7 @@ def _build_core_analysis() -> CoreAnalysis:
         recommended_weights=[{"ticker": "PETR4", "weight": 1.0}],
         total_risk_score=0.12,
         rational="Consenso positivo com otimização determinística concluída.",
+        source_urls=["http://macro.test/source"],
     )
 
 
@@ -177,6 +239,7 @@ def mock_agents() -> dict[str, Any]:
                 recommended_weights=[{"ticker": "WEGE3", "weight": 1.0}],
                 total_risk_score=0.15,
                 rational="Consenso positivo. Otimização concluída.",
+                source_urls=["http://mock.com/consensus"],
             ),
             "audit_log": ["[Core/Consensus] Completed."],
             "messages": [
@@ -217,6 +280,199 @@ def test_centralized_routing_flow(mock_agents: dict[str, Any]) -> None:
     mock_agents["macro"].assert_called_once()
     mock_agents["marks"].assert_called_once()
     mock_agents["core_consensus"].assert_called_once()
+
+
+def test_graph_emits_decision_path_events_in_execution_order(
+    mock_agents: dict[str, Any],
+) -> None:
+    """A full graph run must emit one DecisionPathEvent per executed node."""
+    from src.core.graph import create_graph
+
+    mock_audit_sink = MagicMock(spec=AuditSinkPort)
+    app = create_graph(audit_sink=mock_audit_sink)
+    initial_state = {
+        "messages": [],
+        "target_ticker": "WEGE3",
+        "portfolio_tickers": ["WEGE3"],
+        "portfolio_returns": [[0.01], [0.02]],
+        "risk_appetite": 0.4,
+    }
+    config = {"configurable": {"thread_id": "test_audit_sequence"}}
+
+    for _ in app.stream(initial_state, config=config):
+        pass
+
+    calls = mock_audit_sink.record_decision_event.call_args_list
+    assert len(calls) == 5
+
+    events = [call.args[0] for call in calls]
+    assert all(isinstance(event, DecisionPathEvent) for event in events)
+    assert [event.node_name for event in events] == [
+        "graham",
+        "fisher",
+        "macro",
+        "marks",
+        "core_consensus",
+    ]
+    assert all(event.thread_id == "test_audit_sequence" for event in events)
+    assert events[0].executed_nodes_snapshot == ["graham"]
+    assert events[1].source_urls == ["http://mock.com"]
+    assert events[2].source_urls == []
+    assert events[4].source_urls == ["http://mock.com/consensus"]
+    assert events[4].optimizer_invoked is True
+
+
+def test_graph_continues_when_audit_sink_fails(mock_agents: dict[str, Any]) -> None:
+    """Audit sink failures must not interrupt the main graph execution."""
+    from src.core.graph import create_graph
+
+    mock_audit_sink = MagicMock(spec=AuditSinkPort)
+    mock_audit_sink.record_decision_event.side_effect = RuntimeError("sink unavailable")
+    app = create_graph(audit_sink=mock_audit_sink)
+    initial_state = {
+        "messages": [],
+        "target_ticker": "WEGE3",
+        "portfolio_tickers": ["WEGE3"],
+        "portfolio_returns": [[0.01], [0.02]],
+        "risk_appetite": 0.4,
+    }
+    config = {"configurable": {"thread_id": "test_audit_failure"}}
+
+    path: list[str] = []
+    for state_update in app.stream(initial_state, config=config):
+        path.extend(state_update.keys())
+
+    assert path == ["graham", "fisher", "macro", "marks", "core_consensus"]
+    assert mock_audit_sink.record_decision_event.call_count == 5
+
+
+def test_graph_creates_root_and_child_spans(mock_agents: dict[str, Any]) -> None:
+    """Graph execution must emit a root request span and one child span per node."""
+    from src.core.graph import create_graph
+
+    exported_spans: list[dict[str, Any]] = []
+    telemetry_runtime = TelemetryRuntime(
+        tracer_provider=RecordingTracerProvider(exported_spans),
+        enabled=True,
+    )
+    app = create_graph(
+        audit_sink=MagicMock(spec=AuditSinkPort),
+        telemetry_runtime=telemetry_runtime,
+    )
+    initial_state = {
+        "messages": [],
+        "target_ticker": "WEGE3",
+        "portfolio_tickers": ["WEGE3"],
+        "portfolio_returns": [[0.01], [0.02]],
+        "risk_appetite": 0.4,
+    }
+    config = {"configurable": {"thread_id": "test_span_sequence"}}
+
+    for _ in app.stream(initial_state, config=config):
+        pass
+
+    assert [span["name"] for span in exported_spans] == [
+        "node.graham",
+        "node.fisher",
+        "node.macro",
+        "node.marks",
+        "node.core_consensus",
+        "aequitas.request",
+    ]
+    root_span = exported_spans[-1]
+    assert root_span["attributes"]["thread_id"] == "test_span_sequence"
+    assert root_span["attributes"]["ticker"] == "WEGE3"
+    fisher_span = exported_spans[1]
+    assert fisher_span["attributes"]["node_name"] == "fisher"
+    assert fisher_span["attributes"]["thread_id"] == "test_span_sequence"
+    assert fisher_span["attributes"]["ticker"] == "WEGE3"
+
+
+def test_graph_mutates_state_with_deterministic_rag_scores(
+    mock_agents: dict[str, Any],
+) -> None:
+    """Fisher and Macro outputs must be enriched with deterministic C_rag scores."""
+    from src.core.graph import create_graph
+
+    app = create_graph(audit_sink=MagicMock(spec=AuditSinkPort))
+    initial_state = {
+        "messages": [],
+        "target_ticker": "WEGE3",
+        "portfolio_tickers": ["WEGE3"],
+        "portfolio_returns": [[0.01], [0.02]],
+        "risk_appetite": 0.4,
+    }
+    config = {"configurable": {"thread_id": "test_rag_scores"}}
+
+    final_state = app.invoke(initial_state, config=config)
+
+    assert final_state["fisher_rag_score"] == pytest.approx(
+        calculate_c_rag_score(0.90, 0.85, 0.80)
+    )
+    assert final_state["macro_rag_score"] == pytest.approx(
+        calculate_c_rag_score(0.72, 0.74, 0.20)
+    )
+
+
+def test_node_exceptions_record_error_span_and_degrade() -> None:
+    """Unhandled node exceptions must record span error status and degrade safely."""
+    from src.core.graph import create_graph
+
+    exported_spans: list[dict[str, Any]] = []
+    telemetry_runtime = TelemetryRuntime(
+        tracer_provider=RecordingTracerProvider(exported_spans),
+        enabled=True,
+    )
+
+    with (
+        patch(
+            "src.core.graph.graham_agent",
+            side_effect=RuntimeError("unexpected graham failure"),
+        ),
+        patch("src.core.graph.fisher_agent") as mock_fisher,
+        patch("src.core.graph.macro_agent") as mock_macro,
+        patch("src.core.graph.marks_agent") as mock_marks,
+        patch("src.core.graph.core_consensus_node") as mock_consensus,
+    ):
+        mock_fisher.return_value = {
+            "qual_analysis": _build_fisher(),
+            "executed_nodes": ["fisher"],
+        }
+        mock_macro.return_value = {
+            "macro_analysis": _build_macro(),
+            "audit_log": ["[Macro/HyDE] Reasoning trace."],
+            "executed_nodes": ["macro"],
+        }
+        mock_marks.return_value = {
+            "marks_verdict": "Degraded verdict.",
+            "audit_log": ["Degraded verdict."],
+            "executed_nodes": ["marks"],
+        }
+        mock_consensus.return_value = {
+            "core_analysis": _build_core_analysis(),
+            "executed_nodes": ["core_consensus"],
+        }
+
+        app = create_graph(
+            audit_sink=MagicMock(spec=AuditSinkPort),
+            telemetry_runtime=telemetry_runtime,
+        )
+        initial_state = {
+            "messages": [],
+            "target_ticker": "WEGE3",
+            "portfolio_tickers": ["WEGE3"],
+            "portfolio_returns": [[0.01], [0.02]],
+            "risk_appetite": 0.4,
+        }
+        config = {"configurable": {"thread_id": "test_span_error"}}
+
+        path: list[str] = []
+        for state_update in app.stream(initial_state, config=config):
+            path.extend(state_update.keys())
+
+    assert path == ["graham", "fisher", "macro", "marks", "core_consensus"]
+    graham_span = next(span for span in exported_spans if span["name"] == "node.graham")
+    assert graham_span["error_recorded"] is True
 
 
 def test_routing_skips_specialists_and_goes_to_marks(mock_agents: dict[str, Any]) -> None:
