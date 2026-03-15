@@ -227,6 +227,16 @@ def _set_span_attributes(span: Any, attributes: dict[str, Any]) -> None:
             continue
 
 
+def _extract_target_ticker(input_data: Any) -> str | None:
+    """Extract the target ticker from either a dict-like payload or AgentState."""
+    if isinstance(input_data, dict):
+        ticker = input_data.get("target_ticker")
+        return ticker if isinstance(ticker, str) and ticker else None
+
+    ticker = getattr(input_data, "target_ticker", None)
+    return ticker if isinstance(ticker, str) and ticker else None
+
+
 def _build_instrumented_node(
     node_name: str,
     node_callable: Callable[[AgentState], dict[str, Any]],
@@ -343,7 +353,7 @@ class InstrumentedGraphApp:
 
     def _start_request_span(
         self,
-        input_data: dict[str, Any],
+        input_data: Any,
         config: dict[str, Any] | None,
     ) -> tuple[Any, Any]:
         """Create the root request span and return its context manager pair."""
@@ -354,14 +364,14 @@ class InstrumentedGraphApp:
             span,
             {
                 "thread_id": _extract_thread_id(config),
-                "ticker": input_data.get("target_ticker"),
+                "ticker": _extract_target_ticker(input_data),
             },
         )
         return span_cm, span
 
     def invoke(
         self,
-        input_data: dict[str, Any],
+        input_data: Any,
         config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Any:
@@ -377,7 +387,7 @@ class InstrumentedGraphApp:
 
     def stream(
         self,
-        input_data: dict[str, Any],
+        input_data: Any,
         config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Iterator[dict[str, Any]]:
