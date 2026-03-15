@@ -7,6 +7,8 @@ related to a specific stock ticker. It enforces strict data contracts using
 Pydantic and follows the "Fail Fast" principle to ensure data quality for
 downstream agents like the Fisher Agent.
 """
+import contextlib
+import io
 import re
 from typing import List
 
@@ -80,13 +82,16 @@ def get_ticker_news(
         # 3. Data Extraction using DDGS
         news_items: List[NewsItem] = []
         with DDGS() as ddgs:
-            results = ddgs.news(
-                query,
-                region="br-pt",
-                safesearch="off",
-                timelimit="w",  # Last week
-                max_results=max_results,
-            )
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+                io.StringIO()
+            ):
+                results = ddgs.news(
+                    query,
+                    region="br-pt",
+                    safesearch="off",
+                    timelimit="w",  # Last week
+                    max_results=max_results,
+                )
             if results:
                 for res in results:
                     # 4. Data Validation and Transformation

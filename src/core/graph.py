@@ -125,6 +125,9 @@ def _extract_source_urls(node_name: str, result: dict[str, Any]) -> list[str]:
 
 def _determine_phase(node_name: str, result: dict[str, Any]) -> str:
     """Classify the node event based on the produced checkpoint payload."""
+    if bool(result.get("optimization_blocked")):
+        return "blocked"
+
     checkpoint_field_map = {
         "graham": "metrics",
         "fisher": "qual_analysis",

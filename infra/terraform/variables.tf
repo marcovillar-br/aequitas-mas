@@ -57,17 +57,22 @@ variable "opensearch_index" {
   default = {
     fisher = "fisher-index"
     macro  = "macro-index"
+    audit  = "aequitas-decision-path"
   }
 
   validation {
     condition = (
       can(var.opensearch_index.fisher) &&
       can(var.opensearch_index.macro) &&
+      can(var.opensearch_index.audit) &&
       trimspace(var.opensearch_index.fisher) != "" &&
       trimspace(var.opensearch_index.macro) != "" &&
-      var.opensearch_index.fisher != var.opensearch_index.macro
+      trimspace(var.opensearch_index.audit) != "" &&
+      var.opensearch_index.fisher != var.opensearch_index.macro &&
+      var.opensearch_index.fisher != var.opensearch_index.audit &&
+      var.opensearch_index.macro != var.opensearch_index.audit
     )
-    error_message = "opensearch_index must define non-empty and distinct values for keys 'fisher' and 'macro'."
+    error_message = "opensearch_index must define non-empty and distinct values for keys 'fisher', 'macro', and 'audit'."
   }
 }
 

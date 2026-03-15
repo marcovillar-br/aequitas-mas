@@ -322,6 +322,67 @@ def test_graph_emits_decision_path_events_in_execution_order(
     assert events[4].optimizer_invoked is True
 
 
+def test_graph_emits_blocked_phase_for_consensus_veto() -> None:
+    """Consensus vetoes must be audited as blocked, not successful."""
+    from src.core.graph import create_graph
+
+    mock_audit_sink = MagicMock(spec=AuditSinkPort)
+
+    with (
+        patch("src.core.graph.graham_agent") as mock_graham,
+        patch("src.core.graph.fisher_agent") as mock_fisher,
+        patch("src.core.graph.macro_agent") as mock_macro,
+        patch("src.core.graph.marks_agent") as mock_marks,
+        patch("src.core.graph.core_consensus_node") as mock_consensus,
+    ):
+        mock_graham.return_value = {
+            "metrics": _build_metrics(),
+            "executed_nodes": ["graham"],
+        }
+        mock_fisher.return_value = {
+            "qual_analysis": _build_fisher(),
+            "executed_nodes": ["fisher"],
+        }
+        mock_macro.return_value = {
+            "macro_analysis": _build_macro(),
+            "audit_log": ["[Macro/HyDE] Reasoning trace."],
+            "executed_nodes": ["macro"],
+        }
+        mock_marks.return_value = {
+            "marks_verdict": "VETO",
+            "audit_log": ["VETO"],
+            "executed_nodes": ["marks"],
+        }
+        mock_consensus.return_value = {
+            "core_analysis": CoreAnalysis(
+                recommended_weights=[],
+                total_risk_score=None,
+                rational="A etapa de otimização foi bloqueada por consenso.",
+                source_urls=["http://mock.com/consensus"],
+            ),
+            "audit_log": ["[Core/Consensus] Blocked."],
+            "messages": [
+                AIMessage(content="Consensus blocked.", name="core_consensus")
+            ],
+            "executed_nodes": ["core_consensus"],
+            "optimization_blocked": True,
+        }
+
+        app = create_graph(audit_sink=mock_audit_sink)
+        initial_state = {
+            "messages": [],
+            "target_ticker": "WEGE3",
+        }
+        config = {"configurable": {"thread_id": "test_consensus_blocked"}}
+
+        for _ in app.stream(initial_state, config=config):
+            pass
+
+    consensus_event = mock_audit_sink.record_decision_event.call_args_list[-1].args[0]
+    assert consensus_event.node_name == "core_consensus"
+    assert consensus_event.phase == "blocked"
+
+
 def test_graph_continues_when_audit_sink_fails(mock_agents: dict[str, Any]) -> None:
     """Audit sink failures must not interrupt the main graph execution."""
     from src.core.graph import create_graph

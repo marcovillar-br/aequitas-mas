@@ -24,6 +24,7 @@ echo "Please provide the following credentials (press Enter to leave blank/defau
 
 read -p "OpenSearch Endpoint (e.g., https://bw526xpyvixs3y1e0ytg.us-east-1.aoss.amazonaws.com): " opensearch_endpoint
 read -p "OpenSearch Macro Index (default: macro-index): " opensearch_macro_index
+read -p "OpenSearch Audit Index (default: aequitas-decision-path): " opensearch_audit_index
 read -p "OpenSearch Region (default: us-east-1): " opensearch_region
 read -p "Gemini API Key: " gemini_api_key
 read -p "Terraform AWS Region (default: same as OpenSearch Region): " tf_var_aqm_region
@@ -31,6 +32,7 @@ read -p "Developer SSO ARN for Terraform (optional, for dev OpenSearch policy): 
 
 # Apply defaults for Sprint 3.3
 opensearch_macro_index=${opensearch_macro_index:-macro-index}
+opensearch_audit_index=${opensearch_audit_index:-aequitas-decision-path}
 opensearch_region=${opensearch_region:-us-east-1}
 tf_var_aqm_region=${tf_var_aqm_region:-$opensearch_region}
 
@@ -45,6 +47,7 @@ cat <<EOF > $ENV_FILE
 # --- AWS OpenSearch Serverless ---
 OPENSEARCH_ENDPOINT=$opensearch_endpoint
 OPENSEARCH_INDEX=$opensearch_macro_index
+OPENSEARCH_AUDIT_INDEX=$opensearch_audit_index
 OPENSEARCH_REGION=$opensearch_region
 OPENSEARCH_SERVICE=aoss
 

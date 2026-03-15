@@ -581,3 +581,148 @@ At minimum, the automated ruleset MUST detect:
 
 Existing grep-based dogma checks remain valid as a fast control layer, but they do not
 replace the stronger semantic enforcement required for Sprint 5.
+
+---
+
+## 📌 Specification 6.0: API Gateway & Backtesting Engine
+**Sprint:** 6 | **Status:** PLANNED
+**Objective:** Formalize the HTTP boundary for Aequitas-MAS and define a deterministic
+Backtesting Engine that replays historical market context without look-ahead bias or
+numeric hallucination.
+
+### Planned Scope
+1. Expose the LangGraph supervisor through a FastAPI gateway with dependency-injected
+   checkpoint persistence.
+2. Define a deterministic HTTP contract for analysis, portfolio, and backtesting
+   execution.
+3. Establish a backtesting tool chain under `src/tools/backtesting/` with explicit
+   historical replay semantics.
+4. Preserve `Optional[float] = None` as the controlled-degradation contract for missing
+   historical data points, prices, and derived metrics.
+
+### 1. FastAPI + LangGraph Checkpointer Contract
+
+The FastAPI boundary MUST treat LangGraph compilation and checkpoint persistence as
+startup-scoped dependencies rather than per-request constructions.
+
+#### 1.1 Dependency Injection Rule
+
+The API layer MUST expose provider functions or typed dependency classes that resolve:
+- the compiled LangGraph application,
+- the concrete `BaseCheckpointSaver`,
+- any request-scoped runtime metadata such as `thread_id`.
+
+Concrete persistence adapters (for example `MemorySaver` or `DynamoDBSaver`) MUST be
+instantiated outside the route handler body and injected through FastAPI dependencies.
+
+#### 1.2 Boundary Rule
+
+`src/api/` MUST NOT import `boto3`, `botocore`, or other infrastructure SDKs directly.
+All infrastructure-specific resolution remains confined to `src/infra/adapters/` and
+typed provider factories.
+
+#### 1.3 RunnableConfig Rule
+
+Each request that invokes LangGraph MUST propagate a stable
+`configurable.thread_id` through `RunnableConfig`. This identifier is the checkpoint key
+for persistence, replay continuity, and audit trace correlation.
+
+### 2. HTTP Endpoint Contract
+
+The initial API surface MUST include the following endpoints:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/analyze` | `POST` | Run the full Aequitas supervisor workflow for a ticker |
+| `/portfolio` | `POST` | Run deterministic portfolio optimization from validated inputs |
+| `/backtest/run` | `POST` | Execute a synchronous historical replay over a defined date window |
+
+Optional operational endpoints such as `/health` or asynchronous run polling MAY be added
+later, but they are outside the minimum contract for Specification 6.0.
+
+### 3. Backtesting Engine Structure Contract
+
+The Backtesting Engine MUST be implemented as deterministic tooling under
+`src/tools/backtesting/`.
+
+At minimum, the module structure SHOULD support:
+- `data_loader.py`
+- `signal_adapter.py`
+- `portfolio_simulator.py`
+- `metrics.py`
+- `engine.py`
+
+#### 3.1 Tool-Layer Rule
+
+All backtesting arithmetic, portfolio simulation, and benchmark calculations MUST remain
+inside `src/tools/backtesting/`. The LLM-facing layers may describe strategy context, but
+they are explicitly forbidden to:
+- calculate returns,
+- compute cumulative PnL,
+- derive benchmark-relative statistics,
+- infer missing historical values.
+
+### 4. Historical Data Feeding Strategy
+
+Historical replay MUST be deterministic and strictly chronological.
+
+#### 4.1 Replay Window Rule
+
+Every backtest request MUST define explicit temporal boundaries such as:
+- `start_date`
+- `end_date`
+- optional warmup or training windows when feature generation requires prior bars
+
+The engine MUST process observations in ascending timestamp order and MUST NOT expose data
+beyond the current replay step.
+
+#### 4.2 `as_of_date` Rule
+
+At each simulated timestamp, the engine may consume only data whose publication or market
+timestamp is less than or equal to the active `as_of_date`. Future bars, future news, and
+future fundamentals are strictly inaccessible during the current step.
+
+This rule is mandatory to prevent look-ahead bias.
+
+#### 4.3 Missing Historical Data Rule
+
+Missing price points, benchmark rows, factor values, or feature inputs MUST be represented
+at the boundary as `Optional[float] = None`.
+
+The engine MUST NOT:
+- ask the LLM to infer the missing value,
+- fill the gap with future observations,
+- silently convert missing values into zero unless the metric definition explicitly allows
+  zero as a valid observed value.
+
+If a missing value makes a timestep unusable, the simulator MUST either:
+- skip that timestep with an explicit audit trail, or
+- mark the affected output metric as `None`.
+
+### 5. Controlled Degradation Contract for Backtesting Outputs
+
+Backtesting result schemas MUST preserve Controlled Degradation semantics:
+
+```python
+Optional[float] = None
+```
+
+This applies to:
+- returns that cannot be computed due to missing bars,
+- volatility metrics with insufficient history,
+- benchmark-relative metrics when the benchmark series is incomplete,
+- drawdown metrics when the equity curve is undefined.
+
+The system MUST prefer `None` over synthetic interpolation whenever a data gap would make
+the metric unreliable.
+
+### 6. Numerical Hallucination Prevention
+
+The Backtesting Engine MUST enforce the Aequitas Risk Confinement dogma:
+
+1. No mathematical evaluation may occur inside LLM prompts.
+2. No prompt may calculate rolling returns, CAGR, Sharpe-like measures, or score
+   aggregation.
+3. Deterministic Python tooling is the only authorized layer for historical replay math.
+
+This rule exists to prevent both numerical hallucination and hidden look-ahead leakage.

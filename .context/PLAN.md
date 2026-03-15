@@ -253,3 +253,106 @@ architectural dogma enforcement in CI/CD.
   `src/infra/adapters/`.
 - **Tests:** Validate the ruleset with positive and negative fixtures before making the
   Semgrep job merge-blocking.
+
+---
+
+### 📌 Sprint 6 — API Gateway & Backtesting
+**Status:** PLANNED
+
+#### Objective
+Expose the Aequitas Core workflow through a FastAPI gateway and deliver a deterministic
+backtesting foundation that replays historical signals without look-ahead bias, while
+preserving LangGraph checkpointing, Risk Confinement, and Controlled Degradation.
+
+#### Step 1 — FastAPI Gateway Foundation + Checkpointer Dependency Injection
+- **File(s):** `src/api/`, `src/core/graph.py`, `src/core/interfaces/`,
+  `src/infra/adapters/`
+- **Change:** Introduce a FastAPI application boundary with lifespan-managed dependency
+  providers for the compiled LangGraph app and its `BaseCheckpointSaver` implementation.
+  The API layer must resolve the concrete checkpointer once at startup (`MemorySaver` for
+  local/CI, `DynamoDBSaver` for cloud environments) and inject the compiled graph through
+  typed providers instead of constructing persistence objects inside route handlers.
+- **Dogma check:** No cloud SDK imports in `src/api/` or `src/core/`. Route handlers must
+  depend on interfaces/providers only, not `boto3` or adapter internals.
+- **Tests:** Add API dependency tests confirming the graph app reuses a shared
+  checkpointer and propagates `configurable.thread_id` deterministically.
+
+#### Step 2 — Endpoint Surface for Analysis, Portfolio, and Backtesting
+- **File(s):** `src/api/app.py`, `src/api/dependencies.py`, `src/api/routers/`,
+  `src/api/schemas.py`, `tests/`
+- **Change:** Deliver the initial HTTP surface with:
+  - `POST /analyze` for single-ticker supervisor execution.
+  - `POST /portfolio` for deterministic portfolio optimization handoff.
+  - `POST /backtest/run` for synchronous historical replay against a defined date range.
+  Optional operational endpoints such as `GET /health` or `GET /backtest/{run_id}` may be
+  added only if they remain read-only and do not dilute the initial delivery.
+- **Dogma check:** API request/response schemas must preserve `Optional[float] = None`
+  semantics for any missing financial or historical values.
+- **Tests:** Add FastAPI `TestClient` coverage for request validation, dependency wiring,
+  and degraded responses without invoking real AWS or LLM services.
+
+#### Step 3 — Deterministic Backtesting Engine Skeleton in `src/tools/backtesting/`
+- **File(s):** `src/tools/backtesting/`, `tests/`
+- **Change:** Structure the tool layer with deterministic modules such as:
+  - `data_loader.py` for ordered historical price retrieval,
+  - `signal_adapter.py` for translating Aequitas signals into replayable positions,
+  - `portfolio_simulator.py` for time-stepped account evolution,
+  - `metrics.py` for post-run analytics,
+  - `engine.py` for orchestration.
+  The architecture should follow the strongest reusable patterns found in the FinRL
+  ecosystem: explicit data layer, time-driven simulation, post-run metrics, and benchmark
+  comparison; while keeping the higher-level multi-signal orchestration aligned with the
+  publicly documented MarketSenseAI approach of combining news, fundamentals, price
+  dynamics, and macro signals before portfolio construction.
+- **Dogma check:** All backtesting math remains in `src/tools/backtesting/`. The LLM path
+  may describe strategy rationale but must not compute returns, weights, or benchmarks.
+- **Tests:** Add isolated unit tests for simulator determinism, missing-data degradation,
+  and reproducible metrics from synthetic input series.
+
+#### Step 4 — Historical Data Feeding Strategy and Anti-Look-Ahead Guardrails
+- **File(s):** `src/tools/backtesting/`, `src/core/state.py`, `src/api/schemas.py`,
+  `tests/`
+- **Change:** Formalize an `as_of_date` replay contract so the backtester consumes only
+  observations available up to each timestamp. Historical feeds must be sorted
+  chronologically, windowed by explicit `start_date` and `end_date`, and split into
+  training/selection/backtest ranges where applicable. Missing price or feature points
+  must degrade to `Optional[float] = None` rather than being forward-filled by the LLM.
+- **Dogma check:** No synthetic future interpolation, no prompt-based numeric estimation,
+  and no hidden reordering of bars that could introduce look-ahead bias.
+- **Tests:** Add fixtures proving that future rows are inaccessible during replay, and
+  that missing observations propagate as `None` without crashing the engine.
+
+#### Component Architecture
+- **API Layer:** FastAPI routers call typed dependency providers and never instantiate
+  infrastructure clients directly.
+- **Application Layer:** The compiled LangGraph app remains the orchestration authority for
+  live analysis requests, receiving `thread_id` from `RunnableConfig`.
+- **Tool Layer:** The backtesting engine lives entirely under `src/tools/backtesting/`
+  with deterministic, testable modules.
+- **Infrastructure Layer:** Checkpointers and historical-data adapters remain confined to
+  `src/infra/adapters/`.
+
+#### Data Flow (LangGraph State Mutations + Backtesting Handoff)
+1. `POST /analyze` receives a ticker and runtime options, resolves the shared graph app,
+   and invokes LangGraph with `configurable.thread_id`.
+2. Live analysis mutates `AgentState` through the existing specialist -> auditor ->
+   supervisor path and returns structured checkpoints.
+3. `POST /backtest/run` loads historical bars in strictly ordered slices, converts the
+   replay context into deterministic signal inputs, and runs the simulator step-by-step.
+4. Backtest outputs produce metrics and traces without mutating LangGraph checkpoints with
+   future information.
+
+#### Controlled Degradation
+- Missing historical prices, sparse fundamentals, or incomplete benchmark series MUST map
+  to `Optional[float] = None` at the schema boundary.
+- A replay window with partial data may still complete if the simulator can skip or mark
+  the affected timestep without fabricating numbers.
+- If a required benchmark or price series is entirely unavailable, the backtest must fail
+  fast with a typed validation error at the API boundary rather than inventing fallback
+  values.
+
+#### Definition of Done
+- FastAPI gateway delivered with DI-safe graph/checkpointer providers.
+- Endpoint contract implemented for `/analyze`, `/portfolio`, and `/backtest/run`.
+- Deterministic backtesting modules created under `src/tools/backtesting/`.
+- Historical replay contract documented and covered by anti-look-ahead tests.

@@ -101,6 +101,7 @@ def test_core_consensus_node_blocked_path(
     assert result["core_analysis"].recommended_weights == []
     assert result["core_analysis"].total_risk_score is None
     assert result["core_analysis"].source_urls == ["http://test.com"]
+    assert result["optimization_blocked"] is True
     assert "bloqueada" in result["core_analysis"].rational.lower()
 
 
