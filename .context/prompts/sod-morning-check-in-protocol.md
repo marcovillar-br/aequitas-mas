@@ -1,8 +1,8 @@
 # Start of Day (SOD) - State Rehydration Protocol
 
-This project utilizes a 4-actor Cognitive Hybridization topology. All AI assistants must understand their role in this pipeline to prevent context degradation and maintain Risk Confinement.
+This project utilizes a 4-actor Cognitive Hybridization topology. All AI assistants must understand their role in this iterative operating flow to prevent context degradation and maintain Risk Confinement.
 
-## The Pipeline
+## The Iterative Committee Flow
 1. **The Researcher (NotebookLM):** Ingests SEC/CVM filings and macro news. Generates fundamental context.
 2. **The Scientist (Google AI Studio):** Validates mathematical and logic routing (LangGraph logic).
 3. **The Architect (GEM Web / Codex Architect):** YOU ARE HERE (if assigned). Reads `.context/current-sprint.md`, defines the architectural plan, and outputs directives.
@@ -13,7 +13,7 @@ This project utilizes a 4-actor Cognitive Hybridization topology. All AI assista
 ## Persona-Specific SOD Actions
 
 ### A. If you are acting as THE ARCHITECT:
-1. **Context Sync:** Read `.ai/context.md` and all recently created ADRs (e.g., `.ai/adr/008-*.md`).
+1. **Context Sync:** Read `.ai/context.md` and all recently created ADRs (e.g., `.ai/adr/005-*.md`).
 2. **Sprint Audit:** Review `.context/current-sprint.md` to identify the current objective and pending tasks.
 3. **Plan Validation:** Verify if `.context/PLAN.md` and `.context/SPEC.md` are up to date. If not, generate the necessary updates.
 4. **Directive Handoff:** Provide the Tech Lead with a clear summary of the next implementation steps for the Developer.

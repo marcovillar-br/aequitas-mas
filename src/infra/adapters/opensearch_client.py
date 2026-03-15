@@ -39,7 +39,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 from opensearchpy.exceptions import NotFoundError, RequestError
 
-from src.core.interfaces.vector_store import VectorStorePort
+from src.core.interfaces.vector_store import VectorSearchResult, VectorStorePort
 
 logger = structlog.get_logger(__name__)
 
@@ -164,7 +164,7 @@ class OpenSearchAdapter:
         self,
         query: str,
         top_k: int = 5,
-    ) -> list[dict]:
+    ) -> list[VectorSearchResult]:
         """
         Retrieve the top-k most semantically similar macroeconomic documents.
 
@@ -179,11 +179,7 @@ class OpenSearchAdapter:
             top_k: Maximum number of documents to return. Defaults to 5.
 
         Returns:
-            A list of result dicts. Each entry contains:
-                - ``document_id`` (str): Unique _id of the stored chunk.
-                - ``source_url``  (str): Traceable origin URL (BCB, FED, etc.).
-                - ``content``     (str): Raw text of the retrieved chunk.
-                - ``score``       (float): Cosine similarity score [0.0, 1.0].
+            A list of ``VectorSearchResult`` objects.
             Returns an empty list on retrieval failure (Controlled Degradation).
 
         Raises:
@@ -484,7 +480,7 @@ def _build_knn_query(query_vector: list[float], top_k: int) -> dict:
     }
 
 
-def _parse_hit(hit: dict) -> dict:
+def _parse_hit(hit: dict) -> VectorSearchResult:
     """
     Normalize a raw OpenSearch hit into the VectorStorePort result schema.
 
@@ -496,15 +492,15 @@ def _parse_hit(hit: dict) -> dict:
         hit: A single hit object from the OpenSearch ``hits.hits`` list.
 
     Returns:
-        A normalized result dict conforming to the VectorStorePort contract.
+        A normalized ``VectorSearchResult`` conforming to the VectorStorePort contract.
     """
     source: dict = hit.get("_source", {})
-    return {
-        "document_id": source.get("document_id") or hit.get("_id", ""),
-        "source_url": source.get("source_url", ""),
-        "content": source.get("content", ""),
-        "score": float(hit.get("_score") or 0.0),
-    }
+    return VectorSearchResult(
+        document_id=source.get("document_id") or hit.get("_id", ""),
+        source_url=source.get("source_url", ""),
+        content=source.get("content", ""),
+        score=float(hit.get("_score") or 0.0),
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@
 - **User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
 
 ## 0. Engineering Team Topology
-The development of new features in Aequitas-MAS follows a strictly defined pipeline of responsibilities to ensure the "Risk Confinement" dogma:
+The development of new features in Aequitas-MAS follows a strictly defined iterative operating flow of responsibilities to ensure the "Risk Confinement" dogma:
 - **Tech Lead (Human):** Orchestrator, architectural reviewer, and final decision-maker.
 - **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
 - **GEM (Architect):** Responsible for designing specifications (`SPEC.md`) and execution plans (`PLAN.md`).
@@ -19,7 +19,7 @@ The development of new features in Aequitas-MAS follows a strictly defined pipel
 - **Core**: Python 3.12+.
 - **Management**: Poetry.
 - **Data**: Pandas (Strict typing), Pydantic V2 (Schema Validation).
-- **Orchestration**: LangGraph (Stateful DAGs).
+- **Orchestration**: LangGraph (Stateful Cyclic Graphs).
 
 ## 2. Code Style & Observability
 - **Standard**: PEP 8.
@@ -59,7 +59,7 @@ Follow these strict naming patterns to maintain architectural clarity:
 
 | Entity | Pattern | Example |
 | :--- | :--- | :--- |
-| **Classes / Pydantic Schemas** | `PascalCase` | `GrahamMetrics`, `AequitasState` |
+| **Classes / Pydantic Schemas** | `PascalCase` | `GrahamMetrics`, `AgentState` |
 | **Functions / Methods / Variables** | `snake_case` | `get_graham_data`, `target_ticker` |
 | **Constants / Configs** | `UPPER_SNAKE_CASE` | `RECURSION_LIMIT`, `SELIC_API_URL` |
 | **Files / Modules** | `snake_case` | `b3_fetcher.py`, `graph.py` |

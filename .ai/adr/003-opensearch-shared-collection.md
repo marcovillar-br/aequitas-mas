@@ -1,4 +1,4 @@
-# ADR 006: OpenSearch Shared Collection Strategy (Option B)
+# ADR 003: OpenSearch Shared Collection Strategy (Option B)
 
 ## Status
 Accepted (Sprint 3.3 preparation, 2026-03-10).

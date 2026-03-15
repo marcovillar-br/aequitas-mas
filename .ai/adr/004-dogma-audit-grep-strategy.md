@@ -1,4 +1,4 @@
-# ADR 007: Dogma Audit Strategy (MVP) — Static Grep in CI/CD
+# ADR 004: Dogma Audit Strategy (MVP) — Static Grep in CI/CD
 
 ## Status
 Accepted (Sprint 3.3 preparation, 2026-03-10).

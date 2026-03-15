@@ -7,5 +7,5 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _set_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ensure tests do not depend on shell-level API key exports."""
+    """Ensure tests use the standardized GEMINI_API_KEY secret name."""
     monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")

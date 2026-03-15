@@ -8,6 +8,7 @@ This document serves as the central registry for all specialized skills availabl
 | Skill Identifier | Trigger / Intent | File Path |
 | :--- | :--- | :--- |
 | **AWS Advisor** | Cloud infrastructure, Terraform, AWS DynamoDB, OpenSearch. | `.context/skills/aws-advisor.md` |
+| **Context Manager** | Context synchronization, compliance audit, state restoration, SSOT alignment. | `.context/skills/context-manager.md` |
 | **Domain Analysis** | Financial theory, Value Investing (Graham, Fisher, Marks), Economic indicators. | `.context/skills/domain-analysis.md` |
 | **Playwright** | Web scraping, data extraction from B3, dynamic DOM interaction. | `.context/skills/playwright.md` |
 | **Security & Compliance** | Secret management, zero-trust enforcement, code vulnerabilities. | `.context/skills/security.md` |
@@ -19,3 +20,8 @@ This document serves as the central registry for all specialized skills availabl
 1. Identify the core domain of the user's prompt.
 2. If the domain matches a "Trigger", silently ingest the corresponding `.md` file into your working memory before generating the response.
 3. If multiple skills apply (e.g., writing tests for a web scraper), prioritize the strictest constraint (e.g., `tech-design-doc.md` before implementation, `subagent-creator.md` for new nodes).
+
+## Topology Validation
+- Registry scope is exhaustive for every `.md` file currently present under `.context/skills/`.
+- All listed paths resolve to valid local files under `.context/skills/`.
+- This registry is the canonical routing source referenced by `.context/prompts/sod-context-enforcement.md`.

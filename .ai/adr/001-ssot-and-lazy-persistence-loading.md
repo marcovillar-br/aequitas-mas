@@ -1,4 +1,4 @@
-# ADR 004: Multi-AI SSOT & Lazy Loading for Graph Persistence
+# ADR 001: Multi-AI SSOT & Lazy Loading for Graph Persistence
 
 ## 1. Context
 The project relies on multiple AI assistants (Claude, Copilot, Gemini) and a CI/CD pipeline running in ephemeral environments. We faced two critical issues:

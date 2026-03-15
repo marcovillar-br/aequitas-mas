@@ -33,7 +33,7 @@ Activate this skill when the user requests assistance with Git commands, creatin
 
 ### 2.4. Zero Trust & Security (Pre-Commit Audit)
 * **CRITICAL SECURITY RULE:** Before providing `git add` or `git commit` commands, explicitly remind the user to verify that NO secrets, API keys (AWS, Anthropic, OpenAI), or `.env` files are included in the staging area.
-* Remind the user of the "Secret Management" dogma (Section 4.2 of ETD v5.0) which dictates the exclusive use of Google IDX Secret Manager or local environment variables injected at runtime.
+* Remind the user that runtime secrets must remain behind the project's secret-store boundary (`SecretStorePort`), with local execution currently backed by `EnvSecretAdapter`.
 * For GitHub OIDC troubleshooting, prefer temporary debug logs and remove them after 1-2 successful runs.
 * During early development stage, avoid automatic `terraform apply` in CI to prevent accidental deployment and unnecessary cloud costs.
 

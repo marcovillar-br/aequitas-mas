@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-import os
+from src.core.interfaces.secret_store import SecretStorePort
 
 
-def require_gemini_api_key() -> str:
+def _resolve_secret_store() -> SecretStorePort:
+    """Resolve the default secret store without leaking infra imports to callers."""
+    from src.infra.adapters import EnvSecretAdapter
+
+    return EnvSecretAdapter()
+
+
+def require_gemini_api_key(secret_store: SecretStorePort | None = None) -> str:
     """Return the configured Gemini API key or raise a clear runtime error."""
-    api_key = os.getenv("GEMINI_API_KEY")
+    store = secret_store or _resolve_secret_store()
+    api_key = store.get_secret("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "GEMINI_API_KEY is required for Gemini chat generation and must be set in the .env."
+            "GEMINI_API_KEY not found in the configured secret store."
         )
     return api_key

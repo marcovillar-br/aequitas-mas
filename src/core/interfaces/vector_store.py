@@ -14,7 +14,45 @@ Also provides NullVectorStore — the Null Object Pattern implementation used
 as a safe default when no vector store is configured (local/offline mode).
 """
 
-from typing import Protocol, runtime_checkable
+from __future__ import annotations
+
+import math
+from typing import Any, Optional, Protocol, runtime_checkable
+
+from pydantic import BaseModel, ConfigDict, field_validator
+
+
+class VectorSearchResult(BaseModel):
+    """Immutable vector-retrieval payload returned by the search boundary."""
+
+    model_config = ConfigDict(frozen=True)
+
+    document_id: str
+    source_url: str
+    content: str
+    score: float
+
+    @field_validator("score", mode="before")
+    @classmethod
+    def validate_finite_score(cls, value: Any) -> float:
+        """Safely coerce retrieval scores and reject NaN/Inf."""
+        try:
+            normalized = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{value}' to float.") from exc
+
+        if not math.isfinite(normalized):
+            raise ValueError(f"Value '{value}' is not a valid finite number.")
+
+        return normalized
+
+    @field_validator("document_id", "source_url", "content", mode="before")
+    @classmethod
+    def normalize_optional_strings(cls, value: Optional[str]) -> str:
+        """Degrade missing string fields to empty strings instead of None."""
+        if value is None:
+            return ""
+        return str(value)
 
 
 @runtime_checkable
@@ -27,7 +65,11 @@ class VectorStorePort(Protocol):
     structurally — no explicit inheritance required.
     """
 
-    def search_macro_context(self, query: str, top_k: int = 5) -> list[dict]:
+    def search_macro_context(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> list[VectorSearchResult]:
         """
         Retrieve the top-k most semantically similar macroeconomic documents.
 
@@ -37,11 +79,8 @@ class VectorStorePort(Protocol):
             top_k: Maximum number of documents to return. Defaults to 5.
 
         Returns:
-            A list of result dicts. Each dict MUST contain:
-                - ``document_id`` (str): Unique identifier of the stored chunk.
-                - ``source_url``  (str): Traceable origin URL (e.g., BCB, FED).
-                - ``content``     (str): The raw text of the retrieved chunk.
-                - ``score``       (float): Cosine similarity score [0.0, 1.0].
+            A list of immutable ``VectorSearchResult`` objects containing
+            ``document_id``, ``source_url``, ``content``, and ``score``.
         """
         ...
 
@@ -57,6 +96,10 @@ class NullVectorStore:
     This class satisfies VectorStorePort structurally — no inheritance needed.
     """
 
-    def search_macro_context(self, query: str, top_k: int = 5) -> list[dict]:
+    def search_macro_context(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> list[VectorSearchResult]:
         """Return empty results, triggering Controlled Degradation downstream."""
         return []

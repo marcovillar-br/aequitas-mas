@@ -4,7 +4,13 @@
 from unittest.mock import MagicMock, patch
 
 from src.agents.core import ConsensusDecision, core_consensus_node
-from src.core.state import AgentState, FisherAnalysis, GrahamMetrics, MacroAnalysis
+from src.core.state import (
+    AgentState,
+    FisherAnalysis,
+    GrahamMetrics,
+    MacroAnalysis,
+    PortfolioOptimizationResult,
+)
 
 
 def _build_state() -> AgentState:
@@ -56,12 +62,12 @@ def test_core_consensus_node_approved_path(
     mock_llm_cls.return_value = mock_llm_instance
     mock_prompt.__or__.return_value = mock_chain
 
-    mock_optimize_portfolio.return_value = {
-        "weights": [{"ticker": "PETR4", "weight": 1.0}],
-        "portfolio_variance": 0.04,
-        "portfolio_volatility": 0.2,
-        "expected_return": 0.01,
-    }
+    mock_optimize_portfolio.return_value = PortfolioOptimizationResult(
+        weights=[{"ticker": "PETR4", "weight": 1.0}],
+        expected_return=0.01,
+        expected_volatility=0.2,
+        sharpe_ratio=0.05,
+    )
 
     result = core_consensus_node(_build_state())
 

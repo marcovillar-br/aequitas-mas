@@ -1,4 +1,4 @@
-# ADR 005: Hypothetical Document Embeddings (HyDE) RAG Pipeline for Macro Agent
+# ADR 002: Hypothetical Document Embeddings (HyDE) RAG Pipeline for Macro Agent
 
 ## 1. Context
 

@@ -12,7 +12,7 @@ Whenever resuming a session or updating the project state, invoke the **Aequitas
 > Audit the selected code (or the current file) against the rules defined in `.context/rules/coding-guidelines.md`.
 >
 > ### Audit Requirements:
-> 1. **Stack & Frameworks:** Verify Python 3.12+ features, Pydantic v2 usage, and Decimal for financial logic.
+> 1. **Stack & Frameworks:** Verify Python 3.12+ features, Pydantic v2 usage, and the repository dogma that forbids `Decimal` in `src/core/` and `src/agents/` state-facing paths.
 > 2. **Type Safety:** Ensure ALL function signatures have mandatory Type Hints.
 > 3. **Documentation:** Check for Google-style docstrings in public classes and methods.
 > 4. **Logging:** Ensure NO `print()` statements are used. Only structured `logging` is allowed.
@@ -35,7 +35,7 @@ At the end of every session, generate a "State Checkpoint Report" to allow futur
 - **Template:** 1. Engineering Decisions.
     2. Artifacts Produced.
     3. Technical Debt & Risks.
-    4. DAG/Tasks for Tomorrow.
+    4. Cyclic Graph / Tasks for Tomorrow.
 
 ## 4. Conflict Resolution & Safety
 - In case of conflict between a chat suggestion and `.context/rules/coding-guidelines.md`, the **Guidelines file always wins**.
