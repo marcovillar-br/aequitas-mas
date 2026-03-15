@@ -68,6 +68,12 @@ jobs:
           GOOGLE_API_KEY: "mock-key-for-tests"
         run: poetry run pytest tests/ -v --tb=short
 
+      - name: Install Semgrep
+        run: poetry run pip install semgrep
+
+      - name: Run Semgrep Dogma Audit
+        run: poetry run semgrep scan --config .semgrep/ --error src/
+
   terraform:
     name: "Terraform Execution"
     runs-on: ubuntu-latest

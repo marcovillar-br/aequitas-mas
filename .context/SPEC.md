@@ -458,3 +458,126 @@ Routing is controlled by explicit state checkpoints rather than implicit `audit_
 side effects. Controlled degradation remains valid at every step: a specialist may fail
 gracefully, record execution in the ledger, and still allow the Core Supervisor to reach
 structured consensus without inventing numeric values.
+
+---
+
+## 📌 Specification 5.0: Observability & System Reliability
+**Sprint:** 5 | **Status:** ACTIVE
+**Objective:** Formalize the technical contract for Decision Path observability, graph telemetry,
+deterministic RAG quality evaluation, and automated dogma enforcement.
+
+### Planned Scope
+1. Introduce a DIP-safe audit export boundary so structured Decision Path events can be
+   indexed outside the agent layer.
+2. Instrument the LangGraph execution path with telemetry that measures specialist,
+   auditor, and supervisor latency without influencing routing behavior.
+3. Define a deterministic RAG confidence contract for Fisher and Macro outputs.
+4. Strengthen CI/CD with architecture-aware static enforcement beyond basic grep checks.
+
+### 1. Decision Path Audit Log Contract
+
+Structured audit events MUST be emitted through a dedicated interface boundary and MUST
+NOT require cloud SDK imports inside `src/agents/` or `src/core/`.
+
+#### 1.1 Required Schema
+
+Each Decision Path event MUST contain, at minimum, the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `timestamp` | `str` | ISO-8601 event timestamp |
+| `thread_id` | `str` | Stable execution/thread identifier |
+| `target_ticker` | `str` | Ticker under analysis |
+| `node_name` | `str` | Executed node name (`graham`, `fisher`, `macro`, `marks`, `core_consensus`) |
+| `phase` | `str` | Execution phase such as `start`, `success`, `degraded`, `blocked`, `failure` |
+| `executed_nodes_snapshot` | `list[str]` | Immutable snapshot of the execution ledger at emission time |
+| `degradation_reason` | `str \| null` | Human-readable explanation when Controlled Degradation occurs |
+| `source_urls` | `list[str]` | Traceable URLs associated with the node output |
+| `latency_ms` | `float \| null` | Node latency in milliseconds when available |
+| `optimizer_invoked` | `bool` | Whether the deterministic optimizer was invoked in this path |
+
+#### 1.2 Boundary Rule
+
+The application layer MAY emit Decision Path payloads, but the transport mechanism MUST be
+abstracted behind an interface such as `AuditSinkPort`. Concrete delivery to Amazon
+OpenSearch Serverless MUST remain confined to `src/infra/adapters/`.
+
+#### 1.3 Storage Rule
+
+Decision Path audit logs MUST be routed to a dedicated OpenSearch Serverless
+`TIMESERIES` collection. They MUST NOT reuse the existing `VECTORSEARCH` collection that
+serves RAG retrieval workloads.
+
+### 2. Graph Telemetry Contract
+
+LangGraph execution MUST be instrumented with OpenTelemetry spans for the following
+routing path:
+
+```
+graham -> fisher -> macro -> marks -> core_consensus
+```
+
+Telemetry is observational only. Spans, exporters, or telemetry backends MUST NOT become
+prerequisites for graph execution. If telemetry infrastructure is unavailable, the graph
+must continue operating normally.
+
+At minimum, telemetry MUST support:
+- node-level latency
+- degraded-path detection
+- external dependency timing for retrieval and synthesis stages
+- correlation with `thread_id` and `node_name`
+
+### 3. Deterministic RAG Confidence Score Contract
+
+The RAG confidence signal MUST be computed deterministically and MUST NOT be estimated
+inside LLM prompts.
+
+#### 3.1 Formula
+
+The Aequitas calibration for the RAG confidence score is:
+
+`$C_{rag} = 0.60 \times Faithfulness + 0.30 \times Relevance + 0.10 \times Support$`
+
+Where:
+- `Faithfulness` measures whether the answer is supported by retrieved context
+- `Relevance` measures whether the answer addresses the intended task
+- `Support` measures the strength of retrieval evidence backing the output
+
+#### 3.2 Execution Rule
+
+The calculation of `$C_{rag}$` MUST occur in deterministic tooling only, preferably under
+`src/tools/`. The LLM may produce qualitative analysis, but it is explicitly forbidden to:
+- calculate `Faithfulness`, `Relevance`, or `Support`
+- apply the weighted formula
+- infer numeric confidence values inside prompts or free-form reasoning
+
+#### 3.3 State Mutation Contract
+
+`AgentState` MUST be extended with:
+
+```python
+fisher_rag_score: Optional[float] = None
+macro_rag_score: Optional[float] = None
+```
+
+These fields follow the repository dogma of `Optional[float] = None` for controlled
+absence, invalid evidence, or degraded evaluation paths.
+
+#### 3.4 Supervisor Handoff Rule
+
+The Core Supervisor MAY consume `fisher_rag_score` and `macro_rag_score` as deterministic
+confidence inputs during consensus synthesis. However, the supervisor MUST treat missing
+scores as `None` and MUST NOT fabricate replacement values.
+
+### 4. Automated Dogma Enforcement Contract
+
+The CI/CD pipeline MUST be extended with semantic enforcement rules capable of detecting
+architectural violations that are not reliably covered by grep alone.
+
+At minimum, the automated ruleset MUST detect:
+- prohibited imports such as `decimal` and `scipy` inside `src/agents/`
+- prohibited infrastructure SDK imports inside `src/agents/` and `src/core/`
+- prohibited math execution patterns in LLM-facing layers when they violate Risk Confinement
+
+Existing grep-based dogma checks remain valid as a fast control layer, but they do not
+replace the stronger semantic enforcement required for Sprint 5.

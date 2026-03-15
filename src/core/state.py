@@ -272,6 +272,8 @@ class AgentState(BaseModel):
     metrics: Optional[GrahamMetrics] = None
     qual_analysis: Optional[FisherAnalysis] = None
     macro_analysis: Optional[MacroAnalysis] = None
+    fisher_rag_score: Optional[float] = None
+    macro_rag_score: Optional[float] = None
     marks_verdict: Optional[str] = None
     core_analysis: Optional[CoreAnalysis] = None
 
@@ -295,5 +297,24 @@ class AgentState(BaseModel):
 
         if not math.isfinite(value):
             raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+    @field_validator("fisher_rag_score", "macro_rag_score", mode="before")
+    @classmethod
+    def validate_optional_unit_interval_score(cls, v: Any) -> Optional[float]:
+        """Safely coerce confidence scores and reject NaN/Inf or invalid bounds."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        if value < 0.0 or value > 1.0:
+            raise ValueError(f"Value '{v}' must be within the [0.0, 1.0] interval.")
 
         return value

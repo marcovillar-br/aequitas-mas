@@ -194,3 +194,62 @@ Formalizar decisões arquiteturais descobertas na auditoria de 10/03/2026 criand
    numeric evidence is not explicitly present in retrieved context.
 
 ---
+
+### 📌 Sprint 5 — Observability, Telemetry & RAG Quality
+**Status:** ACTIVE
+
+#### Objective
+Strengthen operational reliability for Aequitas-MAS by adding a searchable Decision Path
+audit trail, graph-level telemetry, deterministic RAG quality scoring, and automated
+architectural dogma enforcement in CI/CD.
+
+#### Step 1 — AuditSinkPort + OpenSearch TIMESERIES Ingestion
+- **File(s):** `src/core/interfaces/`, `src/infra/adapters/`, `infra/terraform/opensearch.tf`,
+  `infra/terraform/variables.tf`
+- **Change:** Establish an `AuditSinkPort` interface so `src/agents/` and `src/core/`
+  emit structured audit events without importing cloud SDKs. Implement an infrastructure
+  adapter in `src/infra/adapters/` that routes `structlog` JSON events to a dedicated
+  OpenSearch Serverless `TIMESERIES` collection for Decision Path analytics, separate
+  from the existing `VECTORSEARCH` RAG collection.
+- **Dogma check:** Preserve DIP by keeping AWS/OpenSearch dependencies outside
+  `src/agents/` and `src/core/`. No math logic in the logging path.
+- **Tests:** Add adapter-level tests with mocked transport boundaries and graph-level
+  tests confirming the supervisor can emit audit events without network calls.
+
+#### Step 2 — OpenTelemetry Instrumentation for LangGraph Routing
+- **File(s):** `src/core/graph.py`, `src/agents/`, `src/core/state.py` (only if trace
+  correlation metadata becomes necessary)
+- **Change:** Instrument the Specialists -> Marks -> Consensus execution path with
+  OpenTelemetry spans. Capture node latency, degradation paths, and external dependency
+  timing for retrieval and LLM synthesis, with particular focus on Fisher and Macro RAG
+  bottlenecks.
+- **Dogma check:** Telemetry must remain observational only. No routing decisions may
+  depend on span exporters or network availability.
+- **Tests:** Add deterministic tests for span creation and correlation metadata using
+  mock exporters or in-memory span processors only.
+
+#### Step 3 — Deterministic RAG Evaluator with Aequitas Calibration
+- **File(s):** `src/tools/`, `src/core/state.py`, `src/agents/core.py`, `tests/`
+- **Change:** Implement a deterministic RAG evaluation tool for `FisherAnalysis` and
+  `MacroAnalysis`, producing a confidence metric `C_rag` grounded on:
+  `w_f = 0.60`, `w_r = 0.30`, `w_s = 0.10`, where Faithfulness, Answer Relevance, and
+  Retrieval Support are evaluated outside the LLM reasoning path. Append the resulting
+  confidence signal to the supervisor-facing consensus state.
+- **Dogma check:** The score must be computed by deterministic tooling, not by free-form
+  LLM arithmetic. Any numeric outputs must continue to use `Optional[float] = None`
+  semantics when evidence is absent.
+- **Tests:** Add isolated tests for metric computation, degraded-context behavior,
+  and state handoff into the Core supervisor.
+
+#### Step 4 — Semgrep CI Enforcement for Architectural Dogmas
+- **File(s):** `.github/workflows/pipeline.yml`, `.semgrep/` (new), optional docs in
+  `.context/`
+- **Change:** Integrate Semgrep into CI/CD to enforce architectural dogmas that exceed
+  basic grep coverage, including bans on `decimal`, `scipy`, and other deterministic math
+  libraries inside `src/agents/`, plus prohibited infrastructure imports in the domain
+  layer. Keep the existing grep audits as a fast first-pass control.
+- **Dogma check:** Enforcement rules must reinforce Risk Confinement and DIP without
+  blocking approved tool-layer usage in `src/tools/` or adapter-layer usage in
+  `src/infra/adapters/`.
+- **Tests:** Validate the ruleset with positive and negative fixtures before making the
+  Semgrep job merge-blocking.

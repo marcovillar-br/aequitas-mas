@@ -1,0 +1,58 @@
+rules:
+  - id: dip-ban-cloud-sdks-in-agents-and-core
+    message: Cloud SDK imports are forbidden in src/agents/ and src/core/. Use infrastructure adapters behind a port.
+    severity: ERROR
+    languages:
+      - python
+    paths:
+      include:
+        - /src/agents/*.py
+        - /src/agents/**/*.py
+        - /src/core/*.py
+        - /src/core/**/*.py
+    patterns:
+      - pattern-either:
+          - pattern: import boto3
+          - pattern: import boto3 as $ALIAS
+          - pattern: from boto3 import $X
+          - pattern: import botocore
+          - pattern: import botocore as $ALIAS
+          - pattern: from botocore import $X
+          - pattern: import opensearchpy
+          - pattern: import opensearchpy as $ALIAS
+          - pattern: from opensearchpy import $X
+
+  - id: risk-confinement-ban-math-libraries-in-agents
+    message: Deterministic math libraries are forbidden in src/agents/. Keep quantitative logic in src/tools/.
+    severity: ERROR
+    languages:
+      - python
+    paths:
+      include:
+        - /src/agents/*.py
+        - /src/agents/**/*.py
+    patterns:
+      - pattern-either:
+          - pattern: import decimal
+          - pattern: import decimal as $ALIAS
+          - pattern: from decimal import $X
+          - pattern: import scipy
+          - pattern: import scipy as $ALIAS
+          - pattern: from scipy import $X
+          - pattern: import numpy
+          - pattern: import numpy as $ALIAS
+          - pattern: from numpy import $X
+          - pattern: import statistics
+          - pattern: import statistics as $ALIAS
+          - pattern: from statistics import $X
+
+  - id: risk-confinement-ban-round-in-agents
+    message: Native round() is forbidden in src/agents/. Use deterministic tools instead of in-agent math.
+    severity: ERROR
+    languages:
+      - python
+    paths:
+      include:
+        - /src/agents/*.py
+        - /src/agents/**/*.py
+    pattern: round(...)
