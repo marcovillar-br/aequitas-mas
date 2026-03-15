@@ -414,6 +414,27 @@ def test_graph_mutates_state_with_deterministic_rag_scores(
     )
 
 
+def test_graph_accepts_agent_state_input_on_invoke(mock_agents: dict[str, Any]) -> None:
+    """The instrumented graph wrapper must accept AgentState inputs from main.py."""
+    from src.core.graph import create_graph
+
+    app = create_graph(audit_sink=MagicMock(spec=AuditSinkPort))
+    initial_state = AgentState(
+        messages=[],
+        target_ticker="WEGE3",
+        portfolio_tickers=["WEGE3"],
+        portfolio_returns=[[0.01], [0.02]],
+        risk_appetite=0.4,
+        audit_log=[],
+    )
+    config = {"configurable": {"thread_id": "test_agent_state_input"}}
+
+    final_state = app.invoke(initial_state, config=config)
+
+    assert final_state["target_ticker"] == "WEGE3"
+    assert final_state["core_analysis"] is not None
+
+
 def test_node_exceptions_record_error_span_and_degrade() -> None:
     """Unhandled node exceptions must record span error status and degrade safely."""
     from src.core.graph import create_graph
