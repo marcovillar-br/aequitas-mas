@@ -43,6 +43,7 @@ except ImportError:  # pragma: no cover - defensive import guard
 
     ResourceExhausted = _ResourceExhaustedFallback
 
+from src.core.llm import require_gemini_api_key
 from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
 from src.core.state import AgentState, MacroAnalysis
 
@@ -273,6 +274,7 @@ def create_macro_agent(
             model="gemini-2.5-flash",
             temperature=0.0,
             max_retries=1,  # Tenacity handles robust retry logic.
+            google_api_key=require_gemini_api_key(),
         )
 
         try:

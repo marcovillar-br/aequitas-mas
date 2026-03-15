@@ -51,7 +51,7 @@ poetry install
 Create a `.env` file in the root of the project:
 
 ```text
-GOOGLE_API_KEY=your_google_ai_studio_key
+GEMINI_API_KEY=your_google_ai_studio_key
 ```
 
 ## 📈 Real Use Case: PETR4

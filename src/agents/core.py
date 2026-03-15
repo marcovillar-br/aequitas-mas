@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
+from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState, CoreAnalysis
 from src.tools.portfolio_optimizer import optimize_portfolio
 
@@ -93,6 +94,7 @@ def core_consensus_node(state: AgentState) -> dict:
         model="gemini-2.5-flash",
         temperature=0.0,
         max_retries=1,
+        google_api_key=require_gemini_api_key(),
     )
     chain = _CONSENSUS_PROMPT | llm.with_structured_output(ConsensusDecision)
 

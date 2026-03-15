@@ -1,6 +1,8 @@
 """Unit tests for the OpenSearch audit adapter using injected mocks."""
 
-from unittest.mock import MagicMock
+import sys
+import types
+from unittest.mock import MagicMock, patch
 
 from src.core.interfaces.audit import DecisionPathEvent
 from src.infra.adapters.opensearch_audit_adapter import OpenSearchAuditAdapter
@@ -65,3 +67,45 @@ def test_record_decision_event_swallows_indexing_failures() -> None:
     adapter.record_decision_event(event)
 
     mock_client.index.assert_called_once()
+
+
+def test_from_env_builds_client_with_timeout_and_retries(monkeypatch) -> None:
+    """The production adapter should tolerate slower first-write data plane responses."""
+    mock_client = MagicMock()
+    mock_open_search = MagicMock(return_value=mock_client)
+    mock_auth = MagicMock(return_value="signed-auth")
+    mock_credentials = MagicMock()
+    mock_session = MagicMock()
+    mock_session.get_credentials.return_value = mock_credentials
+    fake_requests_connection = object()
+
+    fake_boto3 = types.SimpleNamespace(Session=MagicMock(return_value=mock_session))
+    fake_opensearchpy = types.SimpleNamespace(
+        AWSV4SignerAuth=mock_auth,
+        OpenSearch=mock_open_search,
+        RequestsHttpConnection=fake_requests_connection,
+    )
+
+    monkeypatch.setenv("OPENSEARCH_ENDPOINT", "https://example.us-east-1.aoss.amazonaws.com")
+    monkeypatch.setenv("OPENSEARCH_AUDIT_INDEX", "audit-events")
+
+    with patch.dict(
+        sys.modules,
+        {"boto3": fake_boto3, "opensearchpy": fake_opensearchpy},
+    ):
+        adapter = OpenSearchAuditAdapter.from_env()
+
+    assert adapter._client is mock_client
+    assert adapter._index == "audit-events"
+    mock_auth.assert_called_once_with(mock_credentials, "us-east-1", "aoss")
+    mock_open_search.assert_called_once_with(
+        hosts=[{"host": "example.us-east-1.aoss.amazonaws.com", "port": 443}],
+        http_auth="signed-auth",
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=fake_requests_connection,
+        pool_maxsize=10,
+        timeout=30,
+        retry_on_timeout=True,
+        max_retries=3,
+    )

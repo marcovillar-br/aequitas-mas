@@ -13,6 +13,7 @@ import structlog
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState, FisherAnalysis
 from src.tools.news_fetcher import NewsItem, get_ticker_news
 
@@ -78,7 +79,10 @@ def fisher_agent(state: AgentState) -> dict:
 
         # 2. Define the LLM and Prompt for structured output
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash", temperature=0.1, max_retries=1
+            model="gemini-2.5-flash",
+            temperature=0.1,
+            max_retries=1,
+            google_api_key=require_gemini_api_key(),
         )
         structured_llm = llm.with_structured_output(FisherAnalysis)
 

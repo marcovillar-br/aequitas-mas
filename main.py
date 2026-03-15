@@ -26,6 +26,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 
 try:
     from src.core.graph import app
+    from src.core.llm import require_gemini_api_key
     from src.core.state import AgentState
     from langchain_core.runnables.config import RunnableConfig
     from langchain_community.cache import InMemoryCache
@@ -162,13 +163,15 @@ def run_analysis(ticker: str) -> None:
 
 if __name__ == "__main__":
     logger.info("script_started", file="main.py")
-    
-    if not os.getenv("GOOGLE_API_KEY"):
+
+    try:
+        require_gemini_api_key()
+    except RuntimeError:
         logger.error(
-            "missing_api_key", 
-            variable="GOOGLE_API_KEY", 
-            hint="Run 'export GOOGLE_API_KEY=your_key' before executing."
+            "missing_api_key",
+            variable="GEMINI_API_KEY",
+            hint="Set GEMINI_API_KEY in the project .env before executing.",
         )
         sys.exit(1)
-    else:
-        run_analysis("PETR4")
+
+    run_analysis("PETR4")
