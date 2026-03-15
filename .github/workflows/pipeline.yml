@@ -148,7 +148,6 @@ jobs:
     concurrency:
       group: terraform-dev-apply
       cancel-in-progress: false
-    environment: dev
 
     env:
       TF_VAR_AQM_REGION: "us-east-1"
