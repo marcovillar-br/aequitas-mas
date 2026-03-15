@@ -5,13 +5,19 @@
 Prevent boundary mismatches, environment drift, and late-stage regressions before any code is delivered to the remote repository.
 
 ## 2. Mandatory Gate (Run Before Every Push)
-The Developer persona MUST complete the following sequence in the local Poetry-managed environment:
+The Developer persona MUST complete a validation gate before every push. The gate is now
+risk-based and may run in one of three levels:
 
-1. **Environment Loading:** Load local environment variables before validation. The preferred mechanism is the shell function `load_env`, when available.
-2. **Environment Synchronization:** `poetry sync`
-3. **Linting & Quality:** `poetry run ruff check src/ tests/`
-4. **Full Logic Validation:** `poetry run pytest tests/`
-5. **Boundary Contract Smoke Validation:** Run focused tests that exercise the real application boundary contracts, especially when `src/core/graph.py`, `main.py`, `src/core/state.py`, or adapter wiring changed.
+1. **Full Gate:** Mandatory for runtime-sensitive changes.
+2. **Standard Gate:** Mandatory for tests, scripts, CI/CD, or Terraform changes.
+3. **Light Gate:** Allowed for documentation-only or protocol-only changes.
+
+The preferred entrypoint is:
+
+`./scripts/validate_delivery.sh --mode auto`
+
+`auto` is the default and MUST infer the minimum safe validation level from the changed
+file set.
 
 ## 2.1 Environment Loading Rule
 If `load_env` is defined in the developer shell profile, it MUST be executed before the validation gate.
@@ -22,8 +28,46 @@ Special case:
 
 This step ensures that optional smoke validation and any local runtime-dependent checks operate with the same environment contract used during normal development.
 
+## 2.2 Gate Selection Rules
+
+### Full Gate
+Use the Full Gate when the change touches:
+- `src/agents/`
+- `src/core/`
+- `src/tools/`
+- `src/api/`
+- `main.py`
+
+The Full Gate includes:
+1. `poetry sync`
+2. `poetry run ruff check src/ tests/`
+3. `poetry run pytest tests/`
+4. focused boundary smoke validation
+5. optional live smoke validation when explicitly requested
+
+### Standard Gate
+Use the Standard Gate when the change touches:
+- `tests/`
+- `scripts/`
+- `infra/terraform/`
+- `.github/workflows/`
+
+The Standard Gate MUST run only the validations relevant to the changed area, for example:
+- `bash -n` for changed shell scripts
+- `terraform fmt -check -recursive infra/terraform` for Terraform changes
+- `poetry run pytest tests/` when the test suite itself was modified
+
+### Light Gate
+Use the Light Gate when the change is restricted to documentation or protocol files such as:
+- `.context/`
+- `README.md`
+- `setup.md`
+
+The Light Gate is intentionally minimal and SHOULD avoid unnecessary runtime or test execution.
+
 ## 3. Boundary Validation Rules
-When a wrapper, adapter, or entrypoint contract changes, the Developer MUST validate the real invocation modes used by the application.
+When a wrapper, adapter, or entrypoint contract changes, the Developer MUST force the
+Full Gate and validate the real invocation modes used by the application.
 
 Examples of mandatory contract checks:
 - `app.invoke()` with dictionary-based input
@@ -47,6 +91,6 @@ This step is optional because it may depend on external APIs, cloud configuratio
 ## 6. Recommended Automation
 The preferred local command for this protocol is:
 
-`./scripts/validate_delivery.sh`
+`./scripts/validate_delivery.sh --mode auto`
 
 This script standardizes the validation flow and reduces the risk of skipping a required step before delivery.
