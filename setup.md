@@ -43,7 +43,7 @@ poetry init --name aequitas-mas --python "^3.12"
 
 # Core SOTA Dependencies
 poetry add langgraph==^0.2.0 pydantic>=2.0 langchain-anthropic
-poetry add yfinance pandas numpy
+poetry add yfinance pandas numpy scipy
 poetry add --group dev pytest pytest-mock
 ```
 
@@ -52,7 +52,7 @@ poetry add --group dev pytest pytest-mock
 The project rigorously separates intelligence (Agents) from adapters (Tools/Infra).
 
 * `src/core/`: State management and LangGraph definitions (`state.py`, `graph.py`).
-* `src/agents/`: LLM Prompts and Personas logic (Graham, Fisher, Marks).
+* `src/agents/`: LLM Prompts and Personas logic (Graham, Fisher, Macro, Marks, `core.py` for the Aequitas Core Supervisor).
 * `src/tools/`: Deterministic functions (Graham Calculations, B3 Scrapers).
 * `src/infra/`: Persistence and Cloud adapters (SqliteSaver / DynamoDB).
 
@@ -61,6 +61,10 @@ The project rigorously separates intelligence (Agents) from adapters (Tools/Infr
 This is the core of the **Risk Confinement**. The state is not text; it is a validated Pydantic object that enforces two critical dogmas:
 1.  **Zero Numerical Hallucination**: Financial values (`vpa`, `lpa` e métricas derivadas) are typed as `Optional[float] = None` at the LangGraph state boundary, enabling controlled degradation without stochastic guessing.
 2.  **Immutability**: `ConfigDict(frozen=True)` makes the state objects immutable, preventing accidental modification of data after validation.
+
+Post-Sprint 4, the state contract also includes:
+* **Supervisor Output Guardrail**: `CoreAnalysis` is the only state-approved schema for the Core Supervisor portfolio decision output.
+* **Explicit Execution Ledger**: `executed_nodes` is a first-class routing guardrail used to prevent hidden graph loops and to track controlled degradation across specialist checkpoints.
 
 ## 7. Security & FinOps Protocol (Zero Trust)
 

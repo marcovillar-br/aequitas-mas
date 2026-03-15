@@ -62,13 +62,13 @@
 ---
 
 ## Sprint 4 — Core Agent & Portfolio Optimization
-**Status:** ACTIVE
+**Status:** DONE (Delivered and validated)
 
 ### Primary Objective
 Implement the **Aequitas Core (Supervisor)** agent and its strictly deterministic
 **Markowitz Efficient Frontier** optimization tool.
 
-### Delivered Scope (In-Progress)
+### Delivered Scope
 1. ADR 008 formalized: portfolio weighting delegated to deterministic math tool.
 2. `PortfolioWeight` and `CoreAnalysis` Pydantic V2 models implemented in `src/core/state.py`.
 3. Deterministic optimizer implemented in `src/tools/portfolio_optimizer.py` using SciPy (SLSQP).
@@ -77,6 +77,10 @@ Implement the **Aequitas Core (Supervisor)** agent and its strictly deterministi
 6. Audit prompts updated to reflect current dogmas and the `ddgs`-only search constraint.
 7. Technical debt remediated for WSL stability and documentation sync:
    MCP URI hardening, README workflow cleanup, and legacy EOD prompt dogma correction.
+8. Explicit execution ledger implemented via `executed_nodes` in `AgentState`.
+9. `core_consensus` node integrated into `src/core/graph.py` for supervisor-stage synthesis.
+10. Full end-to-end routing delivered from specialists to Marks and finally to the
+    deterministic portfolio optimizer tool.
 
 ### Technical Debt / Impediments
 - Monitor duplicated operational guidance across `.context/protocol/` and
@@ -86,5 +90,5 @@ Implement the **Aequitas Core (Supervisor)** agent and its strictly deterministi
 ### Sprint 4 Mission Focus / Definition of Done
 - [x] Implement deterministic portfolio optimization tool in `src/tools/`.
 - [x] Keep all portfolio mathematics outside the LLM (Risk Confinement).
-- [ ] Route multi-agent consensus through Aequitas Core before optimization.
+- [x] Route multi-agent consensus through Aequitas Core before optimization.
 - [x] Return optimization output through strict Pydantic V2 schemas.

@@ -63,12 +63,14 @@ def fisher_agent(state: AgentState) -> dict:
                 source_urls=[],
             )
             message = AIMessage(
-                content=f"Análise qualitativa para {ticker} não pôde ser concluída (sem notícias)."
+                content=f"Análise qualitativa para {ticker} não pôde ser concluída (sem notícias).",
+                name="fisher",
             )
             return {
                 "qual_analysis": analysis,
                 "messages": [message],
                 "audit_log": [audit_message],
+                "executed_nodes": ["fisher"],
             }
 
         urls = [item.url for item in news_items]
@@ -117,16 +119,22 @@ def fisher_agent(state: AgentState) -> dict:
         )
 
         message = AIMessage(
-            content=f"Análise qualitativa (Fisher) para {ticker} concluída."
+            content=f"Análise qualitativa (Fisher) para {ticker} concluída.",
+            name="fisher",
         )
-        return {"qual_analysis": analysis_result, "messages": [message]}
+        return {
+            "qual_analysis": analysis_result,
+            "messages": [message],
+            "executed_nodes": ["fisher"],
+        }
 
     except RuntimeError as e:
         # 4. Graceful degradation on tool failure
         logger.error("agente_fisher_ferramenta_falhou", ticker=ticker, error=str(e))
         audit_message = f"CRÍTICO: Ferramenta de notícias falhou para '{ticker}'. A análise qualitativa foi comprometida por falta de dados."
         user_message = AIMessage(
-            content=f"Não foi possível realizar a análise de notícias para {ticker}."
+            content=f"Não foi possível realizar a análise de notícias para {ticker}.",
+            name="fisher",
         )
         # Create a placeholder analysis to avoid breaking the graph flow
         failed_analysis = FisherAnalysis(
@@ -138,13 +146,15 @@ def fisher_agent(state: AgentState) -> dict:
             "qual_analysis": failed_analysis,
             "audit_log": [audit_message],
             "messages": [user_message],
+            "executed_nodes": ["fisher"],
         }
     except Exception as e:
         # 5. Graceful degradation on LLM or other failures
         logger.error("agente_fisher_llm_falhou", ticker=ticker, error=str(e))
         audit_message = f"CRÍTICO: Modelo de linguagem (LLM) falhou ao analisar notícias para '{ticker}'. A análise qualitativa está incompleta ou comprometida."
         user_message = AIMessage(
-            content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}."
+            content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}.",
+            name="fisher",
         )
         # Create a placeholder analysis
         failed_analysis = FisherAnalysis(
@@ -156,4 +166,5 @@ def fisher_agent(state: AgentState) -> dict:
             "qual_analysis": failed_analysis,
             "audit_log": [audit_message],
             "messages": [user_message],
+            "executed_nodes": ["fisher"],
         }

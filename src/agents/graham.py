@@ -50,9 +50,14 @@ def graham_agent(state: AgentState) -> dict:
                 f"Análise quantitativa (Graham) para {ticker} concluída. "
                 f"Valor Justo calculado: R$ {metrics.fair_value}. "
                 f"Margem de Segurança: {metrics.margin_of_safety}%."
-            )
+            ),
+            name="graham",
         )
-        return {"metrics": metrics, "messages": [message]}
+        return {
+            "metrics": metrics,
+            "messages": [message],
+            "executed_nodes": ["graham"],
+        }
 
     except RuntimeError as e:
         # Graceful degradation and circuit breaking
@@ -65,7 +70,11 @@ def graham_agent(state: AgentState) -> dict:
         )
         
         user_message = AIMessage(
-            content=f"Não foi possível concluir a análise quantitativa para {ticker} devido a dados inconsistentes."
+            content=(
+                f"Não foi possível concluir a análise quantitativa para {ticker} "
+                "devido a dados inconsistentes."
+            ),
+            name="graham",
         )
 
         # Cria um objeto de métricas de falha para quebrar o loop do roteador,
@@ -76,4 +85,5 @@ def graham_agent(state: AgentState) -> dict:
             "metrics": failed_metrics,
             "audit_log": [audit_message],
             "messages": [user_message],
+            "executed_nodes": ["graham"],
         }

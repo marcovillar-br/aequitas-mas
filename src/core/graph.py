@@ -19,12 +19,14 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledGraph
 
+from src.agents.core import core_consensus_node
 from src.agents.fisher import fisher_agent
 from src.agents.graham import graham_agent
 from src.agents.macro import create_macro_agent
 from src.agents.marks import marks_agent
 from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
 from src.core.state import AgentState
+
 logger = structlog.get_logger(__name__)
 
 # FinOps Circuit Breaker — passed via config={"recursion_limit": RECURSION_LIMIT}
@@ -67,38 +69,44 @@ def _resolve_vector_store() -> VectorStorePort:
 macro_agent = create_macro_agent(_resolve_vector_store())
 
 
+def _has_specialist_checkpoint(state: AgentState, node_name: str) -> bool:
+    """Return True when a specialist has either produced output or already run."""
+    checkpoint_map = {
+        "graham": state.metrics is not None,
+        "fisher": state.qual_analysis is not None,
+        "macro": state.macro_analysis is not None,
+        "marks": state.marks_verdict is not None,
+        "core_consensus": state.core_analysis is not None,
+    }
+    return checkpoint_map[node_name] or node_name in state.executed_nodes
+
+
 # 1. ROUTER DEFINITION (CONDITIONAL EDGES)
-def router(state: AgentState) -> Literal["graham", "fisher", "macro", "marks", "__end__"]:
+def router(
+    state: AgentState,
+) -> Literal["graham", "fisher", "macro", "marks", "core_consensus", "__end__"]:
     """
     Supervisor routing logic (Aequitas Core).
     Decides the next step based on the current state and execution history.
 
-    Implements an execution ledger to prevent infinite loops (Death Loops)
-    by verifying if an agent has already attempted execution via message history.
+    Uses explicit state checkpoints plus an execution ledger to prevent
+    infinite loops (Death Loops) and to allow controlled degradation paths
+    to advance through the full consensus pipeline.
     """
-    # 1. Extract names of all executed agents from the message history
-    # to act as an execution ledger.
-    executed_nodes = [
-        msg.name for msg in state.messages if hasattr(msg, "name") and msg.name
-    ]
-
-    # 2. Prioritize quantitative analysis (Graham)
-    # Only route if metrics are missing AND the agent hasn't run yet.
-    if state.metrics is None and "graham" not in executed_nodes:
+    if not _has_specialist_checkpoint(state, "graham"):
         return "graham"
 
-    # 3. Route to qualitative analysis (Fisher)
-    if state.qual_analysis is None and "fisher" not in executed_nodes:
+    if not _has_specialist_checkpoint(state, "fisher"):
         return "fisher"
 
-    # 4. Route to holistic macro analysis
-    if state.macro_analysis is None and "macro" not in executed_nodes:
+    if not _has_specialist_checkpoint(state, "macro"):
         return "macro"
 
-    # 5. Route to auditor (Marks)
-    # If we reach this point, either all data is present or agents have failed/degraded.
-    if not state.audit_log:
+    if not _has_specialist_checkpoint(state, "marks"):
         return "marks"
+
+    if not _has_specialist_checkpoint(state, "core_consensus"):
+        return "core_consensus"
 
     return "__end__"
 
@@ -108,9 +116,10 @@ def create_graph() -> CompiledGraph:
     Builds the Aequitas-MAS agentic graph using LangGraph.
 
     This graph uses a centralized routing pattern where each specialist agent
-    (Graham, Fisher, Macro, Marks) returns control to a central `router` function
-    after execution. The router then decides the next step based on the current
-    state, allowing for dynamic, robust, and cyclic workflows.
+    (Graham, Fisher, Macro, Marks, and Core Consensus) returns control to a
+    central `router` function after execution. The router then decides the next
+    step based on explicit state checkpoints, allowing for dynamic, robust, and
+    cyclic workflows.
     """
     logger.info("graph_construction_started")
 
@@ -122,6 +131,7 @@ def create_graph() -> CompiledGraph:
     workflow.add_node("fisher", fisher_agent)
     workflow.add_node("macro", macro_agent)
     workflow.add_node("marks", marks_agent)
+    workflow.add_node("core_consensus", core_consensus_node)
 
     # Define the mapping from router decision to the next node
     router_map = {
@@ -129,6 +139,7 @@ def create_graph() -> CompiledGraph:
         "fisher": "fisher",
         "macro": "macro",
         "marks": "marks",
+        "core_consensus": "core_consensus",
         "__end__": END,
     }
 
@@ -141,6 +152,7 @@ def create_graph() -> CompiledGraph:
     workflow.add_conditional_edges("fisher", router, router_map)
     workflow.add_conditional_edges("macro", router, router_map)
     workflow.add_conditional_edges("marks", router, router_map)
+    workflow.add_conditional_edges("core_consensus", router, router_map)
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()

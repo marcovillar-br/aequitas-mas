@@ -80,6 +80,38 @@ O desenvolvimento deve ser estritamente sequencial. O implementador atuará como
 
 ---
 
+### ✅ Sprint 4 — Core Agent & Portfolio Optimization
+**Status:** CONCLUÍDA — Merge ready.
+
+* [x] **Passo 1 — ADR 008 + Math Isolation em `portfolio_optimizer.py`:**
+  Formalizar ADR 008 para delegar portfolio weighting a uma deterministic math tool.
+  Implementar `src/tools/portfolio_optimizer.py` com `scipy.optimize.minimize`
+  (`SLSQP`) e isolamento completo da matemática de portfólio fora do fluxo de LLM.
+
+* [x] **Passo 2 — Explicit Ledger Routing em `src/core/graph.py` + `src/core/state.py`:**
+  Atualizar `AgentState` com `executed_nodes`, `marks_verdict`, `portfolio_tickers`,
+  `portfolio_returns` e `risk_appetite` para suportar roteamento explícito e handoff
+  determinístico ao otimizador.
+  Refatorar o `router` em `src/core/graph.py` para avançar por checkpoints explícitos
+  (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`) sem depender
+  exclusivamente de `audit_log` ou `AIMessage.name`.
+
+* [x] **Passo 3 — Implementação do `core_consensus` Node em `src/agents/core.py`:**
+  Criar `src/agents/core.py` com `core_consensus_node` para structured synthesis dos
+  Decision Tensors (`metrics`, `qual_analysis`, `macro_analysis`, `marks_verdict`) e
+  gatilho controlado do `optimize_portfolio`.
+  O nó bloqueia a etapa de otimização quando faltam evidências ou inputs determinísticos,
+  preservando Controlled Degradation e Risk Confinement.
+
+* [x] **Passo 4 — Deterministic Test Coverage para routing + consensus logic:**
+  Reestruturar a suíte de grafo em `tests/test_graph.py`, `tests/test_graph_routing.py`
+  e `tests/test_core_consensus_node.py` com `unittest.mock.patch` para validar
+  transições de estado e consenso sem chamadas reais de LLM, OpenSearch ou SciPy fora
+  da camada apropriada.
+  **Resultado: 35 passed + `ruff check` green** na validação da integração.
+
+---
+
 ## 📋 Plano Aprovado — Formalização Arquitetural (Prep Sprint 3.3)
 
 > **Status:** APROVADO pelo Tech Lead em 10/03/2026.
@@ -162,34 +194,3 @@ Formalizar decisões arquiteturais descobertas na auditoria de 10/03/2026 criand
    numeric evidence is not explicitly present in retrieved context.
 
 ---
-
-### 📌 Sprint 4 — Core Agent & Portfolio Optimization
-**Status:** PLANNED
-
-#### Step 1 — ADR 008: Portfolio Optimization Tool Strategy
-- **File(s):** `.ai/adr/008-portfolio-optimization-tool-strategy.md`
-- **Change:** Formalize the deterministic optimization strategy (e.g., `scipy.optimize`
-  or PyPortfolioOpt), trade-offs, and strict Risk Confinement boundaries.
-- **Dogma check:** Documentation only. CLEAN.
-- **Tests:** N/A.
-
-#### Step 2 — Deterministic Tool Implementation
-- **File(s):** `src/tools/portfolio_optimizer.py`
-- **Change:** Implement a pure Python deterministic optimizer for Markowitz Efficient
-  Frontier calculations.
-- **Dogma check:** LLM MUST NOT perform portfolio mathematics; tool executes all math.
-- **Tests:** Required in Step 4.
-
-#### Step 3 — Aequitas Core Node Integration
-- **File(s):** `src/core/graph.py`, `src/agents/` (core supervisor integration points)
-- **Change:** Implement Aequitas Core (Supervisor) routing to gather consensus from
-  Graham, Fisher, Macro, and Marks, then invoke `portfolio_optimizer`.
-- **Dogma check:** Preserve DIP and immutable state transitions.
-- **Tests:** Routing behavior validated without real LLM API calls.
-
-#### Step 4 — Shift-Left Testing for Math Tool
-- **File(s):** `tests/test_portfolio_optimizer.py` (new)
-- **Change:** Add isolated pytest coverage for deterministic optimizer behavior,
-  constraints, edge cases, and controlled degradation outputs.
-- **Dogma check:** No stochastic dependencies in math tests.
-- **Tests:** Mandatory before merge.

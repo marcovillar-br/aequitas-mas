@@ -4,7 +4,7 @@
 
 ## 🧠 Agent Architecture
 
-The project uses a Directed Acyclic Graph (DAG) to process financial assets through three critical perspectives, ensuring that intrinsic value is confronted with market reality:
+The project uses a Directed Acyclic Graph (DAG) to process financial assets through a supervised multi-agent flow, ensuring that intrinsic value is confronted with market reality and only reaches deterministic allocation after structured consensus:
 
 1. **GRAHAM Node (Quantitative):** 
 * Performs real-time fundamental data collection via `yfinance`.
@@ -20,6 +20,11 @@ The project uses a Directed Acyclic Graph (DAG) to process financial assets thro
 * Applies "Second-Level Thinking" (Howard Marks) to challenge the previous nodes.
 * Analyzes institutional, political, and governance risks (especially in state-owned enterprises).
 * Defines the final verdict on the viability of the margin of safety.
+
+4. **AEQUITAS CORE Node (Supervisor):**
+* Acts as the orchestration authority for the LangGraph workflow.
+* Coordinates specialist consensus across Graham, Fisher, Macro, and Marks.
+* Triggers deterministic portfolio weighting only after the consensus checkpoint is complete.
 
 ## 🚀 Technical Stack
 
@@ -64,8 +69,8 @@ The system was validated with an analysis of **PETR4** in February 2026:
 This project follows a technical evolution schedule focused on transitioning from a functional prototype to a distributed and resilient analysis infrastructure:
 
 * **Q1/2026 - Stabilization and Core:**
-* Dependency environment sanitation (Poetry) and migration to stable `v1` endpoints.
-* Refinement of the **GRAHAM Node** algorithms to support multiple simultaneous assets.
+* Completed: dependency environment sanitation (Poetry) and migration to stable `v1` endpoints.
+* Completed: Core Integration and deterministic Portfolio Optimization via the **AEQUITAS CORE Node** and `portfolio_optimizer.py`.
 
 * **Q2/2026 - Observability and Testing:**
 * Implementation of structured logs for auditing decisions of the Fisher and Marks agents.
