@@ -9,6 +9,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.tools.backtesting.data_loader import HistoricalDataLoader
+from src.tools.backtesting.historical_ingestion import HistoricalMarketData
 from src.tools.backtesting.metrics import calculate_drawdown, calculate_period_return
 
 
@@ -41,6 +42,18 @@ class BacktestStepLog(BaseModel):
         default=None,
         description="Observed close price visible on the replay date.",
     )
+    vpa: Optional[float] = Field(
+        default=None,
+        description="Book value per share visible on the replay date.",
+    )
+    lpa: Optional[float] = Field(
+        default=None,
+        description="Earnings per share visible on the replay date.",
+    )
+    selic_rate: Optional[float] = Field(
+        default=None,
+        description="Risk-free rate visible on the replay date.",
+    )
     period_return: Optional[float] = Field(
         default=None,
         description="Simple return from the initial visible price to the replay date.",
@@ -54,7 +67,15 @@ class BacktestStepLog(BaseModel):
         description="Deterministic replay trace describing the step outcome.",
     )
 
-    @field_validator("observed_price", "period_return", "drawdown", mode="before")
+    @field_validator(
+        "observed_price",
+        "vpa",
+        "lpa",
+        "selic_rate",
+        "period_return",
+        "drawdown",
+        mode="before",
+    )
     @classmethod
     def validate_optional_float_fields(cls, value: Any) -> Optional[float]:
         """Reject invalid numeric artifacts from boundary payloads."""
@@ -152,7 +173,8 @@ class BacktestEngine:
         max_drawdown: Optional[float] = None
 
         while current_date <= replay_end_date:
-            observed_price = self._data_loader.get_data_as_of(normalized_ticker, current_date)
+            market_data = self._data_loader.get_market_data_as_of(normalized_ticker, current_date)
+            observed_price = market_data.price if market_data is not None else None
 
             if observed_price is not None and initial_price is None:
                 initial_price = observed_price
@@ -178,12 +200,15 @@ class BacktestEngine:
                 BacktestStepLog(
                     as_of_date=current_date,
                     observed_price=observed_price,
+                    vpa=market_data.book_value_per_share if market_data is not None else None,
+                    lpa=market_data.earnings_per_share if market_data is not None else None,
+                    selic_rate=market_data.selic_rate if market_data is not None else None,
                     period_return=period_return,
                     drawdown=drawdown,
                     note=self._build_step_note(
                         ticker=normalized_ticker,
                         current_date=current_date,
-                        observed_price=observed_price,
+                        market_data=market_data,
                     ),
                 )
             )
@@ -205,9 +230,10 @@ class BacktestEngine:
         *,
         ticker: str,
         current_date: date,
-        observed_price: Optional[float],
+        market_data: Optional[HistoricalMarketData],
     ) -> str:
         """Produce a deterministic trace for each replay step."""
+        observed_price = market_data.price if market_data is not None else None
         if observed_price is None:
             return (
                 f"[Backtest] {ticker} @ {current_date.isoformat()}: "
@@ -216,5 +242,8 @@ class BacktestEngine:
 
         return (
             f"[Backtest] {ticker} @ {current_date.isoformat()}: "
-            f"observed close={observed_price:.4f} within as_of_date boundary."
+            f"observed close={observed_price:.4f}, "
+            f"vpa={market_data.book_value_per_share}, "
+            f"lpa={market_data.earnings_per_share}, "
+            f"selic_rate={market_data.selic_rate} within as_of_date boundary."
         )

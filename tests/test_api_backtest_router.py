@@ -3,18 +3,29 @@
 from __future__ import annotations
 
 from datetime import date
-
-import pytest
-from fastapi import HTTPException
+from unittest.mock import patch
 
 from src.api.routers.backtest import run_backtest
 from src.api.schemas import BacktestRequest
+from src.tools.backtesting.engine import BacktestResult
 
 
-def test_backtest_endpoint_returns_not_implemented_until_ingestion_exists() -> None:
-    """The public route should be explicit while historical ingestion is unavailable."""
-    with pytest.raises(HTTPException) as exc_info:
-        run_backtest(
+def test_backtest_endpoint_returns_structured_result() -> None:
+    """The router should return a typed BacktestResult payload."""
+    with patch("src.api.routers.backtest.B3HistoricalFetcher"), patch(
+        "src.api.routers.backtest.HistoricalDataLoader"
+    ), patch("src.api.routers.backtest.BacktestEngine") as mock_engine_cls:
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = BacktestResult(
+            ticker="PETR4",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 3),
+            cumulative_return=0.1,
+            max_drawdown=-0.05,
+            logs=[],
+        )
+
+        result = run_backtest(
             BacktestRequest(
                 ticker="PETR4",
                 start_date=date(2024, 1, 1),
@@ -22,7 +33,8 @@ def test_backtest_endpoint_returns_not_implemented_until_ingestion_exists() -> N
             )
         )
 
-    assert exc_info.value.status_code == 501
-    assert exc_info.value.detail == (
-        "A ingestão histórica real do backtest ainda não está disponível neste ambiente."
-    )
+    assert result.ticker == "PETR4"
+    assert result.start_date == date(2024, 1, 1)
+    assert result.end_date == date(2024, 1, 3)
+    assert result.cumulative_return == 0.1
+    assert result.max_drawdown == -0.05

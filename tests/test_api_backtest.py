@@ -8,9 +8,11 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from unittest.mock import patch
 
 from src.api.routers.backtest import run_backtest
 from src.api.schemas import BacktestRequest
+from src.tools.backtesting.engine import BacktestResult
 
 
 class StableTestClient(TestClient):
@@ -45,20 +47,46 @@ async def _backtest_asgi_app(scope: dict, receive, send) -> None:
 
 
 def test_backtest_run_returns_backtest_result_shape() -> None:
-    """The HTTP route should surface an explicit not-implemented response."""
+    """The HTTP route should return a typed backtest payload when wiring succeeds."""
     client = StableTestClient(_backtest_asgi_app)
 
-    response = client.post(
-        "/backtest/run",
-        json={
-            "ticker": "PETR4",
-            "start_date": "2024-01-01",
-            "end_date": "2024-01-03",
-        },
-    )
+    with patch("src.api.routers.backtest.B3HistoricalFetcher"), patch(
+        "src.api.routers.backtest.HistoricalDataLoader"
+    ), patch("src.api.routers.backtest.BacktestEngine") as mock_engine_cls:
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = BacktestResult(
+            ticker="PETR4",
+            start_date=BacktestRequest(
+                ticker="PETR4",
+                start_date="2024-01-01",
+                end_date="2024-01-03",
+            ).start_date,
+            end_date=BacktestRequest(
+                ticker="PETR4",
+                start_date="2024-01-01",
+                end_date="2024-01-03",
+            ).end_date,
+            cumulative_return=0.1,
+            max_drawdown=-0.05,
+            logs=[],
+        )
 
-    assert response.status_code == 501
+        response = client.post(
+            "/backtest/run",
+            json={
+                "ticker": "PETR4",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-03",
+            },
+        )
+
+    assert response.status_code == 200
     payload = response.json()
     assert payload == {
-        "detail": "A ingestão histórica real do backtest ainda não está disponível neste ambiente."
+        "ticker": "PETR4",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-03",
+        "cumulative_return": 0.1,
+        "max_drawdown": -0.05,
+        "logs": [],
     }
