@@ -17,6 +17,7 @@ Classes:
 
 import math
 import operator
+from datetime import date
 from typing import Annotated, Any, List, Optional
 
 from langchain_core.messages import BaseMessage
@@ -291,6 +292,10 @@ class AgentState(BaseModel):
         ...,
         description="O código de negociação do ativo na bolsa B3.",
         pattern=r"^[A-Z0-9]{5,6}$",
+    )
+    as_of_date: date = Field(
+        default_factory=date.today,
+        description="Strict point-in-time reference for historical queries.",
     )
 
     # Deterministic portfolio optimization inputs.
