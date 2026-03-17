@@ -8,9 +8,11 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from unittest.mock import patch
 
 from src.api.routers.backtest import run_backtest
 from src.api.schemas import BacktestRequest
+from src.tools.backtesting.engine import BacktestResult
 
 
 class StableTestClient(TestClient):
@@ -45,17 +47,38 @@ async def _backtest_asgi_app(scope: dict, receive, send) -> None:
 
 
 def test_backtest_run_returns_backtest_result_shape() -> None:
-    """A valid POST to /backtest/run should return the BacktestResult payload."""
+    """The HTTP route should return a typed backtest payload when wiring succeeds."""
     client = StableTestClient(_backtest_asgi_app)
 
-    response = client.post(
-        "/backtest/run",
-        json={
-            "ticker": "PETR4",
-            "start_date": "2024-01-01",
-            "end_date": "2024-01-03",
-        },
-    )
+    with patch("src.api.routers.backtest.B3HistoricalFetcher"), patch(
+        "src.api.routers.backtest.HistoricalDataLoader"
+    ), patch("src.api.routers.backtest.BacktestEngine") as mock_engine_cls:
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = BacktestResult(
+            ticker="PETR4",
+            start_date=BacktestRequest(
+                ticker="PETR4",
+                start_date="2024-01-01",
+                end_date="2024-01-03",
+            ).start_date,
+            end_date=BacktestRequest(
+                ticker="PETR4",
+                start_date="2024-01-01",
+                end_date="2024-01-03",
+            ).end_date,
+            cumulative_return=0.1,
+            max_drawdown=-0.05,
+            logs=[],
+        )
+
+        response = client.post(
+            "/backtest/run",
+            json={
+                "ticker": "PETR4",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-03",
+            },
+        )
 
     assert response.status_code == 200
     payload = response.json()
@@ -63,29 +86,7 @@ def test_backtest_run_returns_backtest_result_shape() -> None:
         "ticker": "PETR4",
         "start_date": "2024-01-01",
         "end_date": "2024-01-03",
-        "cumulative_return": None,
-        "max_drawdown": None,
-        "logs": [
-            {
-                "as_of_date": "2024-01-01",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-01: no visible price; degrading metrics to None.",
-            },
-            {
-                "as_of_date": "2024-01-02",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-02: no visible price; degrading metrics to None.",
-            },
-            {
-                "as_of_date": "2024-01-03",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-03: no visible price; degrading metrics to None.",
-            },
-        ],
+        "cumulative_return": 0.1,
+        "max_drawdown": -0.05,
+        "logs": [],
     }

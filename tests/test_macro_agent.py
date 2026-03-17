@@ -14,6 +14,7 @@ Coverage:
     - Full fallback: LLM failure returns degraded MacroAnalysis + audit entry.
     - NullVectorStore: module-level macro_agent runs without infrastructure.
 """
+from datetime import date
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -73,6 +74,7 @@ def initial_state() -> AgentState:
     return AgentState(
         messages=[],
         target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
         audit_log=[],
     )
 
@@ -129,7 +131,11 @@ def test_macro_agent_success_path(
         result = agent(initial_state)
 
     # Assert: VectorStore was called with the HyDE text
-    mock_vector_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
+    mock_vector_store.search_macro_context.assert_called_once_with(
+        MOCK_HYDE_TEXT,
+        as_of_date=initial_state.as_of_date,
+        top_k=5,
+    )
 
     # Assert: MacroAnalysis is present and valid
     assert "macro_analysis" in result
@@ -312,7 +318,11 @@ def test_null_vector_store_satisfies_protocol() -> None:
     """NullVectorStore must satisfy VectorStorePort structurally."""
     store = NullVectorStore()
     assert isinstance(store, VectorStorePort)
-    assert store.search_macro_context("any query", top_k=3) == []
+    assert store.search_macro_context(
+        "any query",
+        as_of_date=date(2024, 1, 2),
+        top_k=3,
+    ) == []
 
 
 def test_module_level_macro_agent_is_callable() -> None:
@@ -391,7 +401,11 @@ def test_macro_agent_opensearch_connection_failure_degrades_gracefully(
     ), "messages must contain a degradation AIMessage for graph traceability."
 
     # --- Extra assert: VectorStore was called (HyDE reached the retrieval stage) ---
-    failing_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
+    failing_store.search_macro_context.assert_called_once_with(
+        MOCK_HYDE_TEXT,
+        as_of_date=initial_state.as_of_date,
+        top_k=5,
+    )
 
 
 @patch("src.agents.macro.time.sleep")

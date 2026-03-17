@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from src.api.schemas import BacktestRequest
-from src.tools.backtesting.data_loader import HistoricalDataLoader, build_price_history
+from src.tools.b3_fetcher import B3HistoricalFetcher
+from src.tools.backtesting.data_loader import HistoricalDataLoader
 from src.tools.backtesting.engine import BacktestEngine, BacktestResult
 
 router = APIRouter(tags=["backtesting"])
@@ -15,10 +16,11 @@ router = APIRouter(tags=["backtesting"])
 def run_backtest(request: BacktestRequest) -> BacktestResult:
     """Run a deterministic historical replay for a single ticker."""
     try:
+        fetcher = B3HistoricalFetcher()
         loader = HistoricalDataLoader(
             start_date=request.start_date,
             end_date=request.end_date,
-            price_history=build_price_history([]),
+            fetcher=fetcher,
         )
         engine = BacktestEngine(
             start_date=request.start_date,

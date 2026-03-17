@@ -6,6 +6,7 @@ This test suite validates the Fisher Agent's ability to orchestrate
 the news fetching tool and the language model to produce a structured
 qualitative analysis, ensuring data integrity and traceability.
 """
+from datetime import date
 import pytest
 from unittest.mock import patch, MagicMock
 from src.agents.fisher import fisher_agent
@@ -42,6 +43,7 @@ def initial_state() -> AgentState:
     return AgentState(
         messages=[],
         target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
         metrics=None,
         qual_analysis=None,
         audit_log=[],

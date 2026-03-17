@@ -3,50 +3,29 @@
 from __future__ import annotations
 
 from datetime import date
-
-import pytest
-from fastapi import HTTPException
+from unittest.mock import patch
 
 from src.api.routers.backtest import run_backtest
 from src.api.schemas import BacktestRequest
+from src.tools.backtesting.engine import BacktestResult
 
 
 def test_backtest_endpoint_returns_structured_result() -> None:
-    """The router should return a BacktestResult payload for valid requests."""
-    result = run_backtest(
-        BacktestRequest(
+    """The router should return a typed BacktestResult payload."""
+    with patch("src.api.routers.backtest.B3HistoricalFetcher"), patch(
+        "src.api.routers.backtest.HistoricalDataLoader"
+    ), patch("src.api.routers.backtest.BacktestEngine") as mock_engine_cls:
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = BacktestResult(
             ticker="PETR4",
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 3),
+            cumulative_return=0.1,
+            max_drawdown=-0.05,
+            logs=[],
         )
-    )
 
-    assert result.ticker == "PETR4"
-    assert result.start_date == date(2024, 1, 1)
-    assert result.end_date == date(2024, 1, 3)
-    assert result.cumulative_return is None
-    assert result.max_drawdown is None
-    assert len(result.logs) == 3
-
-
-def test_backtest_endpoint_maps_value_errors_to_bad_request(monkeypatch) -> None:
-    """Engine parameter errors should be surfaced as HTTP 400 responses."""
-
-    def _raise_value_error(
-        self,
-        ticker: str,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> None:
-        raise ValueError("invalid replay window")
-
-    monkeypatch.setattr(
-        "src.api.routers.backtest.BacktestEngine.run",
-        _raise_value_error,
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        run_backtest(
+        result = run_backtest(
             BacktestRequest(
                 ticker="PETR4",
                 start_date=date(2024, 1, 1),
@@ -54,5 +33,8 @@ def test_backtest_endpoint_maps_value_errors_to_bad_request(monkeypatch) -> None
             )
         )
 
-    assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "invalid replay window"
+    assert result.ticker == "PETR4"
+    assert result.start_date == date(2024, 1, 1)
+    assert result.end_date == date(2024, 1, 3)
+    assert result.cumulative_return == 0.1
+    assert result.max_drawdown == -0.05

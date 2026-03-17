@@ -3,89 +3,109 @@
 from __future__ import annotations
 
 from datetime import date
+from unittest.mock import MagicMock
 
-import pytest
-
-from src.tools.backtesting.data_loader import (
-    HistoricalDataLoader,
-    HistoricalPricePoint,
-    build_price_history,
-)
+from src.tools.backtesting.data_loader import HistoricalDataLoader
+from src.tools.backtesting.historical_ingestion import HistoricalMarketData
 
 
-def test_data_loader_returns_exact_price_for_visible_date() -> None:
-    """The loader should return only the exact observed price on the requested day."""
+def test_data_loader_delegates_to_fetcher_and_returns_market_data_object() -> None:
+    """The loader should delegate point-in-time retrieval to the injected fetcher."""
+    fetcher = MagicMock()
+    fetcher.fetch_as_of.return_value = HistoricalMarketData(
+        ticker="PETR4",
+        as_of_date=date(2024, 1, 3),
+        price=36.5,
+        book_value_per_share=20.0,
+        earnings_per_share=3.5,
+        selic_rate=0.1125,
+    )
     loader = HistoricalDataLoader(
         start_date=date(2024, 1, 1),
         end_date=date(2024, 1, 31),
-        price_history={
-            "PETR4": [
-                HistoricalPricePoint(observed_at=date(2024, 1, 2), close=35.0),
-                HistoricalPricePoint(observed_at=date(2024, 1, 3), close=36.5),
-            ]
-        },
+        fetcher=fetcher,
     )
 
-    assert loader.get_data_as_of("PETR4", date(2024, 1, 3)) == pytest.approx(36.5)
+    result = loader.get_market_data_as_of("PETR4", date(2024, 1, 3))
+
+    fetcher.fetch_as_of.assert_called_once_with("PETR4", date(2024, 1, 3))
+    assert result == HistoricalMarketData(
+        ticker="PETR4",
+        as_of_date=date(2024, 1, 3),
+        price=36.5,
+        book_value_per_share=20.0,
+        earnings_per_share=3.5,
+        selic_rate=0.1125,
+    )
 
 
-def test_data_loader_never_uses_future_observations() -> None:
-    """Future prices must remain inaccessible before their observation date."""
+def test_data_loader_returns_price_via_compatibility_wrapper() -> None:
+    """The legacy price-only accessor should still expose the visible close."""
+    fetcher = MagicMock()
+    fetcher.fetch_as_of.return_value = HistoricalMarketData(
+        ticker="VALE3",
+        as_of_date=date(2024, 1, 10),
+        price=70.0,
+        book_value_per_share=None,
+        earnings_per_share=None,
+        selic_rate=None,
+    )
     loader = HistoricalDataLoader(
         start_date=date(2024, 1, 1),
         end_date=date(2024, 1, 31),
-        price_history={
-            "VALE3": [
-                HistoricalPricePoint(observed_at=date(2024, 1, 10), close=70.0),
-                HistoricalPricePoint(observed_at=date(2024, 1, 15), close=72.0),
-            ]
-        },
+        fetcher=fetcher,
     )
 
-    assert loader.get_data_as_of("VALE3", date(2024, 1, 12)) is None
+    assert loader.get_data_as_of("VALE3", date(2024, 1, 10)) == 70.0
 
 
-def test_data_loader_returns_none_for_missing_price_points() -> None:
-    """Missing dates degrade to None instead of forward-filling or interpolation."""
+def test_data_loader_handles_degraded_fetcher_response_safely() -> None:
+    """A degraded fetcher response should propagate as None without crashing."""
+    fetcher = MagicMock()
+    fetcher.fetch_as_of.return_value = HistoricalMarketData(
+        ticker="ITUB4",
+        as_of_date=date(2024, 1, 5),
+        price=None,
+        book_value_per_share=None,
+        earnings_per_share=None,
+        selic_rate=None,
+    )
     loader = HistoricalDataLoader(
         start_date=date(2024, 1, 1),
         end_date=date(2024, 1, 31),
-        price_history={
-            "ITUB4": [
-                HistoricalPricePoint(observed_at=date(2024, 1, 5), close=None),
-            ]
-        },
+        fetcher=fetcher,
     )
 
+    result = loader.get_market_data_as_of("ITUB4", date(2024, 1, 5))
+
+    assert result is not None
+    assert result.price is None
     assert loader.get_data_as_of("ITUB4", date(2024, 1, 5)) is None
-    assert loader.get_data_as_of("ITUB4", date(2024, 1, 6)) is None
+
+
+def test_data_loader_returns_none_when_fetcher_returns_none() -> None:
+    """A None result from the fetcher should degrade safely to None."""
+    fetcher = MagicMock()
+    fetcher.fetch_as_of.return_value = None
+    loader = HistoricalDataLoader(
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 1, 31),
+        fetcher=fetcher,
+    )
+
+    assert loader.get_market_data_as_of("BBDC4", date(2024, 1, 10)) is None
+    assert loader.get_data_as_of("BBDC4", date(2024, 1, 10)) is None
 
 
 def test_data_loader_returns_none_outside_configured_window() -> None:
-    """Queries outside the loader window should degrade safely to None."""
+    """Queries outside the configured replay window must degrade to None."""
+    fetcher = MagicMock()
     loader = HistoricalDataLoader(
         start_date=date(2024, 1, 10),
         end_date=date(2024, 1, 20),
-        price_history={
-            "BBDC4": [
-                HistoricalPricePoint(observed_at=date(2024, 1, 10), close=15.0),
-            ]
-        },
+        fetcher=fetcher,
     )
 
-    assert loader.get_data_as_of("BBDC4", date(2024, 1, 9)) is None
-    assert loader.get_data_as_of("BBDC4", date(2024, 1, 21)) is None
-
-
-def test_build_price_history_normalizes_tickers() -> None:
-    """Tuple rows should convert into normalized immutable price points."""
-    history = build_price_history(
-        [
-            (" petr4 ", date(2024, 1, 2), 35.0),
-            ("PETR4", date(2024, 1, 3), None),
-        ]
-    )
-
-    assert "PETR4" in history
-    assert history["PETR4"][0].close == pytest.approx(35.0)
-    assert history["PETR4"][1].close is None
+    assert loader.get_market_data_as_of("BBDC4", date(2024, 1, 9)) is None
+    assert loader.get_market_data_as_of("BBDC4", date(2024, 1, 21)) is None
+    fetcher.fetch_as_of.assert_not_called()

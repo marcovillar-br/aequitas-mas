@@ -22,11 +22,12 @@ The system state is carried through immutable Pydantic v2 models under
 `src/core/state.py`, with `Optional[float] = None` used whenever evidence is
 missing or invalid.
 
-## Delivered Through Sprint 6
+## Delivered Through Sprint 7 Step 1
 
 - FastAPI gateway under `src/api/` with:
   - `POST /analyze`
-  - `POST /backtest/run`
+  - `POST /backtest/run` with active deterministic replay over real historical
+    ingestion
 - Startup-scoped dependency injection for the compiled LangGraph app and its
   `BaseCheckpointSaver`
 - Strict boundary typing with immutable models such as:
@@ -39,6 +40,8 @@ missing or invalid.
 - Deterministic backtesting with:
   - explicit `start_date` / `end_date`
   - `as_of_date` anti-look-ahead enforcement
+  - `B3HistoricalFetcher` as the current real-ingestion adapter
+  - `HistoricalDataLoader.get_market_data_as_of(...)`
   - controlled degradation to `None` for missing historical values
 
 ## Secret Management
@@ -99,11 +102,15 @@ setup contract.
 - Sprint 3: DynamoDB persistence, HyDE retrieval, OpenSearch hardening
 - Sprint 4: Core supervisor and deterministic portfolio optimization
 - Sprint 5: observability baseline and dogma enforcement
-- Sprint 6: FastAPI gateway, typed boundary hardening, deterministic backtesting
+- Sprint 6: FastAPI gateway, typed boundary hardening, and deterministic
+  backtesting foundations
+- Sprint 7 Step 1: real B3-compatible historical ingestion, time-aware
+  retrieval via `as_of_date`, and active `/backtest/run`
 
 ### Next
 
-- Sprint 7: real historical data ingestion and dynamic portfolio constraints
+- Sprint 7 Step 2: benchmark and factor series coverage
+- Sprint 7 Step 3: dynamic portfolio constraints
 
 ## Quality Gates
 
