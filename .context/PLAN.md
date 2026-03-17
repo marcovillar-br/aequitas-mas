@@ -17,6 +17,11 @@ O baseline arquitetural vigente do repositório já entrega:
 - **FastAPI gateway** com DI do grafo compilado e do `BaseCheckpointSaver`
 - **Backtesting determinístico** com anti-look-ahead, degradação para `None`
   e logs fundamentais enriquecidos
+- **B3HistoricalFetcher** integrado ao replay histórico determinístico como
+  adapter real de ingestão
+- **Active `/backtest/run` endpoint** wired to the deterministic ingestion path
+- **Temporal invariance governance** formalized by
+  `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
 
 ## Sprint 6 — API Gateway & Boundary Hardening
 **Status:** DONE
@@ -57,7 +62,7 @@ Controlled Degradation ou Zero Trust.
 
 ### Entregas consolidadas
 
-#### Passo 1 — Real Historical Data Adapter
+#### Passo 1 — Real Historical Data Adapter — DONE
 - `B3HistoricalFetcher` implementado como adapter determinístico para ingestão
   histórica real compatível com o mercado brasileiro
 - `HistoricalMarketData` consolidado como boundary imutável para:
@@ -69,7 +74,7 @@ Controlled Degradation ou Zero Trust.
 - retrieval qualitativo propagado com `as_of_date` em `VectorStorePort`,
   adapter OpenSearch e agentes qualitativos
 
-#### Passo 1.1 — Backtest Engine Integration
+#### Passo 1.1 — Backtest Engine Integration — DONE
 - `HistoricalDataLoader` refatorado para injetar `B3HistoricalFetcher` via DI
 - `HistoricalDataLoader.get_market_data_as_of(...)` exposto como contrato
   principal de replay point-in-time
@@ -83,16 +88,14 @@ Controlled Degradation ou Zero Trust.
 
 ### Immediate Priority
 
-Os próximos unlocks do Sprint 7 são:
-
-1. **Benchmark and Factor Inputs**
-   - adicionar séries de benchmark e fatores opcionais ao engine
-   - proibir qualquer preenchimento com dados futuros
-   - formalizar faltas de benchmark como degradação explícita, não como zero
+1. **Benchmark and Factor Inputs (CDI/IBOV)**
+   - integrate reference series into `HistoricalDataLoader`
+   - preserve strict `as_of_date` filtering for benchmark and factor series
+   - degrade unavailable benchmark points to `None`, never to synthetic zeros
 2. **Dynamic Portfolio Constraints**
-   - introduzir restrições dinâmicas para concentração, liquidez e regime
-   - executar a lógica exclusivamente em tooling determinístico
-   - expor resultados por modelos Pydantic imutáveis
+   - implement deterministic logic for concentration and regime-aware allocation
+   - keep the full decision path outside the LLM
+   - expose outcomes through immutable Pydantic contracts
 
 ### Próximos passos
 

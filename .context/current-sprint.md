@@ -62,8 +62,14 @@
 Replace synthetic/local backtesting inputs with real historical ingestion and
 introduce deterministic dynamic constraints for allocation and replay.
 
+### Step Status
+- Step 1 — Real Historical Ingestion & Backtest Activation: **DONE**
+- Step 2 — Benchmark and Factor Inputs (CDI/IBOV): **CURRENT PRIORITY**
+- Step 3 — Dynamic Concentration and Regime-Aware Constraints: **PENDING**
+
 ### Delivered Scope
-1. Real historical price ingestion adapter delivered via `B3HistoricalFetcher`
+1. Step 1 completed with real historical price ingestion delivered via
+   `B3HistoricalFetcher`
    returning immutable `HistoricalMarketData`.
 2. `HistoricalMarketData` established as the canonical point-in-time boundary
    for:
@@ -71,6 +77,8 @@ introduce deterministic dynamic constraints for allocation and replay.
    - `book_value_per_share`
    - `earnings_per_share`
    - `selic_rate`
+   - formal temporal invariance reference:
+     `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
 3. `HistoricalDataLoader` refactored to inject `B3HistoricalFetcher` through
    dependency injection while preserving backward compatibility for the engine.
 4. `BacktestEngine` upgraded to consume `get_market_data_as_of(...)` and log:
@@ -90,9 +98,14 @@ introduce deterministic dynamic constraints for allocation and replay.
    - `B3HistoricalFetcher`
    - `HistoricalDataLoader`
    - `BacktestEngine`
+8. Honest Scaffolding is fully removed from the backtesting path; the public
+   endpoint now reflects the live deterministic integration.
+
+### Current Priority
+Step 2 — Benchmark and Factor Inputs (CDI/IBOV)
 
 ### Planned Focus
-1. Benchmark and factor series support
+1. Benchmark and factor series support for CDI/IBOV
 2. Dynamic concentration and regime-aware allocation constraints
 3. Optional `/portfolio` boundary only after contract finalization
 

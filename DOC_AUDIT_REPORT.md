@@ -22,124 +22,52 @@ O relatório foi cruzado com o estado atual do código, que hoje já contém:
 - `SecretStorePort` + `EnvSecretAdapter` como boundary de secrets
 - FastAPI com DI do grafo compilado e de `BaseCheckpointSaver`
 - `B3HistoricalFetcher`, `HistoricalMarketData`, `HistoricalDataLoader.get_market_data_as_of(...)`
-- `/backtest/run` habilitado, sem `HTTP 501`
-- `BacktestEngine` registrando `vpa`, `lpa` e `selic_rate`
+- `/backtest/run` ativo sobre a trilha determinística de ingestão
+- `BacktestEngine` com contexto fundamental enriquecido
+- `BenchmarkType` e `HistoricalBenchmarkData` formalizados na SPEC
+- `ADR 011` formalizando temporal invariance e point-in-time synchronization
 
 ## Resumo executivo
-Após a remediação recente em `.context/PLAN.md` e `.context/SPEC.md`, o drift
-documental remanescente está concentrado em:
+O conjunto documental principal está agora majoritariamente alinhado com o
+estado real do Sprint 7.
 
-1. `README.md`
-2. `setup.md`
-3. `.context/current-sprint.md`
-4. `.ai/adr/002-hyde-rag-pipeline.md`
-5. `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`
-6. `.ai/adr/010-api-boundary-hardening-and-honest-scaffolding.md`
+Não encontrei divergências arquiteturais críticas em:
 
-`PLAN.md` e `SPEC.md` estão agora materialmente alinhados com o estado real do
-Sprint 7 Step 1 e não entram mais como violação principal.
+- `.context/PLAN.md`
+- `.context/SPEC.md`
+- `.context/current-sprint.md`
+- `.ai/adr/002-hyde-rag-pipeline.md`
+- `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`
+- `.ai/adr/010-api-boundary-hardening-and-honest-scaffolding.md`
+- `.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md`
 
-## Arquivos com informação desatualizada ou violação da diretiva de relevância
+O drift remanescente identificado nesta rodada é pequeno e concentrado
+principalmente em nomenclatura editorial do `README.md`.
+
+## Arquivos com informação desatualizada ou possível poda adicional
 
 ### `README.md`
 **Problema**
-- Ainda afirma que `POST /backtest/run` está em `HTTP 501 Not Implemented`.
-- Continua descrevendo Sprint 6 como se o backtest ainda estivesse sob Honest
-  Scaffolding.
+- O título ainda está versionado como `Aequitas-MAS v6`.
 
-**Divergência com o código**
-- O endpoint já está ativo e encadeia `B3HistoricalFetcher ->
-  HistoricalDataLoader -> BacktestEngine`.
-
-**Ação recomendada**
-- Atualizar a seção “Delivered Through Sprint 6”.
-- Reescrever o roadmap para mostrar que a ativação real do backtest já ocorreu
-  no Sprint 7.
-
-### `setup.md`
-**Problema**
-- Ainda documenta `HistoricalDataLoader.get_data_as_of(...)` como contrato do
-  replay.
-
-**Divergência com o código**
-- O loader atual expõe `get_market_data_as_of(...)` e opera sobre
-  `HistoricalMarketData`.
+**Divergência com o estado atual**
+- O conteúdo interno do arquivo já descreve entregas de Sprint 7 Step 1, então
+  a marcação `v6` no cabeçalho cria uma inconsistência editorial com o resto do
+  documento.
 
 **Ação recomendada**
-- Atualizar a seção “Backtesting Contract” para:
-  - `HistoricalDataLoader.get_market_data_as_of(...)`
-  - `HistoricalMarketData`
-  - replay point-in-time com boundary enriquecida
-
-### `.context/current-sprint.md`
-**Problema**
-- Ainda mantém no Sprint 6 o item histórico `HTTP 501` como se fosse parte
-  relevante do snapshot atual.
-- A seção de riscos residuais ainda afirma que faltam ADRs dedicados para
-  secret-store e strict-boundary hardening.
-
-**Divergência com o código e com a documentação**
-- O risco de indisponibilidade do backtest já foi mitigado e superado.
-- Os temas de secret management e strict typing já estão formalizados pelos
-  ADRs 007 e 008.
-
-**Violação da diretiva de relevância**
-- Para um arquivo de sprint corrente, manter comportamento transitório já
-  revogado reduz o valor operacional do documento.
-
-**Ação recomendada**
-- Remover ou condensar o registro de Honest Scaffolding do Sprint 6.
-- Atualizar os riscos residuais para refletir apenas gaps ainda abertos:
-  - fonte point-in-time para fundamentos
-  - benchmark/factors
-  - dynamic constraints
-
-## ADRs com drift parcial
-
-### `.ai/adr/002-hyde-rag-pipeline.md`
-**Problema**
-- Ainda documenta `VectorStorePort.search_macro_context(hyde_text, top_k=5)`
-  sem `as_of_date`.
-
-**Divergência com o código**
-- O retrieval atual é time-aware e exige `as_of_date` no contrato.
-
-**Ação recomendada**
-- Atualizar o ADR para registrar explicitamente retrieval point-in-time.
-
-### `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`
-**Problema**
-- Ainda descreve `HistoricalDataLoader.get_data_as_of(...)` como enforcement
-  principal de anti-look-ahead.
-- Ainda trata ingestão histórica real como follow-up.
-
-**Divergência com o código**
-- O replay já usa `B3HistoricalFetcher` e `get_market_data_as_of(...)`.
-- A ingestão histórica real já foi integrada.
-
-**Ação recomendada**
-- Atualizar o ADR para refletir a arquitetura pós-Sprint 7 Step 1.
-
-### `.ai/adr/010-api-boundary-hardening-and-honest-scaffolding.md`
-**Problema**
-- Ainda congela como decisão ativa que `/backtest/run` deve retornar
-  `HTTP 501 Not Implemented`.
-
-**Divergência com o código**
-- A condição arquitetural desse ADR já foi satisfeita e o endpoint foi
-  desbloqueado.
-
-**Ação recomendada**
-- Marcar a decisão como parcialmente superseded ou amendá-la.
-- Manter como vigentes apenas os pontos ainda válidos:
-  - sanitização de erros
-  - patch explícito de estado
+- Remover o marcador `v6` do título ou atualizá-lo para um rótulo neutro sem
+  versionamento rígido.
 
 ## Arquivos auditados sem drift material relevante
 
-### Alinhados
+### Documentação principal alinhada
+- `setup.md`
 - `.context/PLAN.md`
 - `.context/SPEC.md`
+- `.context/current-sprint.md`
+
+### Domain & skills alinhados
 - `.context/domain/personas.md`
 - `.context/agents/skills-index.md`
 - `.context/skills/aws-advisor.md`
@@ -150,101 +78,76 @@ Sprint 7 Step 1 e não entram mais como violação principal.
 - `.context/skills/security.md`
 - `.context/skills/subagent-creator.md`
 - `.context/skills/tech-design-doc.md`
+
+### ADRs alinhados
 - `.ai/adr/001-ssot-and-lazy-persistence-loading.md`
+- `.ai/adr/002-hyde-rag-pipeline.md`
 - `.ai/adr/003-opensearch-shared-collection.md`
 - `.ai/adr/004-dogma-audit-grep-strategy.md`
 - `.ai/adr/005-portfolio-optimization-tool.md`
 - `.ai/adr/006-agnostic-operational-flow.md`
 - `.ai/adr/007-cloud-first-secret-management.md`
 - `.ai/adr/008-strict-boundary-interface-typing.md`
+- `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`
+- `.ai/adr/010-api-boundary-hardening-and-honest-scaffolding.md`
+- `.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md`
 
 ## Avaliação específica dos upgrades do Sprint 6
 
 ### Strict Interface Typing
 **Status documental**
-- Coberto por `.context/SPEC.md` e `.ai/adr/008-strict-boundary-interface-typing.md`.
-
-**Gap remanescente**
-- Não há gap crítico no núcleo documental auditado.
+- Refletido corretamente em `.context/SPEC.md` e
+  `.ai/adr/008-strict-boundary-interface-typing.md`.
 
 ### Zero Trust Security
 **Status documental**
-- Coberto por `README.md`, `setup.md`, skills de segurança e
-  `.ai/adr/007-cloud-first-secret-management.md`.
-
-**Gap remanescente**
-- Não há necessidade de novo ADR para secret management.
+- Refletido corretamente por `SecretStorePort`, `EnvSecretAdapter`,
+  `README.md`, `setup.md` e `.ai/adr/007-cloud-first-secret-management.md`.
 
 ### Backtesting Engine Paradigm
 **Status documental**
-- Parcialmente coberto.
-
-**Gap remanescente**
-- `README.md`, `setup.md`, `.context/current-sprint.md`, `ADR 009` e `ADR 010`
-  ainda não consolidaram totalmente:
-  - `B3HistoricalFetcher`
-  - `HistoricalMarketData`
-  - endpoint de backtest ativo
-  - `BacktestStepLog` com fundamentos
+- Refletido corretamente em `.context/PLAN.md`, `.context/SPEC.md`,
+  `.context/current-sprint.md` e `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`.
 
 ### FastAPI Gateway
 **Status documental**
-- Majoritariamente alinhado.
-
-**Gap remanescente**
-- O README ainda mantém o endpoint de backtest como indisponível.
+- Refletido corretamente com DI do grafo compilado e `BaseCheckpointSaver`.
 
 ### Graph Paradigm
 **Status documental**
-- Alinhado no escopo auditado.
-
-**Observação**
-- Não encontrei resíduos materiais de vocabulário legado no conjunto principal
-  auditado; a nomenclatura dominante já é `Cyclic Graph` / `Iterative Committee`.
+- O vocabulário dominante no escopo auditado já é `Cyclic Graph` /
+  `Iterative Committee`.
+- Não encontrei resíduos materiais de terminologia legada de grafo linear no
+  conjunto principal auditado.
 
 ## Diretiva de pruning para `current-sprint.md`, `PLAN.md` e `SPEC.md`
 
 ### Situação atual
-- `.context/PLAN.md`: alinhado e enxuto o suficiente para o estado atual.
-- `.context/SPEC.md`: alinhado e atualizado para o contrato pós-ingestão real.
-- `.context/current-sprint.md`: ainda merece pruning adicional por manter
-  conteúdo histórico do `HTTP 501` e risco de ADR já resolvido.
+- `.context/PLAN.md`: alinhado e focado no baseline vigente e nos próximos
+  passos do Sprint 7.
+- `.context/SPEC.md`: alinhado com o contrato atual de ingestão real,
+  temporal invariance e benchmark/factor boundaries.
+- `.context/current-sprint.md`: alinhado com Step 1 como concluído e Step 2
+  como prioridade atual.
 
-### O que deve ser removido ou comprimido em `current-sprint.md`
-- referência ao `HTTP 501` como marco ainda relevante do snapshot corrente
-- risco residual sobre ausência de ADR para secret-store e strict typing
+### Conclusão de pruning
+Não identifiquei, nesta rodada, clutter histórico crítico o suficiente para
+exigir nova poda imediata nesses três arquivos. O conteúdo remanescente ainda
+serve para explicar o estado presente da arquitetura e os próximos passos
+acionáveis.
 
 ## ADRs: criar novos ou apenas atualizar?
 
-### Não é necessário criar ADR novo para:
-- Cloud-First Secret Management
-- Strict Boundary Interface Typing
+### Não é necessário criar novo ADR neste momento
 
 **Justificativa**
-- Esses temas já estão formalizados por:
+- Secret management já está formalizado por:
   - `.ai/adr/007-cloud-first-secret-management.md`
+- Strict boundary typing já está formalizado por:
   - `.ai/adr/008-strict-boundary-interface-typing.md`
-
-### Novo ADR: opcional, não obrigatório
-**Tema sugerido**
-- `Point-in-Time Retrieval and Historical Ingestion Boundaries`
-
-**Motivação**
-- As mudanças de Sprint 7 já são amplas o suficiente para um registro
-  consolidado:
-  - `AgentState.as_of_date`
-  - retrieval time-aware
-  - `B3HistoricalFetcher`
-  - `HistoricalMarketData`
-  - desbloqueio do `/backtest/run`
-
-**Alternativa mínima**
-- Atualizar os ADRs 002, 009 e 010 sem criar novo ADR.
+- Temporal invariance / point-in-time architecture já está formalizado por:
+  - `.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md`
 
 ## Ordem recomendada de remediação
-1. `README.md`
-2. `setup.md`
-3. `.context/current-sprint.md`
-4. `.ai/adr/009-fastapi-gateway-and-deterministic-backtesting.md`
-5. `.ai/adr/010-api-boundary-hardening-and-honest-scaffolding.md`
-6. `.ai/adr/002-hyde-rag-pipeline.md`
+1. `README.md` — remover ou neutralizar o rótulo `v6`
+2. Reaudit após implementação de Step 2 (CDI/IBOV benchmark inputs)

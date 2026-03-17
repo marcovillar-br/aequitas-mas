@@ -166,18 +166,32 @@ Contrato:
 
 ## 5. Backtesting Determinístico
 
+Reference: `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
+governs temporal synchronization between the Graham path, historical data
+loaders, and RAG/HyDE retrieval so that quantitative and qualitative flows
+share the same `as_of_date` boundary.
+
 ### 5.1 HistoricalDataLoader
 
 `HistoricalDataLoader(start_date, end_date, fetcher=...)` é a fronteira de
 acesso a dados históricos point-in-time.
 
-Método obrigatório:
+Protocolo obrigatório:
 
 ```python
-get_market_data_as_of(
-    ticker: str,
-    current_date: date,
-) -> Optional[HistoricalMarketData]
+@runtime_checkable
+class HistoricalDataLoaderPort(Protocol):
+    def get_market_data_as_of(
+        self,
+        ticker: str,
+        current_date: date,
+    ) -> Optional[HistoricalMarketData]: ...
+
+    def get_benchmark_data_as_of(
+        self,
+        benchmark: BenchmarkType,
+        current_date: date,
+    ) -> Optional[HistoricalBenchmarkData]: ...
 ```
 
 #### Regras invioláveis
@@ -187,6 +201,9 @@ get_market_data_as_of(
    `HistoricalMarketData`.
 3. Não é permitido forward-fill com dados futuros.
 4. Não é permitida interpolação sintética.
+5. Benchmark and factor series must never be shifted beyond `current_date`.
+6. If benchmark data is unavailable for a specific date, the boundary must
+   degrade to `None` and trigger an audit log entry.
 
 ### 5.2 Boundary de ingestão
 
@@ -240,6 +257,47 @@ Se o preço inicial, final ou intermediário estiver ausente:
 Se fundamentos ou taxa livre de risco estiverem ausentes:
 - `vpa`, `lpa` e `selic_rate` permanecem `None`
 - o boundary continua válido sem inventar números
+
+Se benchmark ou fator estiver indisponível para uma data específica:
+- `HistoricalBenchmarkData.value` deve degradar para `None`
+- o replay não pode usar forward-fill nem deslocamento temporal para compensar
+- a ausência deve gerar um audit log entry explícito
+
+### 5.5 Benchmark and Factor Contracts
+
+Benchmarks e séries de fatores devem usar uma fronteira tipada e imutável para
+permitir cálculo futuro de alpha, benchmark-relative performance e opportunity
+cost sem violar a invariância temporal do replay.
+
+```python
+class BenchmarkType(str, Enum):
+    CDI = "CDI"
+    IBOV = "IBOV"
+    SELIC = "SELIC"
+    IPCA = "IPCA"
+
+
+class HistoricalBenchmarkData(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    benchmark: BenchmarkType
+    as_of_date: date
+    value: Optional[float] = None
+    description: str
+```
+
+Regras obrigatórias:
+
+1. `CDI`, `IBOV`, `SELIC` e `IPCA` são tratados como séries point-in-time,
+   nunca como constantes globais atemporais.
+2. O loader deve resolver benchmarks somente para datas válidas em
+   `<= current_date`.
+3. Não é permitido forward-fill ou qualquer deslocamento de benchmark para além
+   de `current_date`.
+4. Se uma série estiver indisponível em uma data específica, `value` deve
+   degradar para `None`.
+5. A indisponibilidade de benchmark ou fator deve ser registrada em audit log
+   para preservar observabilidade do replay.
 
 ## 6. Terminologia Obrigatória
 
