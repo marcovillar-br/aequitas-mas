@@ -1,4 +1,4 @@
-# Aequitas-MAS v6
+# Aequitas-MAS
 
 **Aequitas-MAS** is a multi-agent investment analysis system built around a
 **Cyclic Graph** and an **Iterative Committee** model. Deterministic tools
@@ -111,6 +111,10 @@ setup contract.
 
 - Sprint 7 Step 2: benchmark and factor series coverage
 - Sprint 7 Step 3: dynamic portfolio constraints
+
+Current priority:
+- CDI / IBOV benchmark and factor integration under the same point-in-time
+  `as_of_date` contract used by valuation, retrieval, and replay
 
 ## Quality Gates
 
