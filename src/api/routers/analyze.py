@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.runnables import RunnableConfig
 
@@ -12,6 +13,10 @@ from src.api.dependencies import get_graph_app, get_checkpointer
 from src.api.schemas import AnalyzeRequest, AnalyzeResponse
 
 router = APIRouter(tags=["analysis"])
+logger = structlog.get_logger(__name__)
+_GENERIC_ANALYZE_ERROR = (
+    "Falha interna ao executar a análise. Consulte os logs do servidor para mais detalhes."
+)
 
 
 def _build_analyze_response(
@@ -64,12 +69,18 @@ async def analyze(
     try:
         terminal_state = graph_app.invoke({"target_ticker": request.ticker}, config=config)
     except Exception as exc:
+        logger.error(
+            "api_analyze_invoke_failed",
+            ticker=request.ticker,
+            thread_id=thread_id,
+            error=str(exc),
+        )
         return _build_analyze_response(
             {},
             thread_id=thread_id,
             success=False,
             ticker=request.ticker,
-            error=str(exc),
+            error=_GENERIC_ANALYZE_ERROR,
         )
 
     return _build_analyze_response(

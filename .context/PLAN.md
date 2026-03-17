@@ -49,10 +49,18 @@ Substituir a carga sintética/local do backtesting por ingestão histórica real
 introduzir restrições dinâmicas de alocação sem violar Risk Confinement,
 Controlled Degradation ou Zero Trust.
 
+### Immediate Priority
+
+The first Sprint 7 unlock must be the Historical Data Ingestion Engine.
+`/backtest/run` now follows Honest Scaffolding and returns `HTTP 501 Not Implemented`
+until real historical prices are available through a deterministic ingestion path.
+
 ### Passos propostos
 
 #### Passo 1 — Real Historical Data Adapter
 - Criar adaptador determinístico para ingestão histórica real de preços
+- Prioritize B3-compatible historical price ingestion as the first deliverable
+  needed to unlock `/backtest/run`
 - Manter a fronteira de replay baseada em `as_of_date`
 - Garantir retorno degradado com `Optional[float] = None` quando séries vierem
   incompletas

@@ -98,6 +98,10 @@ def optimize_portfolio(
 Esse patch usa `TypedDict` para evitar retorno solto e documentar explicitamente
 os campos mutáveis do nó.
 
+Mandatory state rule:
+- when `optimize_portfolio(...)` degrades to `None`, the patch must explicitly
+  set `optimization_blocked=True`
+
 ## 3. Secret Management Cloud-First
 
 ### 3.1 Port/Adapter
@@ -142,14 +146,21 @@ Contrato:
 - dependências: grafo compilado + checkpointer via `Depends`
 - `thread_id` determinístico em `RunnableConfig`
 - retorno: `AnalyzeResponse`
+- internal LangGraph / LLM exceptions must be logged server-side
+- client-facing failures must return a stable, sanitized response instead of
+  raw exception text
 
 ### 4.3 Endpoint `/backtest/run`
 
 Contrato:
 - body: `BacktestRequest`
-- retorno: `BacktestResult`
+- until real historical ingestion is integrated, the route returns
+  `HTTP 501 Not Implemented`
+- the route must not execute a degraded replay over empty history and present
+  that output as a usable backtest
 - falhas de validação devem resultar em erro HTTP explícito
-- o endpoint atual usa wiring mínimo para provar a integração do engine
+- `BacktestResult` becomes the public response contract only after historical
+  ingestion is available at the API boundary
 
 ## 5. Backtesting Determinístico
 
@@ -209,7 +220,7 @@ contratos baseados em coleções ou payloads não tipados.
 ## 7. Próxima Extensão Planejada
 
 Sprint 7 focará em:
-- ingestão histórica real
+- ingestão histórica real como prerequisite to unlock `/backtest/run`
 - benchmarks e fatores externos
 - restrições dinâmicas de portfólio
 - possível formalização futura do endpoint `/portfolio`

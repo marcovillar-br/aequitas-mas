@@ -141,3 +141,29 @@ def test_core_consensus_node_missing_optimizer_inputs(
     assert result["core_analysis"].total_risk_score is None
     assert result["core_analysis"].source_urls == ["http://test.com"]
     assert "faltam `portfolio_returns` ou `risk_appetite`" in result["core_analysis"].rational
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.optimize_portfolio")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_node_flags_blocked_when_optimizer_degrades_to_none(
+    mock_llm_cls,
+    mock_optimize_portfolio,
+    mock_prompt,
+) -> None:
+    """Optimizer degradation to None must also mark optimization as blocked."""
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="approve",
+        rationale="Os sinais convergem para aprovação.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+    mock_optimize_portfolio.return_value = None
+
+    result = core_consensus_node(_build_state())
+
+    assert result["optimization_blocked"] is True
+    assert "degradou para None" in result["core_analysis"].rational

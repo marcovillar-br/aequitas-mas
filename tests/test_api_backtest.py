@@ -45,7 +45,7 @@ async def _backtest_asgi_app(scope: dict, receive, send) -> None:
 
 
 def test_backtest_run_returns_backtest_result_shape() -> None:
-    """A valid POST to /backtest/run should return the BacktestResult payload."""
+    """The HTTP route should surface an explicit not-implemented response."""
     client = StableTestClient(_backtest_asgi_app)
 
     response = client.post(
@@ -57,35 +57,8 @@ def test_backtest_run_returns_backtest_result_shape() -> None:
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 501
     payload = response.json()
     assert payload == {
-        "ticker": "PETR4",
-        "start_date": "2024-01-01",
-        "end_date": "2024-01-03",
-        "cumulative_return": None,
-        "max_drawdown": None,
-        "logs": [
-            {
-                "as_of_date": "2024-01-01",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-01: no visible price; degrading metrics to None.",
-            },
-            {
-                "as_of_date": "2024-01-02",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-02: no visible price; degrading metrics to None.",
-            },
-            {
-                "as_of_date": "2024-01-03",
-                "observed_price": None,
-                "period_return": None,
-                "drawdown": None,
-                "note": "[Backtest] PETR4 @ 2024-01-03: no visible price; degrading metrics to None.",
-            },
-        ],
+        "detail": "A ingestão histórica real do backtest ainda não está disponível neste ambiente."
     }

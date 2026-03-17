@@ -23,6 +23,12 @@
    - `HistoricalDataLoader`
    - anti-look-ahead `as_of_date` enforcement
    - `Optional[float] = None` degradation for missing historical values
+7. Post-delivery API and state hardening validated in EOD:
+   - sanitized `/analyze` failures to avoid leaking raw exception text
+   - implemented Honest Scaffolding (`HTTP 501`) on `/backtest/run`
+   - corrected `core_consensus_node` to set `optimization_blocked=True` when
+     optimizer degradation returns `None`
+   - added regression tests for API error sanitization and graph state integrity
 
 ### Architecture Snapshot
 - **Graph model:** `Cyclic Graph` with `Iterative Committee` semantics
@@ -40,9 +46,14 @@
 - [x] Historical replay engine implemented with anti-look-ahead guardrails
 - [x] Stability hardening completed for typed retrieval and optimizer boundaries
 - [x] Secret management abstraction aligned with Zero Trust
+- [x] API boundary hardening completed for sanitized `/analyze` error handling
+- [x] Honest Scaffolding applied to `/backtest/run` with `HTTP 501`
+- [x] `core_consensus_node` now sets `optimization_blocked=True` on optimizer degradation
+- [x] Regression coverage added for API sanitization and graph state integrity
 
 ### Residual Risks
-- Backtesting still uses synthetic/local history wiring at the API boundary
+- Backtesting remains intentionally unavailable at the public API boundary until
+  real historical ingestion is wired
 - `/portfolio` remains intentionally deferred until the dynamic-constraints
   contract is finalized
 - Documentation ADR coverage still needs dedicated records for secret-store and

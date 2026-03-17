@@ -26,7 +26,8 @@ missing or invalid.
 
 - FastAPI gateway under `src/api/` with:
   - `POST /analyze`
-  - `POST /backtest/run`
+  - `POST /backtest/run` (Work in Progress: currently returns `HTTP 501 Not Implemented`
+    until real historical data ingestion is integrated)
 - Startup-scoped dependency injection for the compiled LangGraph app and its
   `BaseCheckpointSaver`
 - Strict boundary typing with immutable models such as:
@@ -99,7 +100,8 @@ setup contract.
 - Sprint 3: DynamoDB persistence, HyDE retrieval, OpenSearch hardening
 - Sprint 4: Core supervisor and deterministic portfolio optimization
 - Sprint 5: observability baseline and dogma enforcement
-- Sprint 6: FastAPI gateway, typed boundary hardening, deterministic backtesting
+- Sprint 6: FastAPI gateway, typed boundary hardening, and deterministic
+  backtesting foundations with Honest Scaffolding on `/backtest/run`
 
 ### Next
 
