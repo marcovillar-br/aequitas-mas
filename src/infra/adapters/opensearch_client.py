@@ -31,6 +31,7 @@ Environment variables:
 """
 
 import os
+from datetime import date
 from typing import Any
 
 import boto3
@@ -163,6 +164,7 @@ class OpenSearchAdapter:
     def search_macro_context(
         self,
         query: str,
+        as_of_date: date,
         top_k: int = 5,
     ) -> list[VectorSearchResult]:
         """
@@ -176,6 +178,8 @@ class OpenSearchAdapter:
         Args:
             query: Natural language query or HyDE-generated hypothetical
                    document to anchor the semantic search.
+            as_of_date: Strict point-in-time reference used to constrain
+                retrieval visibility.
             top_k: Maximum number of documents to return. Defaults to 5.
 
         Returns:
@@ -190,6 +194,7 @@ class OpenSearchAdapter:
             "opensearch_search_started",
             index=self._index,
             top_k=top_k,
+            as_of_date=as_of_date.isoformat(),
             query_preview=query[:80],
         )
 

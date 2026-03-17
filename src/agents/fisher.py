@@ -6,6 +6,7 @@ This module defines the agent responsible for performing qualitative analysis
 based on the Philip Fisher methodology. It analyzes financial news to gauge
 market sentiment and identify potential risks.
 """
+from datetime import date
 from typing import List
 import time
 
@@ -19,6 +20,14 @@ from src.tools.news_fetcher import NewsItem, get_ticker_news
 
 # Initialize structured logger for observability
 logger = structlog.get_logger(__name__)
+
+
+def _resolve_as_of_date(state: AgentState) -> date:
+    """Resolve the point-in-time date from state when available."""
+    as_of_date = getattr(state, "as_of_date", None)
+    if not isinstance(as_of_date, date):
+        raise ValueError("AgentState.as_of_date must be a valid date.")
+    return as_of_date
 
 
 def _format_news_for_prompt(news_items: List[NewsItem]) -> str:
@@ -44,7 +53,8 @@ def fisher_agent(state: AgentState) -> dict:
         A dictionary with the mutated state keys (`qual_analysis` or `audit_log`).
     """
     ticker = state.target_ticker
-    logger.info("agente_fisher_invocado", ticker=ticker)
+    as_of_date = _resolve_as_of_date(state)
+    logger.info("agente_fisher_invocado", ticker=ticker, as_of_date=as_of_date.isoformat())
 
     # Free-Tier Rate Limiting
     logger.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)

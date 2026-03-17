@@ -27,6 +27,7 @@ DIP Enforcement:
 
 import time
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 
 import structlog
@@ -52,6 +53,14 @@ from src.core.interfaces.vector_store import (
 from src.core.state import AgentState, MacroAnalysis
 
 logger = structlog.get_logger(__name__)
+
+
+def _resolve_as_of_date(state: AgentState) -> date:
+    """Resolve the point-in-time date from state when available."""
+    as_of_date = getattr(state, "as_of_date", None)
+    if not isinstance(as_of_date, date):
+        raise ValueError("AgentState.as_of_date must be a valid date.")
+    return as_of_date
 
 # ---------------------------------------------------------------------------
 # Prompt templates
@@ -268,7 +277,13 @@ def create_macro_agent(
         Stage 3: Synthesize a validated MacroAnalysis with real source_urls.
         """
         ticker = state.target_ticker
-        logger.info("macro_agent_started", ticker=ticker, pipeline="HyDE+RAG")
+        as_of_date = _resolve_as_of_date(state)
+        logger.info(
+            "macro_agent_started",
+            ticker=ticker,
+            as_of_date=as_of_date.isoformat(),
+            pipeline="HyDE+RAG",
+        )
 
         # Free-Tier rate limiting before first LLM call.
         logger.debug("macro_agent_rate_limit_applied", sleep_seconds=15)
@@ -298,7 +313,11 @@ def create_macro_agent(
             # Stage 2: Retrieval — k-NN search using the hypothesis as query
             # ------------------------------------------------------------------
             logger.info("macro_retrieval_started", ticker=ticker)
-            retrieved_docs = vector_store.search_macro_context(hyde_text, top_k=5)
+            retrieved_docs = vector_store.search_macro_context(
+                hyde_text,
+                as_of_date=as_of_date,
+                top_k=5,
+            )
             logger.info(
                 "macro_retrieval_completed",
                 ticker=ticker,
