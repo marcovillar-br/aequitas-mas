@@ -28,8 +28,9 @@ The pipeline has three stages:
    density.
 
 2. **Stage 2 — k-NN Retrieval:** The hypothetical document is passed to the injected
-   `VectorStorePort.search_macro_context(hyde_text, top_k=5)`. The vector store returns the
-   top-5 most semantically similar real documents from the indexed corpus.
+   `VectorStorePort.search_macro_context(hyde_text, as_of_date, top_k=5)`. The vector store
+   returns the top-5 most semantically similar real documents from the indexed corpus that are
+   valid for the active point-in-time boundary.
 
 3. **Stage 3 — Grounded Synthesis:** The LLM synthesizes a validated `MacroAnalysis` using
    `with_structured_output(MacroAnalysis)`, grounded in the retrieved chunks. All `source_urls`
@@ -39,6 +40,10 @@ The `VectorStorePort` interface (defined in `src/core/interfaces/vector_store.py
 DIP boundary. `NullVectorStore` guarantees Controlled Degradation in offline/local environments
 by returning an empty list, triggering the LLM to fall back to internal knowledge with all
 `Optional[float]` fields set to `None`.
+
+The retrieval contract is now explicitly time-aware: qualitative retrieval must receive
+`as_of_date` from `AgentState` so that contextual evidence respects the same anti-look-ahead
+boundary enforced across quantitative tooling and backtesting.
 
 ## 3. Consequences
 

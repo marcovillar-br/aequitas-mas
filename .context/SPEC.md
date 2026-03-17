@@ -24,6 +24,7 @@ sequência:
 
 Regras:
 - `model_config = ConfigDict(frozen=True)`
+- `as_of_date: date` é obrigatório como referência temporal point-in-time
 - métricas financeiras ausentes ou inválidas devem degradar para
   `Optional[float] = None`
 - o estado nunca deve transportar `decimal.Decimal`
@@ -46,6 +47,7 @@ class VectorStorePort(Protocol):
     def search_macro_context(
         self,
         query: str,
+        as_of_date: date,
         top_k: int = 5,
     ) -> list[VectorSearchResult]: ...
 ```
@@ -54,11 +56,13 @@ class VectorStorePort(Protocol):
 
 1. O retorno do retrieval é sempre uma coleção tipada de `VectorSearchResult`,
    nunca uma coleção crua baseada em mappings.
-2. Campos ausentes devem degradar para string vazia ou `0.0` já na fronteira
+2. Toda consulta qualitativa deve receber `as_of_date` explicitamente para
+   preservar o boundary temporal do grafo.
+3. Campos ausentes devem degradar para string vazia ou `0.0` já na fronteira
    do adapter.
-3. Falhas de rede ou cluster nunca podem escapar do adapter; o retorno deve ser
+4. Falhas de rede ou cluster nunca podem escapar do adapter; o retorno deve ser
    `[]`.
-4. `NullVectorStore` permanece a implementação local/offline de degradação.
+5. `NullVectorStore` permanece a implementação local/offline de degradação.
 
 ### 2.3 Contrato do Otimizador
 
@@ -154,40 +158,66 @@ Contrato:
 
 Contrato:
 - body: `BacktestRequest`
-- until real historical ingestion is integrated, the route returns
-  `HTTP 501 Not Implemented`
-- the route must not execute a degraded replay over empty history and present
-  that output as a usable backtest
+- a rota está ativa e retorna `BacktestResult`
+- o handler instancia `B3HistoricalFetcher`, injeta o fetcher em
+  `HistoricalDataLoader` e executa `BacktestEngine`
 - falhas de validação devem resultar em erro HTTP explícito
-- `BacktestResult` becomes the public response contract only after historical
-  ingestion is available at the API boundary
+- falhas internas devem ser encapsuladas sem fabricar replay sintético
 
 ## 5. Backtesting Determinístico
 
 ### 5.1 HistoricalDataLoader
 
-`HistoricalDataLoader(start_date, end_date, price_history)` é a fronteira de
-acesso a dados históricos.
+`HistoricalDataLoader(start_date, end_date, fetcher=...)` é a fronteira de
+acesso a dados históricos point-in-time.
 
 Método obrigatório:
 
 ```python
-get_data_as_of(ticker: str, current_date: date) -> Optional[float]
+get_market_data_as_of(
+    ticker: str,
+    current_date: date,
+) -> Optional[HistoricalMarketData]
 ```
 
 #### Regras invioláveis
 
 1. Apenas observações com `observed_at <= current_date` podem ser vistas.
-2. Pontos ausentes retornam `None`.
+2. Pontos ausentes ou inválidos devem degradar para `None` nos campos do
+   `HistoricalMarketData`.
 3. Não é permitido forward-fill com dados futuros.
 4. Não é permitida interpolação sintética.
 
-### 5.2 Engine
+### 5.2 Boundary de ingestão
+
+`HistoricalMarketData` é o contrato imutável de mercado/fundamentos e contém:
+
+- `ticker: str`
+- `as_of_date: date`
+- `price: Optional[float] = None`
+- `book_value_per_share: Optional[float] = None`
+- `earnings_per_share: Optional[float] = None`
+- `selic_rate: Optional[float] = None`
+
+`B3HistoricalFetcher.fetch_as_of(ticker, as_of_date)` é o adapter
+determinístico atual para preencher esse boundary.
+
+### 5.3 Engine
 
 `BacktestEngine` executa um loop diário inclusivo entre `start_date` e
 `end_date`, sempre consultando o loader com o `as_of_date` da iteração.
 
 Saída:
+
+```python
+class BacktestStepLog(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    as_of_date: date
+    observed_price: Optional[float] = None
+    vpa: Optional[float] = None
+    lpa: Optional[float] = None
+    selic_rate: Optional[float] = None
+```
 
 ```python
 class BacktestResult(BaseModel):
@@ -200,12 +230,16 @@ class BacktestResult(BaseModel):
     logs: list[BacktestStepLog]
 ```
 
-### 5.3 Controlled Degradation
+### 5.4 Controlled Degradation
 
 Se o preço inicial, final ou intermediário estiver ausente:
 - métricas derivadas degradam para `None`
 - o replay continua quando possível
 - os logs precisam registrar a degradação explicitamente
+
+Se fundamentos ou taxa livre de risco estiverem ausentes:
+- `vpa`, `lpa` e `selic_rate` permanecem `None`
+- o boundary continua válido sem inventar números
 
 ## 6. Terminologia Obrigatória
 
@@ -219,8 +253,7 @@ contratos baseados em coleções ou payloads não tipados.
 
 ## 7. Próxima Extensão Planejada
 
-Sprint 7 focará em:
-- ingestão histórica real como prerequisite to unlock `/backtest/run`
+Os próximos passos de Sprint 7 focam em:
 - benchmarks e fatores externos
 - restrições dinâmicas de portfólio
-- possível formalização futura do endpoint `/portfolio`
+- eventual formalização futura do endpoint `/portfolio`

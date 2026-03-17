@@ -1,7 +1,7 @@
 # ADR 009: FastAPI Gateway and Deterministic Backtesting Boundary
 
 ## Status
-Accepted and Implemented (Sprint 6, 2026-03-15).
+Accepted and Implemented (Sprint 6, amended in Sprint 7 Step 1 on 2026-03-16).
 
 ## Context
 
@@ -26,9 +26,11 @@ We introduced a FastAPI gateway and a fully deterministic backtesting boundary.
 - the compiled LangGraph app and `BaseCheckpointSaver` are resolved through
   dependency providers
 - `src/tools/backtesting/engine.py` contains `BacktestEngine`
-- `HistoricalDataLoader.get_data_as_of(...)` enforces the anti-look-ahead rule
-- missing historical values degrade to `None`
+- `B3HistoricalFetcher` is the current deterministic real-ingestion adapter
+- `HistoricalDataLoader.get_market_data_as_of(...)` enforces the anti-look-ahead rule
+- missing historical or fundamental values degrade to `None`
 - `BacktestResult` and related models define the typed replay boundary
+- `/backtest/run` is active and wired to the deterministic ingestion path
 
 The backtesting path is deterministic by design:
 - chronological replay only
@@ -50,10 +52,9 @@ The backtesting path is deterministic by design:
 **Negative**
 - The initial API boundary is intentionally conservative and does not yet expose
   every potential portfolio/backtest operation.
-- Real historical ingestion remains a follow-up concern beyond the initial
-  deterministic scaffold.
+- Benchmark/factor coverage and dynamic allocation constraints remain pending
+  beyond the initial real-ingestion delivery.
 
 **Follow-up**
-- Sprint 7 should connect the backtesting boundary to real historical data
-  adapters and dynamic portfolio constraints without weakening the deterministic
-  replay contract.
+- Sprint 7 continues with benchmark/factor inputs and dynamic portfolio
+  constraints without weakening the deterministic replay contract.

@@ -1,7 +1,7 @@
 # ADR 010: API Boundary Hardening and Honest Scaffolding
 
 ## Status
-Accepted
+Accepted, partially superseded in Sprint 7 Step 1
 
 ## Context
 
@@ -37,9 +37,12 @@ The architecture adopts the following rules:
      rather than raw exception text.
 
 2. **Honest Scaffolding**
-   - The `/backtest/run` endpoint must return `HTTP 501 Not Implemented` until
-     the historical data ingestion engine is fully integrated.
-   - The endpoint must not execute a degraded simulation over empty history and
+   - The `/backtest/run` endpoint was required to return `HTTP 501 Not Implemented`
+     until the historical data ingestion engine was fully integrated.
+   - This lock has now been satisfied and removed after deterministic wiring of
+     `B3HistoricalFetcher -> HistoricalDataLoader -> BacktestEngine`.
+   - The active rule that remains is architectural honesty: the endpoint must
+     never execute a degraded simulation over empty or fabricated history and
      present that result as a usable backtest.
 
 3. **Explicit State Patching**
@@ -62,7 +65,7 @@ The architecture adopts the following rules:
   telemetry, and audit trails.
 
 **Negative**
-- The public backtesting API remains intentionally unavailable until real
-  ingestion is wired.
-- Some clients may see stricter behavior compared with earlier scaffold-only
-  responses, but that strictness is architecturally intentional.
+- During Sprint 6, the public backtesting API remained intentionally unavailable
+  until real ingestion was wired.
+- The current system is stricter than naive scaffold-only responses because it
+  preserves truthful failure semantics instead of fabricating quantitative output.

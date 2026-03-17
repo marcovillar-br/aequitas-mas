@@ -81,7 +81,8 @@ Backtesting runs are deterministic and rely on:
 
 - explicit `start_date` / `end_date`
 - chronological replay
-- `HistoricalDataLoader.get_data_as_of(...)`
+- `HistoricalDataLoader.get_market_data_as_of(...)`
+- immutable `HistoricalMarketData` as the point-in-time market/fundamental boundary
 - no look-ahead access to observations later than the active replay date
 - `Optional[float] = None` when historical values are unavailable
 
