@@ -1,6 +1,9 @@
 {
     "python-envs.pythonProjects": [],
     "python-envs.defaultEnvManager": "ms-python.python:system",
+    "chat.agentFilesLocations": {
+        ".ai/agents": true
+    },
 
     /* Shared MCP server configuration lives in .vscode/mcp.json */
 
@@ -17,6 +20,14 @@
         "implement": {
             "description": "Geração de Clean Code seguindo o RPI",
             "instruction": "Follow the SOP in .context/protocol/implement.md. Generate type-hinted Python code (en-US). Ensure SOLID/DRY and include pytest unit tests."
+        },
+        "review": {
+            "description": "Review findings-first para mudanças implementadas",
+            "instruction": "Follow the SOP in .context/protocol/review.md. Review the current change or diff with findings first, then emit a review decision and handoff package."
+        },
+        "audit": {
+            "description": "Auditoria arquitetural e de dogmas antes da entrega",
+            "instruction": "Follow the SOP in .context/protocol/audit.md. Audit the current change for Temporal Invariance, Risk Confinement, Controlled Degradation, Dependency Inversion, and Serialization Safety."
         },
         "clean": {
             "description": "Auditoria de violações SOLID/DRY no arquivo ativo",
