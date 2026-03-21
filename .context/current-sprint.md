@@ -55,8 +55,8 @@
 
 ---
 
-## Sprint 7 — Real Data Ingestion & Dynamic Constraints
-**Status:** DONE
+## Sprint 7 Closed — Real Data Ingestion & Dynamic Constraints
+**Status:** CLOSED
 
 ### Objective
 Replace synthetic/local backtesting inputs with real historical ingestion and
@@ -126,3 +126,9 @@ The official MAS communication protocol is now "Artifact-Driven" via `.ai/handof
 
 ### Objective
 TBD (To be defined in the next planning session).
+
+### Macro-Objectives
+- TBD
+
+### Planned Steps
+- TBD

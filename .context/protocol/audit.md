@@ -1,5 +1,5 @@
 # SOP: Audit Protocol (/audit)
-# Reference: Aequitas-MAS Multi-Agent Delivery Flow
+# Reference: Aequitas-MAS Artifact-Driven Blackboard Architecture
 
 ## Objective
 Run an architectural and dogma audit before delivery or at the end of a multi-agent cycle.
@@ -10,7 +10,7 @@ Run an architectural and dogma audit before delivery or at the end of a multi-ag
    - Temporal Invariance: `as_of_date` remains the shared temporal anchor
    - Risk Confinement: deterministic calculations live in `src/tools/`
    - Controlled Degradation: unavailable numeric evidence degrades to `Optional[float] = None`
-   - Serialization Safety: no `decimal.Decimal` in state or LLM-facing schemas
+   - Serialization Safety: no Decimal-based values in state or LLM-facing schemas
    - Dependency Inversion: no `boto3` in `src/agents/` or `src/core/`
 3. When terminal access is available, prefer evidence-backed checks such as lint, tests, and grep audits.
 4. Produce an explicit PASS/FAIL-style verdict with required remediation items.

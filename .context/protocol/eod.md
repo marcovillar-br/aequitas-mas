@@ -10,7 +10,7 @@ Before generating any summary, the LLM MUST execute and verify the following via
 1. **Linting & Quality:** `poetry run ruff check src/ tests/`
 2. **Logic Validation:** `poetry run pytest tests/`
 3. **Dogma Audit (Grep Security Check):**
-   - **Check A (Risk Confinement):** `grep -rn "decimal.Decimal" src/agents/ src/core/` -> Must be empty.
+   - **Check A (Risk Confinement):** `grep -rn "Decimal" src/agents/ src/core/` -> Must be empty.
    - **Check B (DIP):** `grep -rn "import boto3" src/agents/ src/core/` -> Must be empty.
    - **Check C (Search Library):** `grep -rn "duckduckgo_search" src/` -> Must be empty (Only `ddgs` v2026 is allowed).
 

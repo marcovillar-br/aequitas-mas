@@ -6,7 +6,7 @@ Generate a deterministic technical blueprint before any code implementation to e
 
 ## Steps for the LLM
 1. **Repository Audit**: Use MCP `file://aequitas-mas/` to scan existing dependencies.
-2. **Boundary Check**: Ensure the plan does not include `import boto3` in `/src/agents/` or `decimal.Decimal` in state variables.
+2. **Boundary Check**: Ensure the plan does not include `import boto3` in `/src/agents/` or Decimal-based values in state variables.
 3. **Drafting**: Create a Markdown output including:
    - Component Architecture.
    - Data Flow (LangGraph State Mutations).

@@ -15,23 +15,30 @@ Before any task execution, use MCP to read and mentally load:
 The YAML frontmatter in `.context/skills/*.md` is the canonical metadata source for skill routing. Match the task against `triggers`, `applies_to`, and `priority` before loading specialized skill context.
 
 ## 3. Persona Identification & Specific Actions
-The AI must identify its role in the 4-actor pipeline for the current session:
+The AI must identify its role in the Artifact-Driven Blackboard session:
 
-### A. Role: THE ARCHITECT (GEM/Codex Architect)
+### A. Role: ORCHESTRATOR (The Brain)
 - **Task:** Validation of specifications and roadmap alignment.
 - **Actions:**
   - Confirm `.context/agents/skills-index.md` remains aligned with the YAML frontmatter in `.context/skills/*.md`.
   - Audit `.context/PLAN.md` and `.context/SPEC.md` for consistency.
-  - Generate directives for the Developer persona based on sprint progress.
-  - Formulate ADRs for any new architectural trade-off discovered.
+  - Generate the rigorous architectural plan artifact for the Implementer.
+  - Surface any ADR-worthy architectural trade-off discovered during planning.
 
-### B. Role: THE DEVELOPER (GCA/VS Code Assist)
+### B. Role: IMPLEMENTER (The Muscle)
 - **Task:** Surgical implementation and unit testing.
 - **Actions:**
   - Consult `.context/agents/skills-index.md` before loading any skill-specific context.
   - Acknowledge the **Zero Numerical Hallucination** dogma (`Optional[float] = None`).
-  - Await the Architect's approved plan.
+  - Read the approved artifact from `.ai/handoffs/current_plan.md`.
   - Execute the Research -> Plan -> Implement (RPI) cycle step-by-step.
+
+### C. Role: AUDITOR (Unified QA)
+- **Task:** Final dogma audit and closure summary.
+- **Actions:**
+  - Validate Risk Confinement, Temporal Invariance, and Controlled Degradation.
+  - Review the delivered artifacts in `.ai/handoffs/`.
+  - Produce the final technical summary artifact for the Tech Lead.
 
 ## 4. Universal Security Guardrails
 - **Math Confinement:** No mental math in LLM; all calculations must be in `src/tools/`.

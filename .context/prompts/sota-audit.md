@@ -8,7 +8,7 @@
 
 **2. Risk Confinement and State Management (`src/core/`):**
 * Audit the `src/core/state.py` file. Is the `AgentState` using strict Pydantic (v2.0+) validation with `ConfigDict(frozen=True)`?
-* **CRITICAL CHECK (Controlled Degradation):** Are financial metrics strictly typed as `Optional[float] = None` to handle missing data defensively? Flag any usage of `decimal.Decimal` as a critical blocker, as it breaks LangGraph state serialization.
+* **CRITICAL CHECK (Controlled Degradation):** Are financial metrics strictly typed as `Optional[float] = None` to handle missing data defensively? Flag any Decimal-based state value as a critical blocker, as it breaks LangGraph state serialization.
 * Are qualitative agents enforcing "Ethical Traceability" by explicitly returning source URLs or Document IDs in their schemas?
 * Are there loose primitive types (`str`, `dict`) that could cause hallucination or loss of flow control in LangGraph?
 
