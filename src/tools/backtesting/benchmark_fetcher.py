@@ -107,6 +107,9 @@ class BenchmarkFetcher:
         as_of_date: date,
     ) -> HistoricalBenchmarkData:
         """Resolve the latest visible benchmark value without future leakage."""
+        if isinstance(as_of_date, datetime):
+            raise TypeError("as_of_date must be provided as datetime.date, not datetime.datetime.")
+
         if not isinstance(as_of_date, date):
             raise TypeError("as_of_date must be provided as datetime.date.")
 
@@ -114,9 +117,10 @@ class BenchmarkFetcher:
 
         try:
             rows = self._fetch_series_rows(normalized_benchmark)
-            latest_visible_value = self._extract_latest_visible_value(rows, as_of_date)
-        except Exception:
+        except (requests.RequestException, TypeError, AttributeError):
             latest_visible_value = None
+        else:
+            latest_visible_value = self._extract_latest_visible_value(rows, as_of_date)
 
         return HistoricalBenchmarkData(
             benchmark=normalized_benchmark,
@@ -127,7 +131,10 @@ class BenchmarkFetcher:
 
     def _fetch_series_rows(self, benchmark: BenchmarkType) -> list[dict[str, Any]]:
         """Fetch raw series rows from the configured benchmark provider."""
-        endpoint = self._series_endpoint_by_benchmark[benchmark]
+        endpoint = self._series_endpoint_by_benchmark.get(benchmark)
+        if endpoint is None:
+            raise ValueError(f"Missing benchmark endpoint configuration for {benchmark.value}.")
+
         response = self._http_get(endpoint, timeout=_DEFAULT_TIMEOUT_SECONDS)
         response.raise_for_status()
         payload = response.json()
