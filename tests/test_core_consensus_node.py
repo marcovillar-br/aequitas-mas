@@ -11,6 +11,7 @@ from src.core.state import (
     MacroAnalysis,
     PortfolioOptimizationResult,
 )
+from src.tools.portfolio_constraints import BenchmarkMetrics, DynamicConstraints
 
 
 def _build_state() -> AgentState:
@@ -44,11 +45,15 @@ def _build_state() -> AgentState:
 
 
 @patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.calculate_dynamic_constraints")
+@patch("src.agents.core.fetch_benchmarks_as_of")
 @patch("src.agents.core.optimize_portfolio")
 @patch("src.agents.core.ChatGoogleGenerativeAI")
 def test_core_consensus_node_approved_path(
     mock_llm_cls,
     mock_optimize_portfolio,
+    mock_fetch_benchmarks_as_of,
+    mock_calculate_dynamic_constraints,
     mock_prompt,
 ) -> None:
     """A positive consensus must call the deterministic optimizer."""
@@ -62,6 +67,11 @@ def test_core_consensus_node_approved_path(
     mock_llm_cls.return_value = mock_llm_instance
     mock_prompt.__or__.return_value = mock_chain
 
+    mock_fetch_benchmarks_as_of.return_value = BenchmarkMetrics(cdi_annualized_rate=0.11)
+    mock_calculate_dynamic_constraints.return_value = DynamicConstraints(
+        max_ticker_weight=0.275,
+        min_cash_position=0.125,
+    )
     mock_optimize_portfolio.return_value = PortfolioOptimizationResult(
         weights=[{"ticker": "PETR4", "weight": 1.0}],
         expected_return=0.01,
@@ -71,10 +81,17 @@ def test_core_consensus_node_approved_path(
 
     result = core_consensus_node(_build_state())
 
+    mock_fetch_benchmarks_as_of.assert_called_once_with(_build_state().as_of_date)
+    mock_calculate_dynamic_constraints.assert_called_once_with(
+        0.3,
+        mock_fetch_benchmarks_as_of.return_value,
+    )
     mock_optimize_portfolio.assert_called_once_with(
         tickers=["PETR4"],
         returns=[[0.01], [0.02]],
         risk_appetite=0.3,
+        max_ticker_weight=0.275,
+        min_cash_position=0.125,
     )
     assert result["core_analysis"].recommended_weights[0].ticker == "PETR4"
     assert result["core_analysis"].total_risk_score == 0.2
@@ -83,11 +100,15 @@ def test_core_consensus_node_approved_path(
 
 
 @patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.calculate_dynamic_constraints")
+@patch("src.agents.core.fetch_benchmarks_as_of")
 @patch("src.agents.core.optimize_portfolio")
 @patch("src.agents.core.ChatGoogleGenerativeAI")
 def test_core_consensus_node_blocked_path(
     mock_llm_cls,
     mock_optimize_portfolio,
+    mock_fetch_benchmarks_as_of,
+    mock_calculate_dynamic_constraints,
     mock_prompt,
 ) -> None:
     """A blocked consensus must never call the optimizer."""
@@ -103,6 +124,8 @@ def test_core_consensus_node_blocked_path(
 
     result = core_consensus_node(_build_state())
 
+    mock_fetch_benchmarks_as_of.assert_not_called()
+    mock_calculate_dynamic_constraints.assert_not_called()
     mock_optimize_portfolio.assert_not_called()
     assert result["core_analysis"].recommended_weights == []
     assert result["core_analysis"].total_risk_score is None
@@ -112,11 +135,15 @@ def test_core_consensus_node_blocked_path(
 
 
 @patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.calculate_dynamic_constraints")
+@patch("src.agents.core.fetch_benchmarks_as_of")
 @patch("src.agents.core.optimize_portfolio")
 @patch("src.agents.core.ChatGoogleGenerativeAI")
 def test_core_consensus_node_missing_optimizer_inputs(
     mock_llm_cls,
     mock_optimize_portfolio,
+    mock_fetch_benchmarks_as_of,
+    mock_calculate_dynamic_constraints,
     mock_prompt,
 ) -> None:
     """A positive consensus must degrade safely if optimizer inputs are missing."""
@@ -136,6 +163,8 @@ def test_core_consensus_node_missing_optimizer_inputs(
 
     result = core_consensus_node(state)
 
+    mock_fetch_benchmarks_as_of.assert_not_called()
+    mock_calculate_dynamic_constraints.assert_not_called()
     mock_optimize_portfolio.assert_not_called()
     assert result["core_analysis"].recommended_weights == []
     assert result["core_analysis"].total_risk_score is None
@@ -144,11 +173,15 @@ def test_core_consensus_node_missing_optimizer_inputs(
 
 
 @patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.calculate_dynamic_constraints")
+@patch("src.agents.core.fetch_benchmarks_as_of")
 @patch("src.agents.core.optimize_portfolio")
 @patch("src.agents.core.ChatGoogleGenerativeAI")
 def test_core_consensus_node_flags_blocked_when_optimizer_degrades_to_none(
     mock_llm_cls,
     mock_optimize_portfolio,
+    mock_fetch_benchmarks_as_of,
+    mock_calculate_dynamic_constraints,
     mock_prompt,
 ) -> None:
     """Optimizer degradation to None must also mark optimization as blocked."""
@@ -161,9 +194,21 @@ def test_core_consensus_node_flags_blocked_when_optimizer_degrades_to_none(
     mock_llm_instance.with_structured_output.return_value = MagicMock()
     mock_llm_cls.return_value = mock_llm_instance
     mock_prompt.__or__.return_value = mock_chain
+    mock_fetch_benchmarks_as_of.return_value = BenchmarkMetrics(cdi_annualized_rate=0.11)
+    mock_calculate_dynamic_constraints.return_value = DynamicConstraints(
+        max_ticker_weight=0.275,
+        min_cash_position=0.125,
+    )
     mock_optimize_portfolio.return_value = None
 
     result = core_consensus_node(_build_state())
 
+    mock_optimize_portfolio.assert_called_once_with(
+        tickers=["PETR4"],
+        returns=[[0.01], [0.02]],
+        risk_appetite=0.3,
+        max_ticker_weight=0.275,
+        min_cash_position=0.125,
+    )
     assert result["optimization_blocked"] is True
     assert "degradou para None" in result["core_analysis"].rational

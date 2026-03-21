@@ -59,6 +59,8 @@ def optimize_portfolio(
     tickers: Sequence[str],
     returns: Sequence[Sequence[float]],
     risk_appetite: float,
+    max_ticker_weight: Optional[float] = None,
+    min_cash_position: Optional[float] = None,
 ) -> Optional[PortfolioOptimizationResult]:
     """Compute deterministic constrained minimum-variance portfolio weights.
 
@@ -109,11 +111,37 @@ def optimize_portfolio(
             return None
 
         clipped_appetite = float(np.clip(appetite, 0.0, 1.0))
-        max_weight = max(1.0 / n_assets, 0.35 + (0.65 * clipped_appetite))
+        invested_capital = 1.0
+        if min_cash_position is not None:
+            sanitized_cash_position = float(min_cash_position)
+            if not math.isfinite(sanitized_cash_position):
+                return None
+            invested_capital = float(np.clip(1.0 - sanitized_cash_position, 0.0, 1.0))
+
+        if invested_capital <= 0.0:
+            return None
+
+        default_max_weight = max(1.0 / n_assets, 0.35 + (0.65 * clipped_appetite))
+        if max_ticker_weight is None:
+            max_weight = default_max_weight
+        else:
+            sanitized_max_weight = float(max_ticker_weight)
+            if not math.isfinite(sanitized_max_weight):
+                return None
+            max_weight = float(np.clip(sanitized_max_weight, 0.0, 1.0))
+
+        max_weight = min(max_weight, invested_capital)
+        if max_weight <= 0.0:
+            return None
+
+        if (max_weight * n_assets) + 1e-12 < invested_capital:
+            return None
 
         bounds = tuple((0.0, max_weight) for _ in range(n_assets))
-        constraints = ({"type": "eq", "fun": lambda weights: np.sum(weights) - 1.0},)
-        initial_weights = np.full(n_assets, 1.0 / n_assets, dtype=float)
+        constraints = (
+            {"type": "eq", "fun": lambda weights: np.sum(weights) - invested_capital},
+        )
+        initial_weights = np.full(n_assets, invested_capital / n_assets, dtype=float)
 
         def _objective(weights: np.ndarray) -> float:
             variance = float(weights @ covariance @ weights)
@@ -144,7 +172,7 @@ def optimize_portfolio(
     total_weight = float(np.sum(optimized))
     if total_weight <= 0 or not math.isfinite(total_weight):
         return None
-    optimized = optimized / total_weight
+    optimized = (optimized / total_weight) * invested_capital
 
     portfolio_variance = float(optimized @ covariance @ optimized)
     expected_return = float(expected_returns @ optimized)

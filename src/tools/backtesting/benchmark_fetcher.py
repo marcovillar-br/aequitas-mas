@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import Any, Mapping, Optional
 
 import requests
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.tools.portfolio_constraints import BenchmarkMetrics
+
 _DEFAULT_TIMEOUT_SECONDS = 5
+_CDI_SERIES_CODE = 12
 _DESCRIPTION_BY_BENCHMARK: dict["BenchmarkType", str] = {}
 
 
@@ -171,3 +174,25 @@ class BenchmarkFetcher:
                 latest_visible_value = normalized_value
 
         return latest_visible_value
+
+
+def fetch_benchmarks_as_of(
+    as_of_date: date,
+    *,
+    http_get: Any | None = None,
+) -> BenchmarkMetrics:
+    """Fetch the benchmark snapshot required by dynamic portfolio constraints."""
+    start_date = (as_of_date - timedelta(days=14)).strftime("%d/%m/%Y")
+    end_date = as_of_date.strftime("%d/%m/%Y")
+    cdi_endpoint = (
+        "https://api.bcb.gov.br/dados/serie/"
+        f"bcdata.sgs.{_CDI_SERIES_CODE}/dados"
+        f"?formato=json&dataInicial={start_date}&dataFinal={end_date}"
+    )
+    fetcher = BenchmarkFetcher(
+        http_get=http_get,
+        series_endpoint_by_benchmark={BenchmarkType.CDI: cdi_endpoint},
+    )
+    cdi_snapshot = fetcher.fetch_as_of(BenchmarkType.CDI, as_of_date)
+
+    return BenchmarkMetrics(cdi_annualized_rate=cdi_snapshot.value)
