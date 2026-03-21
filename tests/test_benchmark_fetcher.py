@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 
 import pytest
@@ -54,3 +54,22 @@ def test_benchmark_fetcher_degrades_network_failure_to_none() -> None:
     assert result.as_of_date == date(2024, 1, 2)
     assert result.value is None
     assert result.description == "Point-in-time IBOV reference series."
+
+
+def test_benchmark_fetcher_rejects_datetime_input_deterministically() -> None:
+    """Datetime inputs must fail fast instead of degrading silently."""
+    fetcher = BenchmarkFetcher()
+
+    with pytest.raises(TypeError, match="datetime.date"):
+        fetcher.fetch_as_of(BenchmarkType.CDI, datetime(2024, 1, 2, 12, 0, 0))
+
+
+def test_benchmark_fetcher_fails_fast_when_endpoint_configuration_is_missing() -> None:
+    """Missing benchmark endpoints must raise a clear configuration error."""
+    fetcher = BenchmarkFetcher(series_endpoint_by_benchmark={})
+
+    with pytest.raises(
+        ValueError,
+        match="Missing benchmark endpoint configuration for CDI",
+    ):
+        fetcher.fetch_as_of(BenchmarkType.CDI, date(2024, 1, 2))

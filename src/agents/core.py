@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 
 from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState, CoreAnalysis
+from src.tools.backtesting.benchmark_fetcher import fetch_benchmarks_as_of
+from src.tools.portfolio_constraints import calculate_dynamic_constraints
 from src.tools.portfolio_optimizer import optimize_portfolio
 
 logger = structlog.get_logger(__name__)
@@ -182,10 +184,17 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
         }
 
     try:
+        benchmarks = fetch_benchmarks_as_of(state.as_of_date)
+        dynamic_constraints = calculate_dynamic_constraints(
+            state.risk_appetite,
+            benchmarks,
+        )
         optimization = optimize_portfolio(
             tickers=portfolio_tickers,
             returns=state.portfolio_returns,
             risk_appetite=state.risk_appetite,
+            max_ticker_weight=dynamic_constraints.max_ticker_weight,
+            min_cash_position=dynamic_constraints.min_cash_position,
         )
     except Exception as exc:
         logger.error("core_consensus_optimizer_failed", ticker=ticker, error=str(exc))

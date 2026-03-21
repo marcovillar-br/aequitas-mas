@@ -1,50 +1,38 @@
-# 🗺️ PLAN: Dynamic Portfolio Constraints - Sprint 7 Step 3
+# 🗺️ PLAN: Graph Integration of Dynamic Constraints - Sprint 7 Step 4
 
 ## 1. Overview
-This document outlines the technical blueprint for the Portfolio Constraints tool. It implements deterministic logic for concentration and regime-aware allocation, strictly confined to deterministic tooling and outside the LLM path.
+This document outlines the technical blueprint for integrating the `BenchmarkFetcher` and `DynamicConstraints` deterministic tools directly into the LangGraph execution flow. The core consensus node will act as the orchestration layer to route these deterministic inputs into the portfolio optimizer.
 
 ## 2. Target Components
-- **Target File:** `src/tools/portfolio_constraints.py`
-- **Test File:** `tests/test_portfolio_constraints.py`
+- **Target File:** `src/agents/core.py` (specifically `core_consensus_node`)
+- **Test File:** `tests/test_core_consensus_node.py`
 
-## 3. Interfaces & Data Structures
-- **Inputs:** 
-  - `risk_appetite: Optional[float]`
-  - `benchmarks: BenchmarkMetrics` (containing `cdi_annualized_rate`)
-- **Output:** `DynamicConstraints`
-  - Must be a Pydantic V2 model with `model_config = ConfigDict(frozen=True)`.
-  - Fields: `max_ticker_weight: float` and `min_cash_position: float`.
+## 3. Execution Flow & Integration
+1. **Data Extraction:** The `core_consensus_node` must extract `as_of_date` and `risk_appetite` from the `AgentState`.
+2. **Fetch Benchmarks:** 
+   - Instantiate `BenchmarkFetcher` and call `fetch_as_of(BenchmarkType.CDI, state.as_of_date)`.
+   - Construct the `BenchmarkMetrics` object mapping the fetched CDI value.
+3. **Calculate Constraints:** 
+   - Call `calculate_dynamic_constraints(state.risk_appetite, benchmarks)`.
+4. **Portfolio Optimization Handoff:**
+   - Pass the resulting `max_ticker_weight` and `min_cash_position` from the `DynamicConstraints` object into the `optimize_portfolio` tool/function alongside the existing tickers, returns, and risk appetite.
 
-## 4. Business Logic & Constraints
+## 4. Error Handling & Controlled Degradation
+- **No Crashes:** The LangGraph node must NOT crash if the fetcher degrades.
+- Rely entirely on the graceful degradation already built into `HistoricalBenchmarkData` and `calculate_dynamic_constraints` (which safely handles `None` values).
 
-### 4.1 Risk Sanitization
-- If `risk_appetite` is `None` or invalid (e.g., non-finite), default to a conservative `0.2`.
-- Clamp the finalized `risk_appetite` strictly between `0.0` and `1.0`.
-
-### 4.2 Base Bounds Calculation
-- `max_ticker_weight`: Scales linearly from `0.15` (at risk 0.0) to `0.40` (at risk 1.0).
-- `min_cash_position`: Scales linearly from `0.25` (at risk 0.0) down to `0.0` (at risk 1.0).
-
-### 4.3 Regime Adjustment (Risk Confinement)
-- Evaluate the macroeconomic regime via `benchmarks.cdi_annualized_rate`.
-- If `cdi_annualized_rate > 0.12` (12%):
-  - Force `min_cash_position` to be AT LEAST `0.20`.
-  - Force `max_ticker_weight` to be AT MOST `0.20`.
-  - This override takes precedence over the user's risk appetite.
-
-## 5. Architectural Dogmas
-- **No Decimal:** The use of `decimal.Decimal` is STRICTLY FORBIDDEN.
-- **Finite Validation:** Enforce `math.isfinite()` validation on all calculated constraints before instantiating and returning the `DynamicConstraints` boundary object.
+## 5. Dogmas & Guardrails
+- **No LLM Mental Math:** The supervisor node just routes the deterministic outputs. The LLM must NOT be exposed to or reason about the mathematical values of these constraints.
+- **Immutability:** Preserve `frozen=True` boundaries for all intermediate data structures.
 
 ## 6. Testing Requirements (TDD)
-- **SOTA Unit Tests:** Implement comprehensive tests in `tests/test_portfolio_constraints.py`.
-- **Coverage Needs:**
-  - Base risk logic scaling (min, max, and intermediate values).
-  - Fallback mechanism (handling `None` or invalid risk appetite defaulting to 0.2).
-  - High-CDI regime override (verifying strict adherence to the 20% limits when CDI > 12%).
+- **SOTA Unit Tests:** Update `tests/test_core_consensus_node.py`.
+- Mock `BenchmarkFetcher.fetch_as_of` and `calculate_dynamic_constraints` (or just rely on the pure function if feasible).
+- Assert that `optimize_portfolio` is called with the correct constraint arguments (`max_ticker_weight`, `min_cash_position`).
+- Ensure the state updates correctly under both optimal and degraded network conditions.
 
 ## 7. Definition of Done
-- [ ] `src/tools/portfolio_constraints.py` implemented.
-- [ ] `DynamicConstraints` schema is `frozen=True` and contains no `decimal.Decimal`.
-- [ ] Regime adjustments and risk fallback logic are deterministic and validated via `math.isfinite()`.
-- [ ] Test suite passes with 0 regressions.
+- [ ] `src/agents/core.py` updated to orchestrate fetcher and constraints.
+- [ ] `optimize_portfolio` signature correctly accepts and utilizes the new dynamic boundaries.
+- [ ] LLM isolation maintained (no math in prompts).
+- [ ] All tests pass with proper patching.

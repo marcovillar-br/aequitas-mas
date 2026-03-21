@@ -56,16 +56,18 @@
 ---
 
 ## Sprint 7 — Real Data Ingestion & Dynamic Constraints
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ### Objective
 Replace synthetic/local backtesting inputs with real historical ingestion and
 introduce deterministic dynamic constraints for allocation and replay.
+The official MAS communication protocol is now "Artifact-Driven" via `.ai/handoffs/` due to its superior stability.
 
 ### Step Status
 - Step 1 — Real Historical Ingestion & Backtest Activation: **DONE**
-- Step 2 — Benchmark and Factor Inputs (CDI/IBOV): **CURRENT PRIORITY**
-- Step 3 — Dynamic Concentration and Regime-Aware Constraints: **PENDING**
+- Step 2 — Benchmark and Factor Inputs (CDI/IBOV): **DONE**
+- Step 3 — Dynamic Concentration and Regime-Aware Constraints: **DONE**
+- Step 4 — Graph Integration of Dynamic Constraints: **DONE**
 
 ### Delivered Scope
 1. Step 1 completed with real historical price ingestion delivered via
@@ -100,14 +102,9 @@ introduce deterministic dynamic constraints for allocation and replay.
    - `BacktestEngine`
 8. Honest Scaffolding is fully removed from the backtesting path; the public
    endpoint now reflects the live deterministic integration.
-
-### Current Priority
-Step 2 — Benchmark and Factor Inputs (CDI/IBOV)
-
-### Planned Focus
-1. Benchmark and factor series support for CDI/IBOV
-2. Dynamic concentration and regime-aware allocation constraints
-3. Optional `/portfolio` boundary only after contract finalization
+9. **Artifact-Driven Protocol:** Adopted `.ai/handoffs/` for reliable Master Orchestrator planning and auditing.
+10. **Risk Confinement in Core:** `core_consensus_node` now enforces constraints by fetching the CDI regime and computing dynamic bounds (`max_ticker_weight`, `min_cash_position`) *before* delegating to the deterministic portfolio optimizer.
+11. SOTA Unit testing successfully completed (144 tests passing).
 
 ### Definition of Done
 - [x] real historical price ingestion adapter connected to the backtester
@@ -115,11 +112,17 @@ Step 2 — Benchmark and Factor Inputs (CDI/IBOV)
 - [x] `as_of_date` elevated to a first-class state boundary across quantitative
   and retrieval flows
 - [x] full backtest step logs enriched with fundamental context
-- [ ] benchmark and factor series support implemented
-- [ ] dynamic constraints implemented outside the LLM path
-- [ ] new boundary updates fully documented and regression-tested end-to-end
+- [x] benchmark and factor series support implemented
+- [x] dynamic constraints implemented outside the LLM path
+- [x] new boundary updates fully documented and regression-tested end-to-end
 
 ### Residual Risks
-- Benchmark/factor ingestion coverage remains pending before Sprint 7 can be
-  closed
-- Dynamic allocation constraints remain pending before Sprint 7 can be closed
+- Optional `/portfolio` endpoint boundary remains pending contract finalization.
+
+---
+
+## Sprint 8 — TBD
+**Status:** NOT STARTED
+
+### Objective
+TBD (To be defined in the next planning session).
