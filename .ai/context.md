@@ -21,7 +21,9 @@ Before generating any code, plan, or architectural suggestion, every AI assistan
 
 1. **Read** `.context/rules/coding-guidelines.md` in full. This document is the authoritative source for stack constraints, naming conventions, typing rules, and testing requirements. It overrides any default assistant behavior.
 2. **Confirm** the task scope aligns with the current sprint definition in `.context/current-sprint.md`.
-3. **Verify** the three non-negotiable dogmas described in Section 3 below before writing a single line of code.
+3. **Consult** `.context/agents/skills-index.md` before loading specialized skill context.
+4. **Treat** the YAML frontmatter in `.context/skills/*.md` as the canonical metadata source for skill routing, especially `name`, `title`, `description`, `triggers`, `applies_to`, and `priority`.
+5. **Verify** the three non-negotiable dogmas described in Section 3 below before writing a single line of code.
 
 ---
 

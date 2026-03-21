@@ -1,7 +1,9 @@
 **Execute a Complete Architectural Audit (SOTA Review) on the newly loaded repository. Apply the Aequitas-MAS dogmas and provide a structured diagnostic report evaluating the following pillars:**
 
 **1. Context Mesh and RAG (Topology):**
-* Verify if the `.context/prompts/sod-context-enforcement.md` and `.context/current-sprint.md` files are correctly pointing to the skills in `.context/agents/skills-index.md`.
+* Verify if `.context/prompts/sod-context-enforcement.md`, `.context/prompts/sod-morning-check-in-protocol.md`, `.context/prompts/setup-new-ai-coding-assistant.md`, and `.context/current-sprint.md` are correctly aligned with `.context/agents/skills-index.md`.
+* Verify if `.context/agents/skills-index.md` is correctly aligned with the YAML frontmatter in every file under `.context/skills/`.
+* Flag any hardcoded skill-routing instruction in prompts that diverges from the skill frontmatter or from the routing precedence documented in `skills-index.md`.
 * Confirm if the persona matrix (`.context/domain/personas.md`) is compliant.
 
 **2. Risk Confinement and State Management (`src/core/`):**

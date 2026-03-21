@@ -15,14 +15,16 @@ This project utilizes a 4-actor Cognitive Hybridization topology. All AI assista
 ### A. If you are acting as THE ARCHITECT:
 1. **Context Sync:** Read `.ai/context.md` and all recently created ADRs (e.g., `.ai/adr/005-*.md`).
 2. **Sprint Audit:** Review `.context/current-sprint.md` to identify the current objective and pending tasks.
-3. **Plan Validation:** Verify if `.context/PLAN.md` and `.context/SPEC.md` are up to date. If not, generate the necessary updates.
-4. **Directive Handoff:** Provide the Tech Lead with a clear summary of the next implementation steps for the Developer.
+3. **Routing Audit:** Review `.context/agents/skills-index.md` and confirm it remains aligned with the YAML frontmatter in `.context/skills/*.md`.
+4. **Plan Validation:** Verify if `.context/PLAN.md` and `.context/SPEC.md` are up to date. If not, generate the necessary updates.
+5. **Directive Handoff:** Provide the Tech Lead with a clear summary of the next implementation steps for the Developer.
 
 ### B. If you are acting as THE DEVELOPER:
 1. **Core Reading:** ALWAYS read `.ai/context.md` and the current `.context/SPEC.md` first.
-2. **Dogma Acknowledgement:** Formally acknowledge the Zero Numerical Hallucination dogma (`Optional[float] = None`).
-3. **Awaiting Orders:** Await the human (Tech Lead) to paste the Architect's specific plan/directives.
-4. **Execution Cycle:** Execute `/plan` to map the files, then await human approval to `/implement`.
+2. **Skill Routing Sync:** Read `.context/agents/skills-index.md` and use the YAML frontmatter in `.context/skills/*.md` as the canonical skill metadata source.
+3. **Dogma Acknowledgement:** Formally acknowledge the Zero Numerical Hallucination dogma (`Optional[float] = None`).
+4. **Awaiting Orders:** Await the human (Tech Lead) to paste the Architect's specific plan/directives.
+5. **Execution Cycle:** Execute `/plan` to map the files, then await human approval to `/implement`.
 
 ---
 

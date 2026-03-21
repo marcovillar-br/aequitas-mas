@@ -1,3 +1,32 @@
+---
+name: context-manager
+title: Context Management Skill (Aequitas-MAS)
+description: Skill for context synchronization, documentation parity, compliance auditing, and end-of-day state restoration.
+triggers:
+  - resume context
+  - sync state
+  - state restoration
+  - compliance audit
+  - ssot
+  - end of day
+  - checkpoint
+tags:
+  - context
+  - compliance
+  - documentation
+  - audit
+  - state-management
+applies_to:
+  - documentation
+  - review
+  - session-management
+language: en
+output_language: pt-BR
+priority: high
+status: active
+version: 1
+---
+
 # Context Management Skill (Aequitas-MAS)
 
 Use this skill to ensure alignment between the LLM's active memory, the project documentation, and the codebase. It acts as the guardian of the "Single Source of Truth" (SSOT).

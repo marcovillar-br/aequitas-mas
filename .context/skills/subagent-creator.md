@@ -1,3 +1,31 @@
+---
+name: subagent-creator
+title: Subagent Creator (LangGraph Nodes)
+description: Skill for designing and implementing deterministic LLM-based agents and nodes in the Aequitas-MAS workflow.
+triggers:
+  - create agent
+  - create node
+  - subagent
+  - langgraph node
+  - agent design
+  - system prompt
+tags:
+  - agents
+  - langgraph
+  - llm
+  - orchestration
+  - pydantic
+applies_to:
+  - architecture
+  - implementation
+  - review
+language: en
+output_language: pt-BR
+priority: high
+status: active
+version: 1
+---
+
 # Subagent Creator (LangGraph Nodes)
 
 Use this skill when designing or implementing a new LLM-based agent or node for the Aequitas-MAS workflow.

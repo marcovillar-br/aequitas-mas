@@ -1,3 +1,32 @@
+---
+name: domain-analysis
+title: Domain-Driven Design (DDD) & Architecture
+description: Skill for modeling financial domain complexity, bounded contexts, and strict design rules for investment logic.
+triggers:
+  - financial analysis
+  - domain modeling
+  - ddd
+  - graham
+  - fisher
+  - marks
+  - bounded context
+tags:
+  - domain
+  - finance
+  - ddd
+  - architecture
+  - pydantic
+applies_to:
+  - architecture
+  - modeling
+  - review
+language: en
+output_language: pt-BR
+priority: high
+status: active
+version: 1
+---
+
 # Domain-Driven Design (DDD) & Architecture
 
 Use this skill to model financial complexity, ensuring that investment logic (Graham, Fisher, Marks) is isolated from infrastructure and orchestrated precisely via LangGraph.
