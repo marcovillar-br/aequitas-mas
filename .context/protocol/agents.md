@@ -27,7 +27,7 @@ No volatile chat memory is trusted for complex handoffs. All state transitions, 
 
 ### `CGCA (Aequitas-QA-Auditor)`
 **Role:** The Unified QA Inspector.
-- **Purpose:** Replaces the split Auditor/Reviewer roles to avoid redundancy. Final architectural and dogma audit, regression checking.
+- **Purpose:** Final architectural and dogma audit plus regression checking.
 - **Action:** Reads the generated code and rules, rigorously enforces dogmas (e.g., Risk Confinement, Defensive Typing), and writes the final state to `.ai/handoffs/eod_summary.md`.
 - **Constraint:** Does not perform implementation.
 
@@ -51,5 +51,5 @@ At every phase, the GEM must preserve these invariants:
 1. Temporal Invariance: `as_of_date` remains the shared temporal anchor.
 2. Risk Confinement: deterministic calculations belong in `src/tools/`.
 3. Controlled Degradation: unavailable financial values degrade to `Optional[float] = None`.
-4. Serialization Safety: `decimal.Decimal` is forbidden in state and LLM-facing schemas.
+4. Serialization Safety: Decimal-based values are forbidden in state and LLM-facing schemas.
 5. Dependency Inversion: cloud SDKs (e.g., `boto3`) are forbidden in `src/agents/` and `src/core/`.

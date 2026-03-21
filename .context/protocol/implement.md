@@ -8,7 +8,7 @@ Execute the approved technical plan with surgical precision. Implementation MUST
 1. **Defensive Typing:** Every financial metric in `AgentState` or LLM-facing Pydantic schemas MUST be typed as `Optional[float] = None`.
    - NEVER use default numeric values for missing data.
    - Use `math.isfinite()` validation to reject `NaN` or `Inf`.
-2. **No Decimal in State:** `decimal.Decimal` is FORBIDDEN in any schema flowing through the LangGraph state.
+2. **No Decimal in State:** Decimal-based values are FORBIDDEN in any schema flowing through the LangGraph state.
    - Math tools in `src/tools/` may use `Decimal` but MUST cast to `float | None` before returning values.
 3. **Dependency Inversion (DIP):** Absolute prohibition of Cloud SDKs (e.g., `import boto3`) inside `src/agents/` or `src/core/`. Use adapters in `src/infra/`.
 4. **Risk Confinement (No Mental Math):** LLMs are strictly forbidden from performing calculations. Invoke deterministic Python tools in `src/tools/`.

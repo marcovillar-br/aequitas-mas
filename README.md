@@ -6,6 +6,12 @@ perform all math, typed state models guard every boundary, and specialist
 agents contribute structured checkpoints before the supervisor authorizes any
 portfolio action.
 
+The project now operates with an **Artifact-Driven Blackboard Architecture**
+for human/agent coordination. The operational roles are:
+- **Orchestrator (The Brain):** writes plans to `.ai/handoffs/current_plan.md`
+- **Implementer (The Muscle):** reads the artifact and executes the code/test work
+- **Auditor (Unified QA):** validates the result and writes end-of-day summaries
+
 ## Architecture Overview
 
 The current committee order is:
@@ -22,7 +28,7 @@ The system state is carried through immutable Pydantic v2 models under
 `src/core/state.py`, with `Optional[float] = None` used whenever evidence is
 missing or invalid.
 
-## Delivered Through Sprint 7 Step 1
+## Delivered Through Sprint 7
 
 - FastAPI gateway under `src/api/` with:
   - `POST /analyze`
@@ -104,17 +110,17 @@ setup contract.
 - Sprint 5: observability baseline and dogma enforcement
 - Sprint 6: FastAPI gateway, typed boundary hardening, and deterministic
   backtesting foundations
-- Sprint 7 Step 1: real B3-compatible historical ingestion, time-aware
-  retrieval via `as_of_date`, and active `/backtest/run`
+- Sprint 7: real B3-compatible historical ingestion, benchmark support,
+  dynamic portfolio constraints, and graph integration of deterministic
+  allocation bounds
 
 ### Next
 
-- Sprint 7 Step 2: benchmark and factor series coverage
-- Sprint 7 Step 3: dynamic portfolio constraints
+- Sprint 8: TBD
 
 Current priority:
-- CDI / IBOV benchmark and factor integration under the same point-in-time
-  `as_of_date` contract used by valuation, retrieval, and replay
+- define Sprint 8 macro-objectives and initialize a fresh
+  `.ai/handoffs/current_plan.md` only after pre-sprint grooming
 
 ## Quality Gates
 

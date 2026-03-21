@@ -7,7 +7,7 @@ Execute the following steps with maximum technical rigor based on `.context/prot
    - Run and verify the output of: `poetry run ruff check src/ tests/`
    - Run and verify the output of: `poetry run pytest tests/`
    - **SECURITY CHECK:** Search the entire `/src/agents/` and `/src/core/` for:
-     a) "decimal.Decimal" (Must be absent; use float/Optional[float] for Risk Confinement).
+     a) "Decimal" (Must be absent; use float/Optional[float] for Risk Confinement).
      b) "import boto3" (Must be absent; Cloud SDKs are prohibited in Agent domain logic).
      c) "duckduckgo_search" (Must be absent; strictly use 'from ddgs import DDGS' version 2026).
 

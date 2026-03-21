@@ -27,7 +27,7 @@ Regras:
 - `as_of_date: date` é obrigatório como referência temporal point-in-time
 - métricas financeiras ausentes ou inválidas devem degradar para
   `Optional[float] = None`
-- o estado nunca deve transportar `decimal.Decimal`
+- o estado nunca deve transportar valores baseados em `Decimal`
 
 ### 2.2 Contrato Vetorial
 

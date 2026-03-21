@@ -9,7 +9,10 @@
 
 ## 0. Engineering Team Topology
 The development of new features in Aequitas-MAS follows a strictly defined iterative operating flow of responsibilities to ensure the "Risk Confinement" dogma:
-- **Tech Lead (Human):** Orchestrator, architectural reviewer, and final decision-maker.
+- **Tech Lead (Human):** Event Loop, final decision-maker, and delivery owner.
+- **Orchestrator (The Brain):** Writes the architectural blueprint into `.ai/handoffs/current_plan.md`.
+- **Implementer (The Muscle):** Executes the approved artifact and writes code/tests with no scope drift.
+- **Auditor (Unified QA):** Verifies dogmas, regressions, and artifact completeness before closure.
 - **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
 - **GEM (Architect):** Responsible for designing specifications (`SPEC.md`) and execution plans (`PLAN.md`).
 - **Google AI Studio (Scientist):** Sandboxed environment for validating prompts, temperature, and LLM parameters prior to codebase integration.
