@@ -6,8 +6,11 @@ Before writing any code, plan, or analysis, you MUST read the following files in
 
 1. **`.ai/context.md`** — Canonical SSOT: project identity, architecture, full dogma definitions, and key entry points. This is the single authoritative source for all architectural rules.
 2. **`.context/rules/coding-guidelines.md`** — Authoritative rules for stack, typing, naming, testing, and security. These rules override all default Claude behaviors.
+3. **`.context/agents/skills-index.md`** — Central routing map for specialized skills. Use it to decide when a task requires additional context from `.context/skills/`.
 
-Do not proceed with any task until both files have been read and their constraints are active in your working context.
+Treat the YAML frontmatter in `.context/skills/*.md` as the canonical metadata source for skill routing, especially `name`, `title`, `triggers`, `applies_to`, and `priority`.
+
+Do not proceed with any task until these files have been read and their constraints are active in your working context.
 
 ---
 

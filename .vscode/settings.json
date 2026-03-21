@@ -4,10 +4,6 @@
     "chat.agentFilesLocations": {
         ".ai/agents": true
     },
-
-    /* Shared MCP server configuration lives in .vscode/mcp.json */
-
-    // 1. Slash command mapping (RPI flow)
     "gpt.codex.slashCommands": {
         "research": {
             "description": "Busca técnica externa via DDGS v2026",
@@ -42,8 +38,6 @@
             "instruction": "Re-index the Aequitas-MAS repository context for updated logic or modules."
         }
     },
-
-    // 2. Prompting guidelines and constraints
     "gpt.codex.customInstructions": [
         "Always reference Aequitas-MAS core protocols before generating agent logic.",
         "Every generated agent MUST include status() and get_context() methods.",
@@ -51,7 +45,5 @@
         "Stop generation immediately after the logic block to avoid redundant comments.",
         "Strictly adhere to the Zero Numerical Hallucination dogma: Financial metrics MUST be Optional[float] = None if not explicitly found in context. NEVER guess or perform mental math."
     ],
-
-    // 3. GitHub and commit integration
     "github.copilot.commitMessageGeneration.template": "feat/fix/refactor: brief description following Conventional Commits"
 }

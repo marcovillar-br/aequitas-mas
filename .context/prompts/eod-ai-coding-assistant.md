@@ -18,6 +18,7 @@ Execute the following steps with maximum technical rigor based on `.context/prot
    - Analyze all files modified in this session.
    - Generate a technical markdown summary focusing on:
      - **Architecture (DDD):** Changes in domain services or agent responsibilities.
+     - **Context Routing:** Any updates to `.context/agents/skills-index.md`, `.context/skills/*.md`, or prompts that consume skill metadata.
      - **Pydantic Schemas:** New or modified models in `src/core/state.py` or agent-specific schemas.
      - **Graph State Mutations:** Explain how the `LangGraph` State is affected by today's changes.
      - **Tooling:** New deterministic tools implemented (e.g., in `src/tools/`).

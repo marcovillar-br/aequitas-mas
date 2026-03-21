@@ -6,6 +6,11 @@ As the Developer AI, execute a comprehensive Documentation Audit and Pruning (Do
    - Domain & Skills: `.context/domain/personas.md`, `.context/agents/skills-index.md` and all files inside `.context/skills/`.
    - ADRs: All files inside `.ai/adr/`.
 
+1.1. SKILL METADATA CONSISTENCY:
+   - Treat the YAML frontmatter in `.context/skills/*.md` as the canonical metadata source for each skill.
+   - Verify that `.context/agents/skills-index.md` is aligned with each skill file's `name`, `title`, `description`, `triggers`, `applies_to`, and `priority`.
+   - Flag any prompt under `.context/prompts/` that still hardcodes skill routing rules inconsistent with the skill frontmatter or the routing index.
+
 2. STRICT RELEVANCE DIRECTIVE (Pruning):
    - For `current-sprint.md`, `PLAN.md`, and `SPEC.md`: These files MUST contain ONLY highly relevant information. 
    - Identify and flag for removal any historical clutter, deprecated architectural ideas, abandoned features, or overly verbose logs of early Sprints that no longer serve the system's current operational context. 
@@ -24,3 +29,4 @@ As the Developer AI, execute a comprehensive Documentation Audit and Pruning (Do
    - List every `.md` file that contains outdated information or violates the "Strict Relevance" directive.
    - Specify the exact divergence or bloat, and propose the necessary rewrite or deletion.
    - Identify if any new Architecture Decision Records (ADRs) need to be created (e.g., an ADR for Cloud-First Secret Management or Strict Interface Typing).
+   - Include a dedicated section for "Skill Routing Drift" covering mismatches between skill frontmatter, `skills-index.md`, and prompts that consume skill metadata.

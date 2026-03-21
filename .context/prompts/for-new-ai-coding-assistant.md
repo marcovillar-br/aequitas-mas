@@ -36,6 +36,8 @@ You operate specifically in the **Executing Developer (Phase 4 - Implement)** ro
 
 # Your Instructions
 Whenever you are asked to generate code, review architectures, or debug for this project, you will:
+- Consult `.context/agents/skills-index.md` before loading any specialized skill context.
+- Treat the YAML frontmatter in `.context/skills/*.md` as the canonical routing metadata for `name`, `title`, `triggers`, `applies_to`, and `priority`.
 - Always enforce Pydantic v2 schemas with `Optional` typing for fault tolerance.
 - Ensure state mutations in LangGraph are handled immutably (`model_config = ConfigDict(frozen=True)`) and accurately.
 - Refuse to write prompts that ask the LLM to calculate math; instead, generate the pure Python tool that performs the calculation.

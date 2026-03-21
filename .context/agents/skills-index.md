@@ -3,25 +3,33 @@
 ## Purpose
 This document serves as the central registry for all specialized skills available to the AI Assistant. When interacting with the user, cross-reference the user's request with this index to dynamically load the appropriate skill context from the `.context/skills/` directory.
 
+The YAML frontmatter of each skill file is the canonical source for metadata such as `name`, `title`, `description`, `triggers`, `applies_to`, and `priority`. This index is a human-readable routing map derived from that metadata.
+
 ## Registered Skills
 
-| Skill Identifier | Trigger / Intent | File Path |
-| :--- | :--- | :--- |
-| **AWS Advisor** | Cloud infrastructure, Terraform, AWS DynamoDB, OpenSearch. | `.context/skills/aws-advisor.md` |
-| **Context Manager** | Context synchronization, compliance audit, state restoration, SSOT alignment. | `.context/skills/context-manager.md` |
-| **Domain Analysis** | Financial theory, Value Investing (Graham, Fisher, Marks), Economic indicators. | `.context/skills/domain-analysis.md` |
-| **Playwright** | Web scraping, data extraction from B3, dynamic DOM interaction. | `.context/skills/playwright.md` |
-| **Security & Compliance** | Secret management, zero-trust enforcement, code vulnerabilities. | `.context/skills/security.md` |
-| **Subagent Creator** | Structuring new LangGraph nodes, creating new agents, writing system prompts. | `.context/skills/subagent-creator.md` |
-| **Tech Design Doc** | Authoring Technical Design Documents (TDD) before implementation — scope, schemas, routing diagrams. | `.context/skills/tech-design-doc.md` |
-| **GitHub Manager** | Git commands, Semantic Commits (Conventional Commits), Branching, PRs. | `.context/skills/github-manager.md` |
+| Name | Title | Primary Triggers | Applies To | Priority | File Path |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `aws-advisor` | AWS Cloud Infrastructure Advisor | cloud infrastructure, aws, terraform, cdk, fargate | architecture, implementation, review | high | `.context/skills/aws-advisor.md` |
+| `context-manager` | Context Management Skill (Aequitas-MAS) | resume context, sync state, compliance audit, ssot | documentation, review, session-management | high | `.context/skills/context-manager.md` |
+| `domain-analysis` | Domain-Driven Design (DDD) & Architecture | financial analysis, ddd, graham, fisher, marks | architecture, modeling, review | high | `.context/skills/domain-analysis.md` |
+| `github-manager` | GitHub & Version Control Manager | git, github, branch, commit, pull request | implementation, collaboration, release-management | medium | `.context/skills/github-manager.md` |
+| `playwright` | Playwright Automation & Data Extraction | scraping, playwright, browser automation, data extraction | implementation, data-collection, review | medium | `.context/skills/playwright.md` |
+| `security` | Security, Compliance & FinOps | security, compliance, finops, secret management | architecture, implementation, review | high | `.context/skills/security.md` |
+| `subagent-creator` | Subagent Creator (LangGraph Nodes) | create agent, create node, subagent, langgraph node | architecture, implementation, review | high | `.context/skills/subagent-creator.md` |
+| `tech-design-doc` | Technical Design Document (TDD) Creator | tdd, technical design, pre-implementation, mermaid | planning, architecture, documentation | high | `.context/skills/tech-design-doc.md` |
 
 ## Routing Protocol
 1. Identify the core domain of the user's prompt.
-2. If the domain matches a "Trigger", silently ingest the corresponding `.md` file into your working memory before generating the response.
-3. If multiple skills apply (e.g., writing tests for a web scraper), prioritize the strictest constraint (e.g., `tech-design-doc.md` before implementation, `subagent-creator.md` for new nodes).
+2. Match the request against the skill frontmatter, prioritizing `triggers`, `applies_to`, and `priority`.
+3. If the domain matches a registered trigger, silently ingest the corresponding `.md` file into working memory before generating the response.
+4. If multiple skills apply, prioritize the strictest or most foundational constraint first.
+5. Recommended precedence for overlapping cases:
+   - `tech-design-doc.md` before implementation when the task is still in planning or specification.
+   - `subagent-creator.md` when creating or changing LangGraph nodes or agent personas.
+   - `security.md` whenever a task touches secrets, runtime isolation, compliance, or cost risk.
 
 ## Topology Validation
 - Registry scope is exhaustive for every `.md` file currently present under `.context/skills/`.
 - All listed paths resolve to valid local files under `.context/skills/`.
+- Registry entries must remain aligned with each skill file's YAML frontmatter.
 - This registry is the canonical routing source referenced by `.context/prompts/sod-context-enforcement.md`.
