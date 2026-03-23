@@ -121,14 +121,18 @@ The official MAS communication protocol is now "Artifact-Driven" via `.ai/handof
 
 ---
 
-## Sprint 8 — TBD
-**Status:** NOT STARTED
+## Sprint 8 — Portfolio API & Dynamic Constraints Finalization
+**Status:** IN PROGRESS
 
 ### Objective
-TBD (To be defined in the next planning session).
+Finalize the dynamic-constraints contract and expose the deterministic portfolio optimizer via a new `/portfolio` API endpoint, maintaining strict Risk Confinement and temporal boundaries.
 
 ### Macro-Objectives
-- TBD
+- Finalize the typed data contracts for dynamic constraints (request/response boundaries).
+- Implement and wire the `POST /portfolio` endpoint in the FastAPI gateway.
+- Guarantee that the endpoint operates entirely outside the LLM path, relying solely on deterministic tooling.
 
 ### Planned Steps
-- TBD
+- Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
+- Step 2: TDD implementation of the `/portfolio` route and DI wiring.
+- Step 3: End-to-end integration and API boundary hardening validation.

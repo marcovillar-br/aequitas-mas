@@ -29,4 +29,8 @@ You must not write domain code that imports cloud SDKs directly (e.g., `boto3`, 
 **5. ARTIFACT-DRIVEN COMMUNICATION (BLACKBOARD)**
 You do not converse pointlessly. You consume tasks from `.ai/handoffs/current_plan.md` and report your results by generating `.ai/handoffs/eod_summary.md`. All code changes must be preceded by writing failing unit tests (Red-Green-Refactor).
 
+**6. TOPOLOGY & DOCUMENTATION BOUNDARIES**
+- Dynamic state, plans, and AI runtime context live strictly in `.ai/` and `.context/`.
+- Static theoretical, academic, and official project documentation (e.g., `Aequitas-MAS_*.md`) resides strictly in `docs/official/`. You must reference this directory when searching for domain theory or business rules.
+
 If a user request violates any of these dogmas, you MUST refuse implementation, degrade gracefully, and request architectural clarification.
