@@ -57,6 +57,31 @@ def _coerce_optional_unit_interval(value: Any) -> Optional[float]:
     return coerced
 
 
+def _coerce_finite_float(value: Any, *, field_name: str) -> float:
+    """Safely coerce boundary numerics and reject NaN/Inf."""
+    try:
+        coerced = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be a valid float.") from exc
+
+    if not math.isfinite(coerced):
+        raise ValueError(f"{field_name} must be a finite float.")
+
+    return coerced
+
+
+def _normalize_ticker_list(value: Any) -> list[str]:
+    """Normalize and validate ticker collections for portfolio requests."""
+    if not isinstance(value, list):
+        raise ValueError("tickers must be provided as a list of strings.")
+
+    normalized = [_normalize_ticker(item) for item in value]
+    if not normalized:
+        raise ValueError("tickers must not be empty.")
+
+    return normalized
+
+
 class AnalyzeRequest(BaseModel):
     """Inbound request contract for triggering a single ticker analysis."""
 
@@ -198,4 +223,98 @@ class BacktestRequest(BaseModel):
         """Ensure the request declares a valid inclusive replay window."""
         if self.start_date > self.end_date:
             raise ValueError("start_date must be less than or equal to end_date.")
+        return self
+
+
+class PortfolioRequest(BaseModel):
+    """Inbound request contract for deterministic portfolio optimization."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tickers: list[str] = Field(
+        ...,
+        description="Ordered B3 ticker universe to optimize.",
+        min_length=1,
+    )
+    returns: list[float] | list[list[float]] = Field(
+        ...,
+        description="Historical returns as a 1D single-asset vector or 2D matrix.",
+        min_length=1,
+    )
+    risk_appetite: float = Field(
+        ...,
+        description="Risk appetite in the [0, 1] interval.",
+        ge=0.0,
+        le=1.0,
+    )
+    max_ticker_weight: float | None = Field(
+        default=None,
+        description="Optional upper bound per ticker in the [0, 1] interval.",
+        ge=0.0,
+        le=1.0,
+    )
+    min_cash_position: float | None = Field(
+        default=None,
+        description="Optional minimum cash reserve in the [0, 1] interval.",
+        ge=0.0,
+        le=1.0,
+    )
+
+    @field_validator("tickers", mode="before")
+    @classmethod
+    def normalize_tickers(cls, value: Any) -> list[str]:
+        """Normalize ticker collections before pattern-sensitive validation."""
+        return _normalize_ticker_list(value)
+
+    @field_validator("risk_appetite", "max_ticker_weight", "min_cash_position", mode="before")
+    @classmethod
+    def validate_boundary_floats(cls, value: Any, info) -> float | None:
+        """Reject non-finite numeric values at the API boundary."""
+        if value is None:
+            return None
+        return _coerce_finite_float(value, field_name=info.field_name)
+
+    @model_validator(mode="after")
+    def validate_returns_and_constraints(self) -> "PortfolioRequest":
+        """Ensure the optimizer contract is structurally coherent before routing."""
+        if not self.returns:
+            raise ValueError("returns must not be empty.")
+
+        asset_count = len(self.tickers)
+        returns_value = self.returns
+
+        if isinstance(returns_value[0], list):
+            matrix = returns_value
+            if not matrix:
+                raise ValueError("returns must not be empty.")
+            row_lengths = {len(row) for row in matrix}
+            if 0 in row_lengths:
+                raise ValueError("returns rows must not be empty.")
+            if len(row_lengths) != 1:
+                raise ValueError("returns rows must have consistent lengths.")
+
+            width = next(iter(row_lengths))
+            height = len(matrix)
+            if width != asset_count and height != asset_count:
+                raise ValueError("2D returns input must align with ticker count on one axis.")
+
+            for row in matrix:
+                for item in row:
+                    _coerce_finite_float(item, field_name="returns")
+        else:
+            vector = returns_value
+            if asset_count != 1:
+                raise ValueError(
+                    "1D returns input is only valid when optimizing a single ticker."
+                )
+            for item in vector:
+                _coerce_finite_float(item, field_name="returns")
+
+        if self.max_ticker_weight is not None and self.min_cash_position is not None:
+            invested_capital = 1.0 - self.min_cash_position
+            if (self.max_ticker_weight * asset_count) + 1e-12 < invested_capital:
+                raise ValueError(
+                    "max_ticker_weight and min_cash_position define an impossible constraint set."
+                )
+
         return self

@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from src.api.dependencies import get_checkpointer
 from src.api.routers.analyze import router as analyze_router
 from src.api.routers.backtest import router as backtest_router
+from src.api.routers.portfolio import router as portfolio_router
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     )
     application.include_router(analyze_router)
     application.include_router(backtest_router)
+    application.include_router(portfolio_router)
     return application
 
 

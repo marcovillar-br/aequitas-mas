@@ -1,4 +1,4 @@
-> **DEPRECATION NOTICE (Sprint 7):** This ADR has been superseded by the migration to the **Artifact-Driven Blackboard Architecture** and the Superpowers SDLC framework. The `.context/protocol/` directory and its associated files (`sod.md`, `research.md`, `plan.md`, `implement.md`, `eod.md`) have been archived. The operational flow is now strictly governed by `.ai/aidd-001-unified-system-prompt.md` and the active skills in `.ai/skills/sdd-*/`. This document remains for historical purposes only.
+> **DEPRECATION NOTICE (Sprint 7):** This ADR has been superseded by the migration to the **Artifact-Driven Blackboard Architecture** and the Superpowers SDLC framework. The legacy protocol directory and its associated files have been archived. The operational flow is now strictly governed by `.ai/aidd-001-unified-system-prompt.md` and the active skills in `.ai/skills/sdd-*/`. This document remains for historical purposes only.
 
 # ADR 006: Agnostic Operational Flow
 
@@ -31,13 +31,8 @@ harder to keep architectural dogmas synchronized.
 
 Aequitas-MAS will adopt an **Agnostic Operational Flow** rooted in repository-owned protocols.
 
-- Canonical operational SOPs live under `.context/protocol/`.
-- The standardized flow is:
-  - `sod.md`
-  - `research.md`
-  - `plan.md`
-  - `implement.md`
-  - `eod.md`
+- Canonical operational SOPs are managed through the Artifact-Driven Blackboard (previously in legacy protocol folders).
+- The standardized flow operates via Superpowers skills (`sdd-writing-plans`, `sdd-implementer`, `sdd-auditor`).
 - Assistant-facing prompts must reference these SOPs instead of private or tool-specific command
   directories.
 - The IDE MCP workspace must use absolute POSIX paths in WSL for repository mapping stability.
@@ -51,8 +46,7 @@ This decision improves architectural reliability and operational consistency.
   surfaces without semantic drift.
 - **WSL Stability:** absolute POSIX MCP URIs reduce ambiguity during repository indexing and local
   file resolution.
-- **Auditability:** EOD, SOD, and RPI flow become inspectable artifacts instead of implicit IDE
-  behavior.
+- **Auditability:** Planning, implementation, and audit phases become inspectable artifacts (e.g., `current_plan.md`, `eod_summary.md`) instead of implicit IDE behavior.
 - **Dogma Integrity:** prompt wrappers now defer to protocol files that encode the current
   Risk Confinement, DIP, Defensive Typing, and search-library constraints.
 
@@ -71,7 +65,7 @@ This decision improves architectural reliability and operational consistency.
 
 ## 5. Guardrails
 
-- `.context/protocol/` is the canonical source of truth for repository operational flow.
+- The Blackboard files (`.ai/handoffs/`) are the canonical source of truth for repository operational flow.
 - EOD grep checks must remain aligned with coding guidelines:
   - `decimal.Decimal` forbidden in `src/agents/` and `src/core/`
   - `import boto3` forbidden in `src/agents/` and `src/core/`
@@ -81,8 +75,14 @@ This decision improves architectural reliability and operational consistency.
 
 ## 6. Migration Notes
 
-The migration from `.claude/commands/` to `.context/protocol/` is complete for the repository
+The initial migration from `.claude/commands/` to repository-owned protocols is complete for the repository
 workflow defined in Sprint 3.4.
 
 Residual follow-up should focus on keeping prompt wrappers thin and ensuring any future assistant
-integration references the protocol directory first.
+integration references the official manual and unified system prompt first.
+
+## 7. Formal Deprecation and Migration (Sprint 7/8)
+
+This operational flow has been formally deprecated in favor of the Artifact-Driven Blackboard Architecture. The rigid RPI command structures have been replaced by the `sdd-writing-plans`, `sdd-implementer`, and `sdd-auditor` skills.
+
+For the active canonical workflow, refer to `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_Blackboard_SDD_v3_pt-BR.md` and `.ai/aidd-001-unified-system-prompt.md`.

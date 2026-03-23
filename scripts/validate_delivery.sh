@@ -82,6 +82,7 @@ collect_changed_files() {
 
     git diff --name-only --cached >>"$tmp_file" || true
     git diff --name-only >>"$tmp_file" || true
+    git ls-files --others --exclude-standard >>"$tmp_file" || true
 
     if [[ ! -s "$tmp_file" ]]; then
         if git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
@@ -97,7 +98,7 @@ collect_changed_files() {
 
 is_full_path() {
     local path="$1"
-    [[ "$path" =~ ^(src/agents/|src/core/|src/tools/|src/api/|main\.py$) ]]
+    [[ "$path" =~ ^(src/agents/|src/core/|src/tools/|src/api/|main\.py$|pyproject\.toml$|poetry\.lock$) ]]
 }
 
 is_standard_path() {
@@ -107,11 +108,17 @@ is_standard_path() {
 
 is_light_path() {
     local path="$1"
-    [[ "$path" =~ ^(\.context/|README\.md$|setup\.md$|CLAUDE\.md$) ]]
+    [[ "$path" =~ ^(docs/official/|\.ai/adr/|\.ai/handoffs/|\.ai/skills/|\.context/|README\.md$|setup\.md$|CLAUDE\.md$|\.ai/aidd-[^/]+\.md$) ]]
+}
+
+is_known_path() {
+    local path="$1"
+    is_full_path "$path" || is_standard_path "$path" || is_light_path "$path"
 }
 
 infer_mode() {
     local path
+    local all_light=1
 
     if [[ "$MODE" != "auto" ]]; then
         EFFECTIVE_MODE="$MODE"
@@ -137,7 +144,23 @@ infer_mode() {
         fi
     done
 
-    EFFECTIVE_MODE="light"
+    for path in "${CHANGED_FILES[@]}"; do
+        if ! is_light_path "$path"; then
+            all_light=0
+        fi
+
+        if ! is_known_path "$path"; then
+            EFFECTIVE_MODE="standard"
+            return
+        fi
+    done
+
+    if [[ "$all_light" -eq 1 ]]; then
+        EFFECTIVE_MODE="light"
+        return
+    fi
+
+    EFFECTIVE_MODE="standard"
 }
 
 print_changed_files() {
@@ -179,6 +202,7 @@ run_standard_gate() {
     local -a shell_files=()
     local run_pytest=0
     local run_terraform_fmt=0
+    local run_self_smoke=0
 
     echo
     echo "[1] Synchronizing Poetry environment..."
@@ -193,6 +217,9 @@ run_standard_gate() {
         fi
         if [[ "$path" =~ ^scripts/.*\.sh$ ]]; then
             shell_files+=("$path")
+        fi
+        if [[ "$path" == "scripts/validate_delivery.sh" ]]; then
+            run_self_smoke=1
         fi
     done
 
@@ -210,13 +237,20 @@ run_standard_gate() {
         terraform fmt -check -recursive infra/terraform
     fi
 
+    if [[ "$run_self_smoke" -eq 1 ]]; then
+        echo
+        echo "[4] Running validate_delivery self-smoke..."
+        ./scripts/validate_delivery.sh --help
+        ./scripts/validate_delivery.sh --mode light
+    fi
+
     if [[ "$run_pytest" -eq 1 ]]; then
         echo
-        echo "[4] Running test suite because tests changed..."
+        echo "[5] Running test suite because tests changed..."
         poetry run pytest tests/
     fi
 
-    if [[ ${#shell_files[@]} -eq 0 && "$run_terraform_fmt" -eq 0 && "$run_pytest" -eq 0 ]]; then
+    if [[ ${#shell_files[@]} -eq 0 && "$run_terraform_fmt" -eq 0 && "$run_pytest" -eq 0 && "$run_self_smoke" -eq 0 ]]; then
         echo
         echo "[2] No additional standard checks were required for the detected file set."
     fi
