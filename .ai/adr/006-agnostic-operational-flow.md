@@ -1,7 +1,9 @@
+> **DEPRECATION NOTICE (Sprint 7):** This ADR has been superseded by the migration to the **Artifact-Driven Blackboard Architecture** and the Superpowers SDLC framework. The `.context/protocol/` directory and its associated files (`sod.md`, `research.md`, `plan.md`, `implement.md`, `eod.md`) have been archived. The operational flow is now strictly governed by `.ai/aidd-001-unified-system-prompt.md` and the active skills in `.ai/skills/sdd-*/`. This document remains for historical purposes only.
+
 # ADR 006: Agnostic Operational Flow
 
 ## Status
-Accepted and Implemented (Sprint 3.4, 2026-03-14).
+Accepted and Implemented (Sprint 3.4, 2026-03-14). (Deprecated in Sprint 7).
 Validated in repository quality gate via:
 - `bash scripts/check_mcp_prerequisites.sh`
 - `poetry run ruff check src/ tests/`
