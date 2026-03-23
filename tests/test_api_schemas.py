@@ -7,7 +7,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from src.api.schemas import AnalyzeRequest, AnalyzeResponse, BacktestRequest
+from src.api.schemas import AnalyzeRequest, AnalyzeResponse, BacktestRequest, PortfolioRequest
 from src.core.state import GrahamMetrics
 
 
@@ -76,4 +76,43 @@ def test_backtest_request_rejects_inverted_date_window() -> None:
             ticker="VALE3",
             start_date=date(2024, 2, 1),
             end_date=date(2024, 1, 31),
+        )
+
+
+def test_portfolio_request_normalizes_tickers_and_accepts_optional_constraints() -> None:
+    """Portfolio requests should normalize tickers and preserve finite constraints."""
+    request = PortfolioRequest(
+        tickers=[" petr4 ", " vale3 "],
+        returns=[
+            [0.01, 0.02],
+            [0.015, 0.018],
+            [0.012, -0.01],
+        ],
+        risk_appetite=0.4,
+        max_ticker_weight=0.6,
+        min_cash_position=0.1,
+    )
+
+    assert request.tickers == ["PETR4", "VALE3"]
+    assert request.risk_appetite == 0.4
+    assert request.max_ticker_weight == 0.6
+    assert request.min_cash_position == 0.1
+
+
+def test_portfolio_request_rejects_impossible_constraint_combination() -> None:
+    """Impossible capital-allocation constraints must fail fast at the API boundary."""
+    with pytest.raises(
+        ValidationError,
+        match="impossible constraint set",
+    ):
+        PortfolioRequest(
+            tickers=["PETR4", "VALE3"],
+            returns=[
+                [0.01, 0.02],
+                [0.015, 0.018],
+                [0.012, -0.01],
+            ],
+            risk_appetite=0.4,
+            max_ticker_weight=0.2,
+            min_cash_position=0.1,
         )
