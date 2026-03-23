@@ -181,6 +181,7 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
             "audit_log": [f"[Core/Consensus] {rationale}"],
             "messages": [AIMessage(content=rationale, name="core_consensus")],
             "executed_nodes": ["core_consensus"],
+            "optimization_blocked": True,
         }
 
     try:
@@ -208,6 +209,7 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
             "audit_log": [f"[Core/Consensus] {rationale}"],
             "messages": [AIMessage(content=rationale, name="core_consensus")],
             "executed_nodes": ["core_consensus"],
+            "optimization_blocked": True,
         }
 
     if optimization is None:

@@ -135,4 +135,4 @@ Finalize the dynamic-constraints contract and expose the deterministic portfolio
 ### Planned Steps
 - [x] Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
 - [x] Step 2: TDD implementation of the `/portfolio` route and DI wiring.
-- [ ] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).
+- [x] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).

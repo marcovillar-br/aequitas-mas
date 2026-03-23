@@ -169,6 +169,9 @@ def test_core_consensus_node_missing_optimizer_inputs(
     assert result["core_analysis"].recommended_weights == []
     assert result["core_analysis"].total_risk_score is None
     assert result["core_analysis"].source_urls == ["http://test.com"]
+    assert result["optimization_blocked"] is True
+    assert result["messages"][0].content == result["core_analysis"].rational
+    assert "faltam `portfolio_returns` ou `risk_appetite`" in result["audit_log"][0]
     assert "faltam `portfolio_returns` ou `risk_appetite`" in result["core_analysis"].rational
 
 
@@ -211,4 +214,46 @@ def test_core_consensus_node_flags_blocked_when_optimizer_degrades_to_none(
         min_cash_position=0.125,
     )
     assert result["optimization_blocked"] is True
+    assert result["messages"][0].content == result["core_analysis"].rational
+    assert "degradou para None" in result["audit_log"][0]
     assert "degradou para None" in result["core_analysis"].rational
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.calculate_dynamic_constraints")
+@patch("src.agents.core.fetch_benchmarks_as_of")
+@patch("src.agents.core.optimize_portfolio")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_node_flags_blocked_when_optimizer_raises(
+    mock_llm_cls,
+    mock_optimize_portfolio,
+    mock_fetch_benchmarks_as_of,
+    mock_calculate_dynamic_constraints,
+    mock_prompt,
+) -> None:
+    """Optimizer exceptions must degrade safely with an immutable blocked patch."""
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="approve",
+        rationale="Os sinais convergem para aprovação.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+    mock_fetch_benchmarks_as_of.return_value = BenchmarkMetrics(cdi_annualized_rate=0.11)
+    mock_calculate_dynamic_constraints.return_value = DynamicConstraints(
+        max_ticker_weight=0.275,
+        min_cash_position=0.125,
+    )
+    mock_optimize_portfolio.side_effect = RuntimeError("covariance exploded")
+
+    result = core_consensus_node(_build_state())
+
+    assert result["core_analysis"].recommended_weights == []
+    assert result["core_analysis"].total_risk_score is None
+    assert result["core_analysis"].source_urls == ["http://test.com"]
+    assert result["optimization_blocked"] is True
+    assert result["messages"][0].content == result["core_analysis"].rational
+    assert "falhou" in result["core_analysis"].rational
+    assert "covariance exploded" in result["audit_log"][0]

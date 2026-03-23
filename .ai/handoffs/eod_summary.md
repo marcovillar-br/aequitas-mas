@@ -1,27 +1,30 @@
 ---
-summary_id: eod-official-documentation-modernization
+summary_id: eod-sprint-8-step-3-graph-integration
 plan_source: .ai/handoffs/current_plan.md
 status: completed
 tests_run:
-  - N/A (Documentation Only)
+  - poetry run pytest tests/test_core_consensus_node.py -q
+  - poetry run pytest tests/test_graph_routing.py -q
+  - poetry run pytest tests/test_graph.py -q
 dogmas_respected:
+  - risk-confinement
+  - controlled-degradation-and-type-safety
   - artifact-driven-communication
-  - topology-boundaries
 ---
 
 ## 1. Implementation Summary
 
-Executed the plan to modernize the official SDD Workflow Documentation, permanently replacing the fragmented RPI flow with the Artifact-Driven Blackboard architecture.
+Executed Sprint 8 Step 3 to harden `core_consensus_node` in `src/agents/core.py` against deterministic optimizer degradation.
 
-- Created `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_Blackboard_SDD_v3_pt-BR.md` (v3.0) outlining the new unified roles (Orchestrator, Implementer, Auditor) and the `.ai/handoffs/` lifecycle.
-- Instructed the removal of the legacy v2.0 RPI manual.
-- Appended Section 7 to `.ai/adr/006-agnostic-operational-flow.md`, explicitly declaring its deprecation and linking to the new v3.0 manual.
+- Added a shared blocked-result builder so every fallback path returns an immutable `CoreAnalysis` with `recommended_weights=[]`, preserved `source_urls`, an explicit `audit_log` entry, a matching `AIMessage`, and `optimization_blocked=True`.
+- Closed the remaining failure gaps for missing optimizer inputs and optimizer exceptions, keeping the LLM out of any weight-generation path.
+- Expanded unit coverage in `tests/test_core_consensus_node.py` for missing inputs, optimizer `None` degradation, and raised exceptions.
 
 ## 2. Validation
 
-- The new manual perfectly maps the Superpowers `sdd-*` pipeline.
-- ADR 006 now correctly cross-references the updated file to strengthen historical traceability.
+- All RED-GREEN-REFACTOR assertions passed in the focused `core_consensus_node` test suite.
+- Graph-level regression tests stayed green, confirming the hardened blocked patch remains compatible with routing and state contracts.
 
 ## 3. Notes
 
-The documentation debt regarding the legacy RPI methodology is resolved. The project documentation formally embodies the Artifact-Driven Blackboard standard.
+Sprint 8 Step 3 is complete. The graph now fails closed whenever deterministic optimization cannot run, and the degradation rationale remains fully auditable in state.
