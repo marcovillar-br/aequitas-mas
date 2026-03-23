@@ -12,7 +12,7 @@ The project follows a strict responsibility model to preserve Risk Confinement a
 - **Tech Lead (Human):** final decision-maker, architectural reviewer, and delivery approver.
 - **GEM (Architect):** owner of `PLAN.md`, `SPEC.md`, and architectural direction.
 - **Scientist (Google AI Studio / sandbox):** validates prompts, temperature, and LLM behavior before integration.
-- **GCA (Developer / IDE executor):** implements approved work inside the IDE using the RPI flow (`Research -> Plan -> Implement`) without making architectural decisions.
+- **GCA (Developer / IDE executor):** implements approved work inside the IDE using the Artifact-Driven Blackboard (SDD) methodology (via `.ai/handoffs/current_plan.md`) without making architectural decisions.
 
 ## 2. Prerequisites
 

@@ -1,14 +1,14 @@
 ---
 name: tech-design-doc
 title: Technical Design Document (TDD) Creator
-description: Skill for drafting technical design documents before implementation using the RPI methodology.
+description: Skill for drafting technical design documents before implementation using the Artifact-Driven Blackboard workflow.
 triggers:
   - tdd
   - technical design
   - architecture plan
   - pre-implementation
   - mermaid
-  - rpi
+  - sdd
 tags:
   - design
   - architecture
@@ -23,12 +23,12 @@ language: en
 output_language: pt-BR
 priority: high
 status: active
-version: 1
+version: 2
 ---
 
 # Technical Design Document (TDD) Creator
 
-Use this skill to draft technical specifications and architecture plans BEFORE writing any code, strictly following the RPI (Research -> Plan -> Implement) methodology.
+Use this skill to draft technical specifications and architecture plans BEFORE writing any code, strictly following the Artifact-Driven Blackboard workflow.
 
 ## 1. TDD Mandatory Structure
 Every design document must include:

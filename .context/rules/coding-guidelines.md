@@ -16,7 +16,7 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
 - **GEM (Architect):** Responsible for designing specifications (`SPEC.md`) and execution plans (`PLAN.md`).
 - **Google AI Studio (Scientist):** Sandboxed environment for validating prompts, temperature, and LLM parameters prior to codebase integration.
-- **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `PLAN.md` using the RPI (Research -> Plan -> Implement) methodology.
+- **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `current_plan.md` using the Artifact-Driven Blackboard (SDD) methodology via Superpowers skills.
 
 ## 1. Stack & Frameworks
 - **Core**: Python 3.12+.
@@ -45,7 +45,7 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Framework**: `pytest` and `pytest-asyncio`.
 - **Financial Logic**: Mandatory unit tests for deterministic mathematical functions (e.g., Graham calculations).
 - **Graph Routing**: LangGraph state machine routing must be tested using `unittest.mock.patch`. Ensure transitions between nodes are validated without triggering the underlying LLM APIs (to avoid costs and flaky tests).
-- **Methodology**: Follow the **RPI** flow (Research -> Plan -> Implement) for all new features.
+- **Methodology**: Follow the **Artifact-Driven Blackboard (SDD)** flow using Superpowers skills (`sdd-writing-plans`, `sdd-implementer`, `sdd-auditor`) for all new features.
 
 ## 6. Security & Cloud Agnosticism
 - **Dependency Inversion:** Cloud SDKs (e.g., `import boto3`) are strictly forbidden inside the `/src/agents/` directory. Cloud interactions must be abstracted via adapters in `/src/infra/`.
