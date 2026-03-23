@@ -1,35 +1,27 @@
 ---
-summary_id: eod-sprint-8-portfolio-api-step-1
+summary_id: eod-official-documentation-modernization
 plan_source: .ai/handoffs/current_plan.md
 status: completed
 tests_run:
-  - poetry run pytest tests/test_api_schemas.py tests/test_api_portfolio_router.py tests/test_api_portfolio.py -q
-  - poetry run pytest tests/test_api_backtest_router.py tests/test_api_analyze_router.py tests/test_api_dependencies.py -q
-  - poetry run pytest tests/test_api_* -q
+  - N/A (Documentation Only)
 dogmas_respected:
-  - risk-confinement
-  - type-safety
-  - temporal-invariance
-  - inversion-of-control
   - artifact-driven-communication
+  - topology-boundaries
 ---
 
 ## 1. Implementation Summary
 
-Executed the Sprint 8 Blackboard plan for the deterministic `POST /portfolio` API boundary.
+Executed the plan to modernize the official SDD Workflow Documentation, permanently replacing the fragmented RPI flow with the Artifact-Driven Blackboard architecture.
 
-- Added `PortfolioRequest` in `src/api/schemas.py` with immutable Pydantic V2 configuration, finite-float validation, ticker normalization, and fail-fast validation for impossible constraint combinations.
-- Added `src/api/routers/portfolio.py` exposing `POST /portfolio` and delegating exclusively to `optimize_portfolio(...)`.
-- Wired the new router into `src/api/app.py`.
-- Added focused tests for schema validation, router success/failure behavior, and application route registration.
+- Created `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_Blackboard_SDD_v3_pt-BR.md` (v3.0) outlining the new unified roles (Orchestrator, Implementer, Auditor) and the `.ai/handoffs/` lifecycle.
+- Instructed the removal of the legacy v2.0 RPI manual.
+- Appended Section 7 to `.ai/adr/006-agnostic-operational-flow.md`, explicitly declaring its deprecation and linking to the new v3.0 manual.
 
 ## 2. Validation
 
-- The new route returns `PortfolioOptimizationResult` on success.
-- Degraded optimizer outcomes now surface as HTTP 400 without leaking internal implementation details.
-- Unexpected internal failures are sanitized and logged.
-- `poetry run pytest tests/test_api_* -q` passed with 18 tests green.
+- The new manual perfectly maps the Superpowers `sdd-*` pipeline.
+- ADR 006 now correctly cross-references the updated file to strengthen historical traceability.
 
 ## 3. Notes
 
-No LLM path was introduced in the portfolio endpoint. All numerical optimization remains isolated in `src/tools/portfolio_optimizer.py`, preserving Risk Confinement.
+The documentation debt regarding the legacy RPI methodology is resolved. The project documentation formally embodies the Artifact-Driven Blackboard standard.

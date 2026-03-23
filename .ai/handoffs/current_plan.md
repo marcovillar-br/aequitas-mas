@@ -1,28 +1,27 @@
-# 🗺️ Current Plan: Sprint 8 - Portfolio API Architecture (Step 1)
+# 🗺️ Current Plan: Modernize Official SDD Workflow Documentation
 
 ## 1. Objective
-Finalize the dynamic-constraints contract by designing and implementing the `POST /portfolio` API boundary. This endpoint will expose the deterministic portfolio optimization tool safely, adhering to the project's Risk Confinement and Strict Typing dogmas.
+Update the official engineering manual and legacy operational ADR to fully reflect the Aequitas-MAS Artifact-Driven Blackboard architecture, formally deprecating the fragmented RPI (Research, Plan, Implement) toolchain.
 
 ## 2. Scope & Constraints
-- **API Boundary:** Add `POST /portfolio` to the FastAPI gateway (`src/api/`).
-- **Contracts:** Define `PortfolioRequest` using immutable Pydantic V2 models (`ConfigDict(frozen=True)`). Return types must map cleanly to the existing `PortfolioOptimizationResult`.
-- **Determinism:** The endpoint must exclusively invoke the deterministic Python tool (`src/tools/portfolio_optimizer.py`). NO LLM invocation is permitted in this path.
-- **Validation:** Inputs with invalid shapes, missing parameters, or impossible constraint combinations must degrade gracefully or fail fast with HTTP 422/400.
-- **Risk Confinement:** Ensure no `decimal.Decimal` is exposed or returned at the state boundaries.
+- **Target 1:** `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_RPI_SDD_v2_pt-BR.md`
+  - Upgrade version from v2.0 to v3.0.
+  - Replace legacy RPI terminology with the new Superpowers SDD Workflow (Orchestrator, Implementer, Auditor).
+  - Update artifact references to `.ai/handoffs/current_plan.md` and `.ai/handoffs/eod_summary.md`.
+- **Target 2:** `.ai/adr/006-agnostic-operational-flow.md`
+  - Ensure the deprecation notice comprehensively explains the shift to the Artifact-Driven Blackboard and cross-references the new manual.
 
 ## 3. Implementation Steps (For SDD Implementer)
 
-### Step 1: Data Contract Definition
-- [ ] Create the `PortfolioRequest` schema in the appropriate location (e.g., `src/api/schemas.py` or existing contract files).
-- [ ] Review alignment with `PortfolioOptimizationResult` for the response generation.
+### Step 1: Update the Official Manual (pt-BR)
+- [ ] Rename the file to remove "RPI" and add "Blackboard" (e.g., `Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_Blackboard_SDD_v3_pt-BR.md`).
+- [ ] Rewrite Section 2 to define the new unified roles: Orchestrator (The Brain), Implementer (The Muscle), and Auditor (Unified QA).
+- [ ] Rewrite Section 3 to map the Blackboard workflow phases (Planning -> Implementation -> Audit) instead of Research -> Plan -> Implement.
 
-### Step 2: TDD & Routing (RED-GREEN-REFACTOR)
-- [ ] Write failing unit tests (`pytest`) for the `/portfolio` endpoint validating both successful optimization and failure degradation.
-- [ ] Implement the FastAPI route handler, injecting or wrapping the `optimize_portfolio` tool.
-- [ ] Ensure internal errors are sanitized according to the Honest Scaffolding rule (ADR-010).
+### Step 2: Reinforce ADR 006 Deprecation
+- [ ] Review `.ai/adr/006-agnostic-operational-flow.md` and append a concluding section formally linking to the v3.0 manual in `docs/official/` for historical traceability.
 
 ## 4. Definition of Done
-- `POST /portfolio` is active and successfully wired to `optimize_portfolio(...)`.
-- 100% test coverage for the new route, including HTTP failure scenarios.
-- Zero regressions in existing `/analyze` and `/backtest/run` endpoints.
-- Code strictly respects `float` and `math.isfinite()` validation (no `Decimal` leakage).
+- The official pt-BR manual correctly instructs users on the Artifact-Driven Blackboard topology.
+- All references to the legacy RPI flow are removed from active instructional text.
+- The legacy ADR 006 is firmly closed and cross-referenced with the new topology.

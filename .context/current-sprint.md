@@ -133,6 +133,6 @@ Finalize the dynamic-constraints contract and expose the deterministic portfolio
 - Guarantee that the endpoint operates entirely outside the LLM path, relying solely on deterministic tooling.
 
 ### Planned Steps
-- Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
-- Step 2: TDD implementation of the `/portfolio` route and DI wiring.
-- Step 3: End-to-end integration and API boundary hardening validation.
+- [x] Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
+- [ ] Step 2: TDD implementation of the `/portfolio` route and DI wiring.
+- [ ] Step 3: End-to-end integration and API boundary hardening validation.
