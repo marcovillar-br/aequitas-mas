@@ -1,39 +1,41 @@
 ---
-summary_id: eod-spec-thesis-cot-boundaries-002
-plan_source: .ai/handoffs/current_plan.md
+summary_id: eod-implementer-skills-index-injection-001
 status: completed
+target_files:
+  - ".ai/skills/sdd-implementer/SKILL.md"
+  - ".ai/agents/aequitas-mas-implementer.md"
 tests_run:
-  - ./scripts/validate_delivery.sh --mode auto
+  - "Manual diff review"
 dogmas_respected:
-  - risk-confinement
-  - controlled-degradation-and-type-safety
-  - temporal-invariance
-  - artifact-driven-communication
+  - controlled-degradation
+  - topology-boundaries
+  - language-protocol
 ---
 
 ## 1. Implementation Summary
 
-Executed the Blackboard plan to update `.context/SPEC.md` and close the
-architectural drift between the roadmap and the active technical contracts.
+Executed the requested meta-prompt update so the implementer now loads the
+specialized skill routing registry during context initialization.
 
-- Expanded the deterministic `HistoricalMarketData` boundary to include
-  `piotroski_f_score` and `altman_z_score`.
-- Added explicit contract language that both indicators must be calculated only
-  by deterministic Python tooling in `src/tools/`, never by the LLM.
-- Hardened the `Thesis-CoT Reporting` section so the MAS output is defined as a
-  structured Pydantic JSON consumed by a decoupled Presentation Adapter for
-  charts and PDF generation.
-- Prohibited ASCII charts, visual markdown tables, and direct PDF formatting by
-  the LLM.
+- Updated `.ai/skills/sdd-implementer/SKILL.md` so Context Initialization now
+  requires loading `.context/agents/skills-index.md` alongside the existing
+  system prompt and coding guideline inputs.
+- Updated `.ai/agents/aequitas-mas-implementer.md` so the agent role now
+  instructs the implementer to read `.ai/handoffs/current_plan.md` and
+  `.context/agents/skills-index.md` as its first action.
+- Preserved the existing RED-GREEN-REFACTOR sequence, Risk Confinement, and
+  Defensive Typing constraints without expanding scope beyond markdown prompts.
 
 ## 2. Validation
 
-- Documentation diff hygiene passed through `./scripts/validate_delivery.sh --mode auto`.
-- The update stayed documentation-only and did not alter runtime code, graph
-  topology, or deterministic math boundaries.
-- The Definition of Done items in `.ai/handoffs/current_plan.md` are now fully satisfied.
+- The change scope remained limited to markdown prompt files and this Blackboard
+  handoff artifact.
+- All referenced paths remain explicitly anchored to
+  `.ai/handoffs/current_plan.md` and `.context/agents/skills-index.md`.
+- No Python files, runtime modules, or mutable topology rules were changed.
 
-## 3. Notes
+## 3. Outcome
 
-This execution was constrained to `.context/SPEC.md` plus the required EOD
-artifact, preserving the Blackboard implementation scope exactly as approved.
+The implementer skill and agent definition now both mandate loading the central
+skills routing index before execution, improving plan delivery for tasks that
+depend on secondary specialized skills such as security or playwright.

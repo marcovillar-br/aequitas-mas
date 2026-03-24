@@ -18,7 +18,7 @@ As the Tech Lead, you do not write implementation code directly. Your role is to
 
 You must erase previous methodologies relying on scattered `.context/protocol/` files. The new operational topology is:
 * **The Brain (Rules):** `.ai/aidd-001-unified-system-prompt.md` enforces Risk Confinement.
-* **The Knowledge Base:** `.context/rules/` and `.context/domain/` house our standard operating procedures (e.g., DDD personas, `structlog` usage, `ddgs` library constraint).
+* **The Knowledge Base:** `.context/rules/`, `.context/domain/`, and `.context/agents/` house our standard operating procedures (e.g., DDD personas, `structlog` usage, `ddgs` library constraint) and the central `.context/agents/skills-index.md` routing map for specialized skills.
 * **The Blackboard (State):** `.ai/handoffs/` is the only medium where subagents communicate.
 * **The Engine:** The `Superpowers` framework manages the RPI (Research, Plan, Implement) cycle via strict custom skills.
 

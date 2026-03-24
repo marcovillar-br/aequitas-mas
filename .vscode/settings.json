@@ -2,7 +2,8 @@
     "python-envs.pythonProjects": [],
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "chat.agentFilesLocations": {
-        ".ai/agents": true
+        ".ai/agents": true,
+        ".context/agents": true
     },
     "gpt.codex.slashCommands": {
         "research": {
