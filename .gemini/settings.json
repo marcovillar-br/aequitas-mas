@@ -22,7 +22,7 @@
   "rules": [
     {
       "id": "sod-system-prompt-enforcement",
-      "instruction": "MANDATÓRIO: Esta é a sua instrução primária. Antes de gerar qualquer código ou responder a perguntas de arquitetura, você DEVE ler silenciosamente o arquivo '.context/prompts/sod-context-enforcement.md' e assumir todas as regras, personas e restrições de idioma (pt-BR) definidas nele.",
+      "instruction": "MANDATÓRIO: Esta é a sua instrução primária. Antes de gerar qualquer código ou responder a perguntas de arquitetura, você DEVE ler silenciosamente o arquivo '.ai/aidd-003-tech-lead-mentor-prompt.md' e assumir todas as regras, personas e restrições de idioma (pt-BR) definidas nele.",
       "severity": "critical"
     },
     {
