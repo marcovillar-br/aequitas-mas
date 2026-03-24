@@ -1,5 +1,41 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 10 — AWS Serverless Deployment & Deterministic Presentation
+**Status:** DONE
+
+### Objective
+Enable FinOps-aligned "Scale-to-Zero" AWS deployment for the FastAPI gateway using Mangum, and finalize the `Thesis-CoT` presentation layer by implementing a deterministic PDF Generator adapter that consumes the strictly typed `ThesisReportPayload`.
+
+### Planned Steps
+- [x] Step 1: Initialize the AWS Lambda entrypoint (`Mangum` wrapper) for the FastAPI application.
+- [x] Step 2: Implement the `PdfPresentationAdapter` inside `src/infra/adapters/` adhering to the `PresentationAdapter` boundary.
+- [x] Step 3: Establish the deterministic report generation logic (HTML-to-PDF) ensuring zero LLM visual hallucinations.
+
+### Delivered Scope
+1. `src/api/serverless.py` now exposes a minimal AWS Lambda-compatible
+   `Mangum` handler wrapping the shared FastAPI `app`.
+2. `src/infra/adapters/pdf_presentation_adapter.py` now implements the
+   `PresentationAdapter` protocol as a deterministic downstream consumer of
+   `ThesisReportPayload`.
+3. The presentation adapter renders stable HTML and a lightweight mock PDF byte
+   stream without introducing heavy native rendering dependencies, preserving
+   the 250MB Lambda size hypothesis for now.
+4. `pyproject.toml` now declares `mangum` as a standard dependency for the
+   serverless entrypoint.
+5. Unit coverage now validates both the serverless handler contract and the
+   deterministic presentation adapter behavior.
+
+### Definition of Done
+- [x] `src/api/serverless.py` exposes a generic ASGI handler compatible with AWS Lambda API Gateway integrations.
+- [x] `PdfPresentationAdapter` correctly implements `render_report(payload: ThesisReportPayload) -> bytes`.
+- [x] No mathematical or visual rendering logic is leaked into the LLM prompts or domain layers.
+- [x] The presentation layer safely consumes frozen Pydantic payloads.
+
+### Residual Risks
+- Managing heavy visual dependencies (e.g., WeasyPrint, Matplotlib) within an AWS Lambda layer could risk exceeding deployment size limits (250MB unzipped). Dependency grouping needs careful FinOps evaluation.
+
+---
+
 ## Sprint 6 — API Gateway, Boundary Hardening & Backtesting
 **Status:** DONE
 
@@ -136,3 +172,52 @@ Finalize the dynamic-constraints contract and expose the deterministic portfolio
 - [x] Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
 - [x] Step 2: TDD implementation of the `/portfolio` route and DI wiring.
 - [x] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).
+
+---
+
+## Sprint 9 — Quantitative Hardening, CoT Prompts & Presentation Boundaries
+**Status:** CLOSED
+
+### Objective
+Complete the Sprint 9 roadmap by delivering deterministic quantitative
+hardening, the specialist CoT prompt layer, and the foundational observability
+and presentation boundaries required for the next deployment phase.
+
+### Step Status
+- Step 1 — Quantitative Tools & CoT Prompt Refinement: **DONE**
+- Step 2 — Telemetry, Audit IoC & Presentation Boundaries: **DONE**
+
+### Delivered Scope
+1. `src/tools/fundamental_metrics.py` now exposes deterministic Piotroski
+   F-Score and Altman Z-Score helpers with controlled degradation.
+2. `tests/tools/test_fundamental_metrics.py` validates the new deterministic
+   financial tools through RED-GREEN-REFACTOR coverage.
+3. New CoT prompt artefacts were created for Graham, Fisher, and Marks under
+   `.ai/prompts/`, each with explicit anti-math guardrails.
+4. `src/tools/b3_fetcher.py` now enforces an intraday fallback only for
+   `as_of_date == date.today()`, strictly preventing look-ahead bias for past
+   dates when historical closes are missing.
+5. `src/core/interfaces/audit_store.py` formalizes the immutable
+   `DecisionPathEvent` boundary and the `AuditStorePort` protocol.
+6. `src/core/interfaces/presentation.py` formalizes the immutable
+   `ThesisReportPayload` boundary and the `PresentationAdapter` protocol for
+   deterministic downstream rendering.
+7. `src/core/telemetry.py` and
+   `src/infra/adapters/opensearch_audit_adapter.py` now degrade safely on
+   telemetry or audit-shipping failures, protecting the FastAPI and graph
+   execution paths from observability outages.
+
+### Definition of Done
+- [x] Deterministic Piotroski and Altman tools implemented in `src/tools/`
+- [x] Unit tests added and passing for the new financial tooling
+- [x] Graham, Fisher, and Marks CoT prompts created under `.ai/prompts/`
+- [x] Intraday fallback hardened with strict anti-look-ahead behavior
+- [x] `AuditStorePort` and `PresentationAdapter` boundaries implemented with
+      Pydantic V2 immutable payloads
+- [x] Telemetry and audit adapters degrade safely without crashing execution
+- [x] `ruff check` passing
+- [x] Full test suite passing
+
+### Next Planning Target
+- Sprint 10 — AWS Serverless deployment and deterministic PDF generation via
+  the Presentation Adapter boundary.

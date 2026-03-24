@@ -173,9 +173,22 @@ print_changed_files() {
     printf '  - %s\n' "${CHANGED_FILES[@]}"
 }
 
+run_poetry_lock_guard() {
+    echo
+    echo "[lock] Validating Poetry lock consistency..."
+    poetry check --lock
+
+    if printf '%s\n' "${CHANGED_FILES[@]}" | grep -qx "pyproject.toml" && \
+       ! printf '%s\n' "${CHANGED_FILES[@]}" | grep -qx "poetry.lock"; then
+        echo "WARNING: pyproject.toml changed but poetry.lock is not part of the detected file set."
+        echo "If dependency resolution changed, refresh poetry.lock before delivery."
+    fi
+}
+
 run_full_gate() {
     echo
     echo "[1] Synchronizing Poetry environment..."
+    run_poetry_lock_guard
     poetry sync
 
     echo
@@ -206,6 +219,7 @@ run_standard_gate() {
 
     echo
     echo "[1] Synchronizing Poetry environment..."
+    run_poetry_lock_guard
     poetry sync
 
     for path in "${CHANGED_FILES[@]}"; do

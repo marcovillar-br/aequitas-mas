@@ -27,6 +27,10 @@ Regras:
 - `as_of_date: date` é obrigatório como referência temporal point-in-time
 - métricas financeiras ausentes ou inválidas devem degradar para
   `Optional[float] = None`
+- Strict Boundary Mapping: em schemas Pydantic que atuam como boundaries,
+  campos podem ser tipados como `Optional[T]`, mas NÃO devem usar
+  `default=None`; todas as propriedades devem ser explicitamente mapeadas na
+  instanciação, mesmo quando o valor passado for `None`
 - o estado nunca deve transportar valores baseados em `Decimal`
 
 ### 2.2 Contrato Vetorial
@@ -112,6 +116,21 @@ Para evitar alucinações visuais ou formatação corrompida, o sistema adota o
 padrão **Thesis-CoT** (Chain-of-Thought) inspirado no framework FinRobot,
 preservando rastreabilidade, separação de responsabilidades e profissionalismo
 na entrega final do PA.
+
+Contrato documental de apresentação:
+
+```python
+class ThesisReportPayload(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    thesis: str
+    evidence: list[str]
+    quantitative_data: dict[str, object]
+
+
+@runtime_checkable
+class PresentationAdapter(Protocol):
+    def render_pdf(self, payload: ThesisReportPayload) -> bytes: ...
+```
 
 Regras obrigatórias:
 1. O output final do Multi-Agent System é um JSON estritamente estruturado e
@@ -246,9 +265,16 @@ Regras invioláveis da boundary:
    `altman_z_score` atua como sinal determinístico de risco de insolvência.
 2. Ambos os indicadores devem ser calculados exclusivamente por ferramentas em
    Python puro sob `src/tools/`.
-3. É proibido ao LLM estimar, inferir probabilisticamente ou recomputar esses
+3. As assinaturas documentais mínimas para esses cálculos são:
+
+```python
+def calculate_piotroski_f_score(...) -> Optional[int]: ...
+def calculate_altman_z_score(...) -> Optional[float]: ...
+```
+
+4. É proibido ao LLM estimar, inferir probabilisticamente ou recomputar esses
    indicadores em prompt space.
-4. Quando as evidências de entrada forem ausentes, inválidas ou temporalmente
+5. Quando as evidências de entrada forem ausentes, inválidas ou temporalmente
    incompatíveis com `as_of_date`, os campos devem degradar para `None`.
 
 ### 5.3 Engine

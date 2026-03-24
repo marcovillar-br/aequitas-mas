@@ -202,6 +202,7 @@ def mock_agents() -> dict[str, Any]:
                 ticker="WEGE3",
                 vpa=10.0,
                 lpa=1.5,
+                price_to_earnings=None,
                 fair_value=40.0,
                 margin_of_safety=10.0,
             ),

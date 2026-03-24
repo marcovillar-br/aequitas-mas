@@ -28,6 +28,7 @@ scipy = "^1.17.1"
 opentelemetry-api = "^1.40.0"
 opentelemetry-sdk = "^1.40.0"
 uvicorn = {extras = ["standard"], version = "^0.41.0"}
+mangum = "^0.17.0"
 
 [tool.poetry.group.infra.dependencies]
 # Cloud infrastructure SDKs — optional, not required for local/offline execution.

@@ -1,41 +1,67 @@
 ---
-summary_id: eod-implementer-skills-index-injection-001
+summary_id: eod-plan-systemic-mapping-omission-prevention-001
 status: completed
 target_files:
-  - ".ai/skills/sdd-implementer/SKILL.md"
-  - ".ai/agents/aequitas-mas-implementer.md"
+  - ".context/SPEC.md"
+  - "src/core/state.py"
+  - "src/agents/graham.py"
+  - "tests/test_graham_agent.py"
+  - "tests/test_api_schemas.py"
+  - "tests/test_core_consensus_node.py"
+  - "tests/test_graph_routing.py"
+  - ".ai/handoffs/eod_summary.md"
 tests_run:
-  - "Manual diff review"
+  - "poetry run pytest tests/test_graham_agent.py"
+  - "poetry run pytest tests/test_api_schemas.py tests/test_core_consensus_node.py tests/test_graph_routing.py"
+  - "poetry run ruff check ."
+  - "poetry run pytest"
 dogmas_respected:
-  - controlled-degradation
-  - topology-boundaries
-  - language-protocol
+  - defensive-typing
+  - fail-fast
+  - risk-confinement
+  - artifact-driven-communication
 ---
 
 ## 1. Implementation Summary
 
-Executed the requested meta-prompt update so the implementer now loads the
-specialized skill routing registry during context initialization.
+Executed the approved systemic prevention plan from
+`.ai/handoffs/current_plan.md` and completed the required boundary hardening.
 
-- Updated `.ai/skills/sdd-implementer/SKILL.md` so Context Initialization now
-  requires loading `.context/agents/skills-index.md` alongside the existing
-  system prompt and coding guideline inputs.
-- Updated `.ai/agents/aequitas-mas-implementer.md` so the agent role now
-  instructs the implementer to read `.ai/handoffs/current_plan.md` and
-  `.context/agents/skills-index.md` as its first action.
-- Preserved the existing RED-GREEN-REFACTOR sequence, Risk Confinement, and
-  Defensive Typing constraints without expanding scope beyond markdown prompts.
+- Updated `.context/SPEC.md` to permanently document the new
+  **Strict Boundary Mapping** rule under strict typing contracts.
+- Hardened `GrahamMetrics` in `src/core/state.py` by removing `default=None`
+  from all `Optional` financial fields so Pydantic now requires explicit field
+  mapping at instantiation time.
+- Updated `src/agents/graham.py` and `tests/test_graham_agent.py` so every
+  `GrahamMetrics` instantiation explicitly maps all fields, including
+  `None` values when degradation is intended.
 
-## 2. Validation
+## 2. TDD Execution
 
-- The change scope remained limited to markdown prompt files and this Blackboard
-  handoff artifact.
-- All referenced paths remain explicitly anchored to
-  `.ai/handoffs/current_plan.md` and `.context/agents/skills-index.md`.
-- No Python files, runtime modules, or mutable topology rules were changed.
+- RED: Strengthened `tests/test_graham_agent.py` to require explicit full-field
+  mapping. After hardening `GrahamMetrics`, the first targeted run failed with
+  `ValidationError` because degraded paths in `src/agents/graham.py` still
+  instantiated `GrahamMetrics` with omitted fields.
+- GREEN: Fixed all `GrahamMetrics` instantiations in `src/agents/graham.py` so
+  the Graham hot path and degraded paths now map every field explicitly.
+- REFACTOR: Ran the full suite, which exposed additional systemic omissions in
+  `tests/test_api_schemas.py`, `tests/test_core_consensus_node.py`, and
+  `tests/test_graph_routing.py`. Updated those instantiations to comply with
+  the new boundary rule without changing business logic.
 
-## 3. Outcome
+## 3. Validation
 
-The implementer skill and agent definition now both mandate loading the central
-skills routing index before execution, improving plan delivery for tasks that
-depend on secondary specialized skills such as security or playwright.
+- `poetry run pytest tests/test_graham_agent.py` passed with `3 passed`.
+- `poetry run pytest tests/test_api_schemas.py tests/test_core_consensus_node.py tests/test_graph_routing.py`
+  passed with `31 passed`.
+- `poetry run ruff check .` passed successfully.
+- `poetry run pytest` passed successfully with `182 passed in 78.79s`.
+
+## 4. Dogma Compliance
+
+- Defensive typing is now stronger: silent omission of `GrahamMetrics` fields
+  is prevented by schema construction itself.
+- Fail-fast behavior is now systemic: missing mappings raise
+  `ValidationError` immediately instead of silently degrading by omission.
+- Risk confinement is preserved: no prompt math, `Decimal`, or domain
+  architecture drift was introduced while hardening the boundary contract.

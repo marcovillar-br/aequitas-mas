@@ -49,25 +49,20 @@ class GrahamMetrics(BaseModel):
 
     # Campos financeiros obrigatórios para a fórmula de Graham.
     vpa: Optional[float] = Field(
-        default=None,
         description="Valor Patrimonial por Ação (VPA).",
     )
     lpa: Optional[float] = Field(
-        default=None,
         description="Lucro por Ação (LPA).",
     )
 
     # Optional fields that depend on calculations or data availability.
     price_to_earnings: Optional[float] = Field(
-        default=None,
         description="Índice Preço/Lucro (P/L).",
     )
     fair_value: Optional[float] = Field(
-        default=None,
         description="Valor intrínseco calculado pela fórmula de Graham.",
     )
     margin_of_safety: Optional[float] = Field(
-        default=None,
         description="Margem de segurança percentual.",
     )
 

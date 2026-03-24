@@ -77,6 +77,7 @@ Activate this skill when the user requests assistance with Git commands, creatin
 * Before any push, summarize staged files and intended target branch in one short confirmation line.
 * If there are unrelated local changes, avoid bundling them in the same commit unless user explicitly asks.
 * **Mandatory Pre-Delivery Gate:** Before any remote delivery (`git push`), run `./scripts/validate_delivery.sh --mode auto` and confirm it passed successfully.
+* **Poetry Lock Discipline:** If `pyproject.toml` changes, run `poetry check --lock`. When dependency resolution changes, commit `poetry.lock` in the same delivery.
 * **Risk-Based Validation:** Allow the gate to scale by changed-file risk:
   - `full` for `src/core/`, `src/agents/`, `src/tools/`, `src/api/`, or `main.py`
   - `standard` for `tests/`, `scripts/`, `infra/terraform/`, and `.github/workflows/`

@@ -325,12 +325,16 @@ def test_null_vector_store_satisfies_protocol() -> None:
     ) == []
 
 
-def test_module_level_macro_agent_is_callable() -> None:
+def test_module_level_macro_agent_requires_explicit_wiring(
+    initial_state: AgentState,
+) -> None:
     """
-    The module-level macro_agent (NullVectorStore default) must be callable,
-    ensuring backward compatibility with any code that imports it directly.
+    Direct imports of src.agents.macro.macro_agent must fail fast instead of
+    silently degrading to an unwired NullVectorStore execution path.
     """
     assert callable(macro_agent)
+    with pytest.raises(RuntimeError, match="explicit vector store wiring"):
+        macro_agent(initial_state)
 
 
 # ---------------------------------------------------------------------------
