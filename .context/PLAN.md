@@ -1,127 +1,42 @@
 # 🗺️ PLAN: Execução de Engenharia — Aequitas-MAS
 
-## Estado Atual Consolidado
+## 1. Arquitetura Baseline (Status: Sprints 1 a 8 Concluídas)
 
-O baseline arquitetural vigente do repositório já entrega:
+O baseline arquitetural vigente do repositório entrega as seguintes capacidades:
 
-- **Cyclic Graph / Iterative Committee** com a ordem:
-  `graham -> fisher -> macro -> marks -> core_consensus -> __end__`
-- **AgentState** como estado canônico, imutável e tipado, com `as_of_date`
-  como boundary temporal explícita
-- **HyDE retrieval flow** com `VectorStorePort -> list[VectorSearchResult]`
-  e retrieval time-aware
-- **Otimização determinística** via
-  `optimize_portfolio(...) -> Optional[PortfolioOptimizationResult]`
-- **Secret management cloud-first** via
-  `SecretStorePort` e `EnvSecretAdapter`
-- **FastAPI gateway** com DI do grafo compilado e do `BaseCheckpointSaver`
-- **Backtesting determinístico** com anti-look-ahead, degradação para `None`
-  e logs fundamentais enriquecidos
-- **B3HistoricalFetcher** integrado ao replay histórico determinístico como
-  adapter real de ingestão
-- **Active `/backtest/run` endpoint** wired to the deterministic ingestion path
-- **Temporal invariance governance** formalized by
-  `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
+- **Orquestração (LangGraph):** Cyclic Graph com semântica de Iterative Committee (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`).
+- **Estado (Pydantic):** `AgentState` imutável, tipado defensivamente e ancorado temporalmente via `as_of_date`.
+- **RAG & Contexto (HyDE):** Retrieval qualitativo time-aware operando via `VectorStorePort`.
+- **Ingestão Histórica (B3):** Ingestão real via `B3HistoricalFetcher` conectada ao engine de backtesting determinístico com degradação controlada.
+- **Otimização de Portfólio:** Ferramenta matemática determinística isolada, acessível de forma resiliente pelo `core_consensus_node` (que falha fechado com `optimization_blocked=True`).
+- **API Gateway (FastAPI):** Fronteiras HTTP tipadas para `/analyze`, `/backtest/run` e `/portfolio`, operando com sanitização de erros.
+- **Infraestrutura e Segurança:** Gerenciamento de credenciais via `SecretStorePort` (Zero Trust) e documentação unificada sob a arquitetura de Blackboard.
 
-## Sprint 6 — API Gateway & Boundary Hardening
-**Status:** DONE
+## 2. Academic & SOTA Roadmap 2026-2027 (Integrated V2)
 
-### Entregas consolidadas
+O Aequitas-MAS atingiu maturidade técnica à frente do calendário acadêmico. O planejamento de longo prazo agora se alinha à grade de Pós-Graduação (UFG) e ao estado da arte (SOTA):
 
-1. `src/api/` entregue com:
-   - `POST /analyze`
-   - `POST /backtest/run`
-2. Dependências compartilhadas do gateway resolvidas por providers:
-   - `get_graph_app()`
-   - `get_checkpointer()`
-3. Contratos HTTP tipados por modelos Pydantic imutáveis:
-   - `AnalyzeRequest`
-   - `AnalyzeResponse`
-   - `BacktestRequest`
-   - `BacktestResult`
-4. Hardening de fronteiras concluído:
-   - `VectorSearchResult`
-   - `PortfolioOptimizationResult`
-   - patch tipado de `core_consensus_node`
-5. Secret management desacoplado do domínio via:
-   - `SecretStorePort`
-   - `EnvSecretAdapter`
-6. Backtesting determinístico entregue em `src/tools/backtesting/` com:
-   - `HistoricalDataLoader`
-   - métricas determinísticas
-   - `BacktestEngine`
+- **Mar/26 (ePrompt): Engenharia do Blackboard.** Refinamento dos System Prompts para a "Tríade de Agentes" (Graham, Fisher, Marks) usando Chain-of-Thought (CoT) para emular o paper FinRobot, mantendo a tipagem estrita.
+- **Abr-Mai/26 (Framework & API): Telemetry & Streaming.** Expandir o FastAPI atual com telemetria avançada, auditoria de logs no OpenSearch e streaming assíncrono das respostas do LangGraph.
+  - **Deterministic Thesis-CoT Reporting:** Criação de um gerador de PDF em Python (utilizando Matplotlib e WeasyPrint) que consome o JSON final do LLM (Pydantic) para renderizar um relatório profissional, abolindo alucinações visuais do modelo.
+- **Jun-Jul/26 (DAIA): Shift-Left Testing Avançado.** Expandir a base de testes atual (144 testes) para cobrir Edge Cases estatísticos e comprovar o Risk Confinement.
+- **Ago-Set/26 (EGI & AM): Validação Econométrica.** Aplicar a metodologia de Damodar Gujarati para provar que os sinais do Agente Macro (HyDE RAG) e Agente Fisher possuem significância estatística.
+- **Out-Nov/26 (LLM & Agent): Refinamento do Grafo Cíclico.** Aplicar padrões de Reasoning and Acting (ReAct) e Tree-of-Thought (ToT) no `core_consensus_node`, focando no Agente Marks (Risco).
+- **Dez/26-Jan/27 (EAD): Expansão de Fatores SOTA.** Integrar fatores quantitativos institucionais via Selenium/Pandas para municiar o motor determinístico do Agente Graham. Expansão da boundary `HistoricalMarketData` para suportar o cálculo de Piotroski F-Score (Quality/Value Trap filter) e Altman Z-Score (Bankruptcy Risk) via ferramentas em Python puro.
+- **Jan-Fev/27 (AMLDO): Aprimoramento do RAG (MarketSenseAI).** Focar em Semantic Chunking para transcrições de Earnings Calls, refinando o Agente Fisher.
+- **Fev-Mar/27 (PA): Defesa e TCC Final.** Simulação de Backtesting em larga escala, formatação ABNT/USP-ESALQ e redação do paper final demonstrando a geração de Alpha frente à Fórmula Mágica e ao Ibovespa.
 
-## Sprint 7 — Real Data Ingestion & Dynamic Constraints
-**Status:** DONE
+## 3. Cross-Cutting Engineering Track (AWS Serverless & FinOps)
 
-### Objetivo
+Em paralelo ao roadmap acadêmico, o Aequitas-MAS executa uma trilha de infraestrutura focada em implantação em nuvem e otimização de custos:
 
-Substituir a carga sintética/local do backtesting por ingestão histórica real e
-introduzir restrições dinâmicas de alocação sem violar Risk Confinement,
-Controlled Degradation ou Zero Trust.
+- **API Deployment (Abr-Mai/26):** Empacotamento do gateway FastAPI para AWS Lambda (Serverless) para alcançar a capacidade *Scale-to-Zero*, conectando os adaptadores de persistência do DynamoDB e OpenSearch Serverless.
+- **CI/CD & IAC Pipeline (Jun-Jul/26):** Ativação da esteira de CI/CD via GitHub Actions para aplicar o estado do Terraform e executar os testes automatizados *shift-left* (DAIA) na nuvem.
+- **Cloud Backtesting Engine (Fev-Mar/27):** Execução do backtesting quantitativo final do TCC na infraestrutura AWS para provar a viabilidade arquitetural e de FinOps (custos *Scale-to-Zero* versus Performance).
 
-### Entregas consolidadas
+## 4. 🚀 Optional SOTA Backlog (If Time Permits)
 
-#### Passo 1 — Real Historical Data Adapter — DONE
-- `B3HistoricalFetcher` implementado como adapter determinístico para ingestão
-  histórica real compatível com o mercado brasileiro
-- `HistoricalMarketData` consolidado como boundary imutável para:
-  - `price`
-  - `book_value_per_share`
-  - `earnings_per_share`
-  - `selic_rate`
-- `AgentState.as_of_date` promovido a boundary temporal de primeira classe
-- retrieval qualitativo propagado com `as_of_date` em `VectorStorePort`,
-  adapter OpenSearch e agentes qualitativos
-
-#### Passo 1.1 — Backtest Engine Integration — DONE
-- `HistoricalDataLoader` refatorado para injetar `B3HistoricalFetcher` via DI
-- `HistoricalDataLoader.get_market_data_as_of(...)` exposto como contrato
-  principal de replay point-in-time
-- `BacktestEngine` atualizado para consumir dados fundamentais completos
-- `BacktestStepLog` enriquecido com:
-  - `observed_price`
-  - `vpa`
-  - `lpa`
-  - `selic_rate`
-- `/backtest/run` ativado no gateway com wiring determinístico de ponta a ponta
-
-### Definition of Done — Sprint 7
-
-- ingestão histórica real conectada ao backtester
-- engine de backtest consumindo dados fundamentais point-in-time
-- benchmark e fatores externos integrados com anti-look-ahead
-- restrições dinâmicas formalizadas fora do caminho LLM
-- novos contratos tipados documentados e testados
-- nenhuma regressão em anti-look-ahead ou Controlled Degradation
-
-## Sprint 8 — Portfolio API & Resilient Graph Integration
-**Status:** DONE
-
-### Objetivo
-
-Finalizar a boundary do otimizador determinístico e integrá-la ao supervisor
-do grafo sem permitir cálculo financeiro no caminho LLM.
-
-### Entregas consolidadas
-
-1. `POST /portfolio` entregue no gateway FastAPI com contratos tipados para:
-   - universo ordenado de tickers B3
-   - matriz de retornos validada na boundary
-   - constraints determinísticas opcionais
-2. Hardening da API concluído com:
-   - normalização defensiva de tickers
-   - reshape explícito de série 1D para matriz `observations x 1`
-   - mensagens estáveis em pt-BR para falhas do otimizador
-3. `core_consensus_node` endurecido para:
-   - bloquear otimização ao faltar `portfolio_returns` ou `risk_appetite`
-   - bloquear otimização quando o tool falha ou degrada para `None`
-   - retornar patch imutável e auditável com `optimization_blocked=True`
-4. Artefatos operacionais consolidados em `.ai/handoffs/` para fechamento da Sprint 8.
-
-### Definition of Done — Sprint 8
-
-- endpoint `/portfolio` ativo fora do caminho LLM
-- contratos HTTP alinhados ao comportamento do tool determinístico
-- `core_consensus_node` falhando fechado com rastreabilidade explícita
-- documentação ativa refletindo Blackboard Architecture sem resquícios do fluxo RPI
+- **Explainable AI (XAI) Dashboard:** Um frontend em Streamlit ou Gradio consumindo nosso FastAPI para visualizar a execução do LangGraph, a evolução do `AgentState` e o raciocínio CoT (Chain-of-Thought) em tempo real durante a defesa da tese.
+- **Historical Stress Testing:** Expansão do `BacktestEngine` determinístico para executar cenários isolados de "Cisne Negro" (ex: crash da COVID-19, Joesley Day), provando a resiliência do nosso *Risk Confinement* e o valor do Agente Marks.
+- **Regime-Aware Consensus (Dynamic Weights):** Aprimoramento do `core_consensus_node` para que o Supervisor altere dinamicamente os pesos de votação com base na taxa Selic (ex: priorizando Graham/Marks sobre Fisher em ambientes de juros altos).
+- **Graph-of-Thought (GoT) / GraphRAG:** Experimentação com prompting estruturado em grafos e Knowledge Graphs para o Agente Macro mapear causalidades econômicas complexas, referenciando metodologias avançadas (Shao, 2024).

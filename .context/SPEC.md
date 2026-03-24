@@ -103,14 +103,27 @@ Esse patch usa `TypedDict` para evitar retorno solto e documentar explicitamente
 os campos mutáveis do nó.
 
 Mandatory state rule:
-- every blocked or degraded deterministic optimization path must explicitly
+- when `optimize_portfolio(...)` degrades to `None`, the patch must explicitly
   set `optimization_blocked=True`
-- missing `portfolio_returns` or `risk_appetite` must block optimization
-  without raising unhandled exceptions
-- blocked patches must preserve `source_urls`, emit `audit_log`, and include a
-  matching `AIMessage` rationale
-- the supervisor may authorize or block optimization qualitatively, but it must
-  never hallucinate substitute weights when the deterministic tool fails
+
+### 2.5 Contrato de Apresentação (Thesis-CoT Reporting)
+
+Para evitar alucinações visuais ou formatação corrompida, o sistema adota o
+padrão **Thesis-CoT** (Chain-of-Thought) inspirado no framework FinRobot,
+preservando rastreabilidade, separação de responsabilidades e profissionalismo
+na entrega final do PA.
+
+Regras obrigatórias:
+1. O output final do Multi-Agent System é um JSON estritamente estruturado e
+   validado via Pydantic, contendo tese, evidências e dados quantitativos já
+   resolvidos pelas fronteiras determinísticas.
+2. A renderização visual pertence exclusivamente a um **Presentation Adapter**
+   desacoplado em Python, capaz de consumir esse JSON para gerar gráficos e
+   relatórios PDF por ferramentas determinísticas como Matplotlib e WeasyPrint.
+3. O LLM é terminantemente proibido de gerar gráficos ASCII, markdown tables
+   com finalidade visual, layout de relatório ou formatação direta de PDF.
+4. A camada de apresentação é downstream do estado estruturado; ela não altera
+   os dados, não recalcula métricas e não move lógica de domínio para prompts.
 
 ## 3. Secret Management Cloud-First
 
@@ -170,16 +183,6 @@ Contrato:
 - falhas de validação devem resultar em erro HTTP explícito
 - falhas internas devem ser encapsuladas sem fabricar replay sintético
 
-### 4.4 Endpoint `/portfolio`
-
-Contrato:
-- body: `PortfolioRequest`
-- retorno: `PortfolioOptimizationResult`
-- o handler deve encaminhar apenas dados já tipados e validados na boundary
-- falhas determinísticas do otimizador devem retornar mensagem estável em
-  pt-BR, nunca `str(exc)` bruto
-- degradações para `None` devem resultar em `HTTP 400` explícito
-
 ## 5. Backtesting Determinístico
 
 Reference: `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
@@ -231,9 +234,22 @@ class HistoricalDataLoaderPort(Protocol):
 - `book_value_per_share: Optional[float] = None`
 - `earnings_per_share: Optional[float] = None`
 - `selic_rate: Optional[float] = None`
+- `piotroski_f_score: Optional[int] = None`
+- `altman_z_score: Optional[float] = None`
 
 `B3HistoricalFetcher.fetch_as_of(ticker, as_of_date)` é o adapter
 determinístico atual para preencher esse boundary.
+
+Regras invioláveis da boundary:
+
+1. `piotroski_f_score` atua como filtro de qualidade/value trap e
+   `altman_z_score` atua como sinal determinístico de risco de insolvência.
+2. Ambos os indicadores devem ser calculados exclusivamente por ferramentas em
+   Python puro sob `src/tools/`.
+3. É proibido ao LLM estimar, inferir probabilisticamente ou recomputar esses
+   indicadores em prompt space.
+4. Quando as evidências de entrada forem ausentes, inválidas ou temporalmente
+   incompatíveis com `as_of_date`, os campos devem degradar para `None`.
 
 ### 5.3 Engine
 
@@ -273,6 +289,12 @@ Se o preço inicial, final ou intermediário estiver ausente:
 Se fundamentos ou taxa livre de risco estiverem ausentes:
 - `vpa`, `lpa` e `selic_rate` permanecem `None`
 - o boundary continua válido sem inventar números
+
+Se os insumos necessários para `piotroski_f_score` ou `altman_z_score`
+estiverem ausentes ou inválidos:
+- `piotroski_f_score` e `altman_z_score` devem degradar para `None`
+- nenhum fallback probabilístico pode ser produzido pelo LLM
+- o cálculo deve permanecer restrito a tooling determinístico em `src/tools/`
 
 Se benchmark ou fator estiver indisponível para uma data específica:
 - `HistoricalBenchmarkData.value` deve degradar para `None`
@@ -325,12 +347,10 @@ Os documentos operacionais do projeto devem preferir:
 Os documentos não devem reintroduzir vocabulário legado de grafo linear nem
 contratos baseados em coleções ou payloads não tipados.
 
-## 7. Estado Atual de Extensão
+## 7. Próxima Extensão Planejada
 
-Sprint 8 consolidou:
-- o endpoint determinístico `/portfolio`
-- a integração resiliente do otimizador no `core_consensus_node`
-- o fechamento formal do risco residual que havia sido carregado da Sprint 7
-
-As próximas extensões devem partir desse baseline já consolidado, sem
-reintroduzir contratos provisórios ou fluxos operacionais fragmentados.
+O baseline consolidado (Sprint 8) já entrega a API de Portfólio e a integração resiliente.
+Os próximos passos (Sprint 9: Mar/26 — ePrompt) focam em:
+- Refinamento cognitivo via Chain-of-Thought (CoT) estruturado para Graham, Fisher e Marks.
+- Implementação das ferramentas determinísticas para Piotroski e Altman em src/tools/.
+- Prototipagem do Presentation Adapter para o Thesis-CoT Reporting.

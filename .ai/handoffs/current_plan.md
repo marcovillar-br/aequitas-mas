@@ -1,51 +1,43 @@
-# 🗺️ Current Plan: Documentation Integrity Audit & Sprint 8 Closure
+---
+plan_id: plan-spec-thesis-cot-boundaries-002
+target_files:
+  - ".context/SPEC.md"
+enforced_dogmas: [risk-confinement, type-safety, temporal-invariance]
+validation_scale: FACTS (Mean: 5.0)
+---
 
-## 1. Objective
-Realizar uma auditoria abrangente da documentação e limpeza para eliminar 'Context Poisoning' e otimizar o Signal-to-Noise Ratio para os agentes. Encerrar oficialmente a Sprint 8, atualizando os documentos arquiteturais chave para refletir as entregas.
+## 1. Intent & Scope
+Atualizar `.context/SPEC.md` para formalizar as novas fronteiras técnicas introduzidas pelo roadmap de longo prazo, evitando drift arquitetural nas próximas sprints. O foco é consolidar a expansão da boundary `HistoricalMarketData` e adicionar um contrato explícito para a camada de apresentação `Thesis-CoT`, alinhado ao padrão FinRobot sem permitir cálculo financeiro ou formatação visual pelo LLM.
 
-## 2. Scope & Constraints
-- **Diretórios Alvo:** `.ai/handoffs/`, `.ai/adr/`, `.context/`, `docs/official/`, `README.md`.
-- **Exclusão:** O diretório `.ai/archive/` e seus subdiretórios devem ser ignorados.
-- **Alinhamento com Blackboard:** Todas as atualizações devem reforçar a Arquitetura de Blackboard Orientada a Artefatos.
-- **Sem Alucinação de LLM:** O Implementador deve seguir estritamente o plano, sem inferir mudanças adicionais.
+## 2. File Implementation: .context/SPEC.md
 
-## 3. Implementation Steps (For SDD Implementer)
+### Step 2.1: Expandir o Contrato HistoricalMarketData
+* **Action:** Atualizar a seção `5.2 Boundary de ingestão` para declarar explicitamente os campos `piotroski_f_score: Optional[int] = None` e `altman_z_score: Optional[float] = None` dentro do contrato `HistoricalMarketData`.
+* **Constraints:** Must preserve `ConfigDict(frozen=True)`, must keep controlled degradation semantics, must not introduce `decimal.Decimal`, and must keep the boundary strictly point-in-time.
+* **Signatures:** `class HistoricalMarketData(BaseModel): ... piotroski_f_score: Optional[int] = None; altman_z_score: Optional[float] = None`
 
-### Step 1: Correção Crítica de Bug (Pré-Fechamento da Sprint 8)
-- [x] **Aplicar Patch em `src/agents/core.py`:** Implementar a correção identificada na auditoria anterior para garantir que `optimization_blocked=True` seja definido em **todas** as ramificações de falha do otimizador.
+### Step 2.2: Formalizar a Regra de Cálculo Exclusivamente Determinístico
+* **Action:** Na subseção de regras invioláveis da boundary quantitativa, adicionar texto normativo afirmando que `piotroski_f_score` e `altman_z_score` são calculados exclusivamente por ferramentas em Python puro sob `src/tools/`.
+* **Constraints:** Must explicitly ban any probabilistic LLM-side estimation, must reinforce Zero Math / Risk Confinement, and must require degradation to `None` when source evidence is missing or invalid.
+* **Signatures:** `def calculate_piotroski_f_score(...) -> Optional[int]`; `def calculate_altman_z_score(...) -> Optional[float]`
 
-### Step 2: Poda de Arquivos Obsoletos
-- [x] **Verificar Manual Legado:** Confirmar que `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_RPI_SDD_v2_pt-BR.md` já não existe mais no repositório. O manual ativo permanece a versão Blackboard v3.
+### Step 2.3: Criar o Novo Contrato de Apresentação Thesis-CoT
+* **Action:** Adicionar uma nova seção arquitetural para a camada de apresentação, definindo que o MAS produz um JSON estruturado via Pydantic contendo tese, evidências e dados, e que um Presentation Adapter isolado consome esse payload para renderizar gráficos e PDF.
+* **Constraints:** Must explicitly prohibit ASCII charts, visually formatted markdown tables, and direct PDF formatting by the LLM. Must keep the adapter downstream and deterministic (e.g., Matplotlib/WeasyPrint), never inside the prompt layer.
+* **Signatures:** `class ThesisReportPayload(BaseModel): ...`; `class PresentationAdapter(Protocol): def render_pdf(self, payload: ThesisReportPayload) -> bytes: ...`
 
-### Step 3: Atualizar Status da Sprint e Documentação Principal
-- [x] **Atualizar `.context/current-sprint.md`:**
-  - Marcar o Step 3 como concluído: `[x] Step 3: Graph Integration (resilient optimizer integration in core_consensus_node, ensuring optimization_blocked=True and logging rationale upon degradation).`
-  - Mudar o status da Sprint 8 para `DONE`.
-  - Atualizar os Macro-Objetivos da Sprint 8 para refletir a entrega bem-sucedida do endpoint `/portfolio` determinístico e da integração resiliente no `core_consensus_node`.
-- [x] **Atualizar `README.md`:**
-  - Na seção "Next", atualizar "Sprint 8: TBD" para "Sprint 8: Portfolio API & Resilient Graph Integration (DONE)".
-  - Adicionar um breve resumo das entregas chave da Sprint 8 (ex: endpoint `/portfolio` determinístico, `core_consensus_node` resiliente).
-- [x] **Atualizar `.context/PLAN.md`:**
-  - Remover as seções "Immediate Priority" e "Próximos passos", pois estão obsoletas.
-  - Atualizar o status da "Sprint 7 Closed — Real Data Ingestion & Dynamic Constraints" para `DONE`.
-  - Adicionar uma nova seção para "Sprint 8 — Portfolio API & Resilient Graph Integration" com seu status como `DONE` e um resumo de suas entregas.
-  - Garantir que não haja resquícios do fluxo "RPI" nas seções de planejamento ativas.
-- [x] **Atualizar `.context/SPEC.md`:**
-  - Revisar a Seção 2.4 "Contrato do Supervisor" para garantir que esteja totalmente alinhada com a integração resiliente do otimizador e a flag `optimization_blocked=True`.
-  - Garantir que não haja referências diretas ao fluxo "RPI" ou à toolchain fragmentada na especificação ativa.
-- [x] **Atualizar `setup.md`:**
-  - Na Seção 1 "Engineering Team Topology", garantir que a descrição do GCA esteja alinhada com a Arquitetura de Blackboard e o uso de `.ai/handoffs/current_plan.md`.
-  - Na Seção 9 "API Runtime", atualizar a lista de endpoints ativos para incluir `POST /portfolio`.
-  - Revisar "System Version" e "Architecture Version" para ver se precisam ser atualizados para `6.0.0` e `3.0` respectivamente, refletindo as entregas da Sprint 8 e a arquitetura Blackboard.
+### Step 2.4: Alinhar a Seção com o Padrão SOTA FinRobot
+* **Action:** Inserir referência textual de que a camada de relatórios segue o padrão `Thesis-CoT` do framework FinRobot para reforçar rastreabilidade, profissionalismo e separação entre raciocínio, dados estruturados e rendering determinístico.
+* **Constraints:** Must remain documentation-only, must not promise concrete implementation modules not yet present in the repo, and must avoid speculative architecture beyond the contract level.
+* **Signatures:** `N/A (documentation contract update only)`
 
-### Step 4: Auditoria Final e Resumo de Fim de Dia (EOD)
-- [x] **Executar SDD Auditor:** Após todas as modificações, acionar a skill `sdd-auditor` para realizar uma auditoria final de integridade da documentação.
-- [x] **Gerar Resumo EOD:** Criar um novo `.ai/handoffs/eod_summary.md` resumindo a conclusão da limpeza da documentação e o encerramento da Sprint 8.
-
-## 4. Definition of Done
-- O bug crítico em `src/agents/core.py` foi corrigido.
-- Todos os artefatos de documentação obsoletos foram deletados ou arquivados corretamente.
-- `README.md` e `.context/current-sprint.md` refletem com precisão o encerramento da Sprint 8.
-- `.context/PLAN.md` e `.context/SPEC.md` estão totalmente modernizados e livres de resquícios do RPI.
-- Uma auditoria final da documentação confirma a ausência de links quebrados ou inconsistências.
-- Um `eod_summary.md` abrangente para esta limpeza e encerramento da Sprint 8 foi gerado.
+## 3. Definition of Done (DoD)
+- [x] `.context/SPEC.md` declara `piotroski_f_score: Optional[int] = None` e `altman_z_score: Optional[float] = None` na boundary `HistoricalMarketData`.
+- [x] O documento afirma explicitamente que esses indicadores são calculados apenas em `src/tools/` por Python puro.
+- [x] O contrato proíbe qualquer estimativa probabilística desses indicadores pelo LLM.
+- [x] Existe uma nova seção arquitetural para `Thesis-CoT Reporting` baseada em JSON Pydantic + Presentation Adapter desacoplado.
+- [x] O texto proíbe explicitamente gráficos ASCII, markdown tables visuais e formatação direta de PDF pelo LLM.
+- [x] A seção de apresentação referencia o padrão `Thesis-CoT` do FinRobot em nível contratual.
+- [x] Code passes standard static analysis (`ruff check`).
+- [x] Tests execute successfully with zero warnings.
+- [x] Zero instances of `decimal.Decimal` and synchronous domain logic.
