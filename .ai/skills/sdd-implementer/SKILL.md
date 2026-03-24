@@ -1,26 +1,27 @@
 ---
 name: sdd-implementer
-title: SDD Implementer (Muscle Persona)
 description: Skill for executing an approved Blackboard implementation plan using deterministic Test-Driven Development and controlled degradation rules.
-triggers:
-  - implement the plan
-  - sdd implement
-  - execute blackboard plan
-  - start subagent development
-tags:
-  - sdd
-  - implementation
-  - tdd
-  - blackboard
-  - delivery
-applies_to:
-  - implementation
-  - tdd
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 1
+metadata:
+  title: SDD Implementer (Muscle Persona)
+  triggers:
+    - implement the plan
+    - sdd implement
+    - execute blackboard plan
+    - start subagent development
+  tags:
+    - sdd
+    - implementation
+    - tdd
+    - blackboard
+    - delivery
+  applies_to:
+    - implementation
+    - tdd
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 1
 ---
 
 # Name: SDD Implementer (Muscle Persona)

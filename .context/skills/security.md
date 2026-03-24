@@ -1,30 +1,31 @@
 ---
 name: security
-title: Security, Compliance & FinOps
 description: Skill for zero-trust architecture, secret management, LangGraph safety, and cost-aware operational guardrails.
-triggers:
-  - security
-  - compliance
-  - finops
-  - secret management
-  - prompt injection
-  - audit
-  - zero trust
-tags:
-  - security
-  - compliance
-  - finops
-  - secrets
-  - observability
-applies_to:
-  - architecture
-  - implementation
-  - review
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 1
+metadata:
+  title: Security, Compliance & FinOps
+  triggers:
+    - security
+    - compliance
+    - finops
+    - secret management
+    - prompt injection
+    - audit
+    - zero trust
+  tags:
+    - security
+    - compliance
+    - finops
+    - secrets
+    - observability
+  applies_to:
+    - architecture
+    - implementation
+    - review
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 1
 ---
 
 # SKILL: SECURITY, COMPLIANCE & FINOPS

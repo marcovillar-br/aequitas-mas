@@ -1,27 +1,28 @@
 ---
 name: sdd-writing-plans
-title: SDD Writing Plans (Orchestrator Persona)
 description: Skill for generating deterministic implementation plans and architecture breakdowns in the Artifact-Driven Blackboard workflow.
-triggers:
-  - plan this feature
-  - write a plan
-  - break this down
-  - create an implementation plan
-  - sdd plan
-tags:
-  - sdd
-  - planning
-  - architecture
-  - blackboard
-  - orchestration
-applies_to:
-  - planning
-  - architecture
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 1
+metadata:
+  title: SDD Writing Plans (Orchestrator Persona)
+  triggers:
+    - plan this feature
+    - write a plan
+    - break this down
+    - create an implementation plan
+    - sdd plan
+  tags:
+    - sdd
+    - planning
+    - architecture
+    - blackboard
+    - orchestration
+  applies_to:
+    - planning
+    - architecture
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 1
 ---
 
 # Name: SDD Writing Plans (Orchestrator Persona)

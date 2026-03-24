@@ -1,30 +1,31 @@
 ---
 name: playwright
-title: Playwright Automation & Data Extraction
 description: Skill for deterministic browser automation and robust data extraction when APIs are unavailable.
-triggers:
-  - scraping
-  - playwright
-  - browser automation
-  - earnings calls
-  - investor relations
-  - dynamic dom
-  - data extraction
-tags:
-  - playwright
-  - scraping
-  - automation
-  - extraction
-  - tools
-applies_to:
-  - implementation
-  - data-collection
-  - review
-language: en
-output_language: pt-BR
-priority: medium
-status: active
-version: 1
+metadata:
+  title: Playwright Automation & Data Extraction
+  triggers:
+    - scraping
+    - playwright
+    - browser automation
+    - earnings calls
+    - investor relations
+    - dynamic dom
+    - data extraction
+  tags:
+    - playwright
+    - scraping
+    - automation
+    - extraction
+    - tools
+  applies_to:
+    - implementation
+    - data-collection
+    - review
+  language: en
+  output_language: pt-BR
+  priority: medium
+  status: active
+  version: 1
 ---
 
 # SKILL: PLAYWRIGHT AUTOMATION & DATA EXTRACTION

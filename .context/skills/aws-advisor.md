@@ -1,32 +1,33 @@
 ---
 name: aws-advisor
-title: AWS Cloud Infrastructure Advisor
 description: AWS infrastructure advisor for Aequitas-MAS architecture, IaC, observability, secrets, and cost-aware guidance.
-triggers:
-  - cloud infrastructure
-  - aws
-  - terraform
-  - cdk
-  - fargate
-  - s3
-  - secrets manager
-  - cloudwatch
-tags:
-  - aws
-  - infrastructure
-  - iac
-  - observability
-  - finops
-  - security
-applies_to:
-  - architecture
-  - implementation
-  - review
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 1
+metadata:
+  title: AWS Cloud Infrastructure Advisor
+  triggers:
+    - cloud infrastructure
+    - aws
+    - terraform
+    - cdk
+    - fargate
+    - s3
+    - secrets manager
+    - cloudwatch
+  tags:
+    - aws
+    - infrastructure
+    - iac
+    - observability
+    - finops
+    - security
+  applies_to:
+    - architecture
+    - implementation
+    - review
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 1
 ---
 
 # AWS Cloud Infrastructure Advisor

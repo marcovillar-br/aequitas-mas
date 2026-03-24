@@ -1,28 +1,29 @@
 ---
 name: sdd-auditor
-title: SDD Auditor (Evaluator Persona)
 description: Skill for static code analysis, architectural compliance checks, and final verification of the Definition of Done before authorizing a commit or merge.
-triggers:
-  - audit the code
-  - run qa
-  - validate implementation
-  - sdd audit
-  - request code review
-tags:
-  - sdd
-  - audit
-  - qa
-  - compliance
-  - review
-applies_to:
-  - review
-  - qa
-  - compliance
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 1
+metadata:
+  title: SDD Auditor (Evaluator Persona)
+  triggers:
+    - audit the code
+    - run qa
+    - validate implementation
+    - sdd audit
+    - request code review
+  tags:
+    - sdd
+    - audit
+    - qa
+    - compliance
+    - review
+  applies_to:
+    - review
+    - qa
+    - compliance
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 1
 ---
 
 # Name: SDD Auditor (Evaluator Persona)

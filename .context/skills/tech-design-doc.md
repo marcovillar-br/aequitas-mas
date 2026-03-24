@@ -1,29 +1,30 @@
 ---
 name: tech-design-doc
-title: Technical Design Document (TDD) Creator
 description: Skill for drafting technical design documents before implementation using the Artifact-Driven Blackboard workflow.
-triggers:
-  - tdd
-  - technical design
-  - architecture plan
-  - pre-implementation
-  - mermaid
-  - sdd
-tags:
-  - design
-  - architecture
-  - planning
-  - documentation
-  - mermaid
-applies_to:
-  - planning
-  - architecture
-  - documentation
-language: en
-output_language: pt-BR
-priority: high
-status: active
-version: 2
+metadata:
+  title: Technical Design Document (TDD) Creator
+  triggers:
+    - tdd
+    - technical design
+    - architecture plan
+    - pre-implementation
+    - mermaid
+    - sdd
+  tags:
+    - design
+    - architecture
+    - planning
+    - documentation
+    - mermaid
+  applies_to:
+    - planning
+    - architecture
+    - documentation
+  language: en
+  output_language: pt-BR
+  priority: high
+  status: active
+  version: 2
 ---
 
 # Technical Design Document (TDD) Creator
