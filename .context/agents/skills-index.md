@@ -3,7 +3,7 @@
 ## Purpose
 This document serves as the central registry for all specialized skills available to the AI Assistant. When interacting with the user, cross-reference the user's request with this index to dynamically load the appropriate skill context from the `.context/skills/` or `.ai/skills/` directory.
 
-For `.context/skills/*.md` and `.ai/skills/*/SKILL.md`, the YAML frontmatter is the canonical metadata source. The visible `Name`, `Description`, and `Triggers` sections in skill bodies must remain aligned with that metadata. This index is a human-readable routing map derived from that metadata.
+For `.context/skills/*.md` and `.ai/skills/*/SKILL.md`, the YAML frontmatter is the canonical metadata source. Use `name` and `description` as the required top-level fields, and place any extra routing hints under `metadata`. The visible `Name`, `Description`, and `Triggers` sections in skill bodies must remain aligned with that metadata. This index is a human-readable routing map derived from that metadata.
 
 ## Registered Skills
 
@@ -23,7 +23,7 @@ For `.context/skills/*.md` and `.ai/skills/*/SKILL.md`, the YAML frontmatter is 
 
 ## Routing Protocol
 1. Identify the core domain of the user's prompt.
-2. Match the request against the skill frontmatter, prioritizing `triggers`, `applies_to`, and `priority`.
+2. Match the request against the skill frontmatter, prioritizing `description` and any optional `metadata.triggers`, `metadata.applies_to`, and `metadata.priority`.
 3. If the domain matches a registered trigger, silently ingest the corresponding `.md` file into working memory before generating the response.
 4. If multiple skills apply, prioritize the strictest or most foundational constraint first.
 5. Recommended precedence for overlapping cases:

@@ -1,30 +1,31 @@
 ---
 name: github-manager
-title: GitHub & Version Control Manager
 description: Skill for branch strategy, conventional commits, pull requests, and repository state management.
-triggers:
-  - git
-  - github
-  - branch
-  - commit
-  - pull request
-  - pr
-  - repository state
-tags:
-  - git
-  - github
-  - version-control
-  - workflow
-  - ci-cd
-applies_to:
-  - implementation
-  - collaboration
-  - release-management
-language: en
-output_language: pt-BR
-priority: medium
-status: active
-version: 1
+metadata:
+  title: GitHub & Version Control Manager
+  triggers:
+    - git
+    - github
+    - branch
+    - commit
+    - pull request
+    - pr
+    - repository state
+  tags:
+    - git
+    - github
+    - version-control
+    - workflow
+    - ci-cd
+  applies_to:
+    - implementation
+    - collaboration
+    - release-management
+  language: en
+  output_language: pt-BR
+  priority: medium
+  status: active
+  version: 1
 ---
 
 # SKILL: GITHUB & VERSION CONTROL MANAGER
