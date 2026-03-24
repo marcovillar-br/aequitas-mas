@@ -1,27 +1,32 @@
 ---
-summary_id: eod-official-documentation-modernization
+summary_id: eod-sprint-8-closure-and-documentation-pruning
 plan_source: .ai/handoffs/current_plan.md
 status: completed
 tests_run:
-  - N/A (Documentation Only)
+  - poetry run pytest tests/test_core_consensus_node.py -q
+  - poetry run pytest tests/test_graph_routing.py -q
+  - poetry run pytest tests/test_graph.py -q
 dogmas_respected:
+  - risk-confinement
+  - controlled-degradation-and-type-safety
   - artifact-driven-communication
-  - topology-boundaries
 ---
 
 ## 1. Implementation Summary
 
-Executed the plan to modernize the official SDD Workflow Documentation, permanently replacing the fragmented RPI flow with the Artifact-Driven Blackboard architecture.
+Executed the Sprint 8 closure plan with three outcomes:
 
-- Created `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_Blackboard_SDD_v3_pt-BR.md` (v3.0) outlining the new unified roles (Orchestrator, Implementer, Auditor) and the `.ai/handoffs/` lifecycle.
-- Instructed the removal of the legacy v2.0 RPI manual.
-- Appended Section 7 to `.ai/adr/006-agnostic-operational-flow.md`, explicitly declaring its deprecation and linking to the new v3.0 manual.
+- hardened `src/agents/core.py` so every deterministic optimization failure path returns the same immutable blocked patch shape, preserving `source_urls`, `audit_log`, `messages`, and `optimization_blocked=True`
+- pruned obsolete operational noise by keeping `.ai/handoffs/` focused on the active plan and EOD artifacts only
+- updated the active project documents (`README.md`, `.context/current-sprint.md`, `.context/PLAN.md`, `.context/SPEC.md`, `setup.md`) to reflect Sprint 8 as fully delivered under the Artifact-Driven Blackboard architecture
 
 ## 2. Validation
 
-- The new manual perfectly maps the Superpowers `sdd-*` pipeline.
-- ADR 006 now correctly cross-references the updated file to strengthen historical traceability.
+- focused consensus-node regression tests passed
+- graph routing regressions remained green after the immutable blocked-patch refactor
+- active documentation no longer advertises Sprint 8 as pending or `/portfolio` as deferred
+- the legacy RPI workflow manual was already absent from `docs/official/`, so no further deletion was needed there
 
 ## 3. Notes
 
-The documentation debt regarding the legacy RPI methodology is resolved. The project documentation formally embodies the Artifact-Driven Blackboard standard.
+The `sdd-auditor` skill was not available in this session, so the final documentation audit was executed manually through targeted repository inspection and reference checks. Sprint 8 is now formally closed in the active planning artifacts.

@@ -117,22 +117,22 @@ The official MAS communication protocol is now "Artifact-Driven" via `.ai/handof
 - [x] new boundary updates fully documented and regression-tested end-to-end
 
 ### Residual Risks
-- Optional `/portfolio` endpoint boundary remains pending contract finalization.
+- Residual risk from the deferred `/portfolio` boundary was closed in Sprint 8.
 
 ---
 
 ## Sprint 8 — Portfolio API & Dynamic Constraints Finalization
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ### Objective
-Finalize the dynamic-constraints contract and expose the deterministic portfolio optimizer via a new `/portfolio` API endpoint, maintaining strict Risk Confinement and temporal boundaries.
+Finalize the dynamic-constraints contract and expose the deterministic portfolio optimizer through a stable `/portfolio` API boundary, with resilient graph integration and strict Risk Confinement.
 
 ### Macro-Objectives
-- Finalize the typed data contracts for dynamic constraints (request/response boundaries).
-- Implement and wire the `POST /portfolio` endpoint in the FastAPI gateway.
-- Guarantee that the endpoint operates entirely outside the LLM path, relying solely on deterministic tooling.
+- Typed request/response contracts for deterministic portfolio optimization delivered.
+- `POST /portfolio` implemented and wired in the FastAPI gateway.
+- `core_consensus_node` hardened to fail closed with `optimization_blocked=True` and auditable rationale whenever deterministic optimization cannot proceed.
 
 ### Planned Steps
 - [x] Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
 - [x] Step 2: TDD implementation of the `/portfolio` route and DI wiring.
-- [ ] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).
+- [x] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).

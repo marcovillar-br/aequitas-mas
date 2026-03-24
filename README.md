@@ -28,7 +28,7 @@ The system state is carried through immutable Pydantic v2 models under
 `src/core/state.py`, with `Optional[float] = None` used whenever evidence is
 missing or invalid.
 
-## Delivered Through Sprint 7
+## Delivered Through Sprint 8
 
 - FastAPI gateway under `src/api/` with:
   - `POST /analyze`
@@ -49,6 +49,14 @@ missing or invalid.
   - `B3HistoricalFetcher` as the current real-ingestion adapter
   - `HistoricalDataLoader.get_market_data_as_of(...)`
   - controlled degradation to `None` for missing historical values
+- Deterministic portfolio optimization exposed through:
+  - `POST /portfolio`
+  - typed `PortfolioRequest` / `PortfolioOptimizationResult` boundaries
+  - stable pt-BR API error contracts for optimizer degradation
+- Resilient `core_consensus_node` integration with:
+  - fail-closed `optimization_blocked=True`
+  - immutable blocked patches
+  - auditable rationale in `audit_log` and `messages`
 
 ## Secret Management
 
@@ -116,11 +124,11 @@ setup contract.
 
 ### Next
 
-- Sprint 8: TBD
-
-Current priority:
-- define Sprint 8 macro-objectives and initialize a fresh
-  `.ai/handoffs/current_plan.md` only after pre-sprint grooming
+- Sprint 8: Portfolio API & Resilient Graph Integration (DONE)
+- Key outcomes:
+  - deterministic `POST /portfolio` endpoint delivered
+  - resilient optimizer handoff integrated into `core_consensus_node`
+  - Artifact-Driven Blackboard remains the active coordination model through `.ai/handoffs/current_plan.md`
 
 ## Quality Gates
 

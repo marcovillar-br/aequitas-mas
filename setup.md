@@ -1,18 +1,18 @@
 # AEQUITAS-MAS: SETUP & RUNTIME CONTRACT
 
-**System Version:** `5.0.0`
-**Architecture Version:** `2.0`
+**System Version:** `6.0.0`
+**Architecture Version:** `3.0`
 
 This document is the definitive runtime contract for the Aequitas-MAS workspace. It describes how the local environment, dependency groups, secrets, observability, and deterministic boundaries must be handled by developers and AI coding assistants.
 
 ## 1. Engineering Team Topology
 
-The project follows a strict responsibility model to preserve Risk Confinement and Specification-Driven Development:
+The project follows a strict responsibility model to preserve Risk Confinement and the Artifact-Driven Blackboard architecture:
 
 - **Tech Lead (Human):** final decision-maker, architectural reviewer, and delivery approver.
 - **GEM (Architect):** owner of `PLAN.md`, `SPEC.md`, and architectural direction.
 - **Scientist (Google AI Studio / sandbox):** validates prompts, temperature, and LLM behavior before integration.
-- **GCA (Developer / IDE executor):** implements approved work inside the IDE using the Artifact-Driven Blackboard (SDD) methodology (via `.ai/handoffs/current_plan.md`) without making architectural decisions.
+- **GCA (Developer / IDE executor):** consumes the active artifact in `.ai/handoffs/current_plan.md`, executes the approved code/test work, and writes back delivery evidence without making architectural decisions.
 
 ## 2. Prerequisites
 
@@ -143,8 +143,9 @@ The active API boundary includes:
 
 - `POST /analyze`
 - `POST /backtest/run`
+- `POST /portfolio`
 
-The backtest endpoint is live and wired to the deterministic ingestion path.
+The API now exposes deterministic analysis, backtesting, and portfolio optimization boundaries under the Blackboard runtime contract.
 
 ## 10. Quality Gates
 

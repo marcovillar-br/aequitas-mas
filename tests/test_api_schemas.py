@@ -99,6 +99,18 @@ def test_portfolio_request_normalizes_tickers_and_accepts_optional_constraints()
     assert request.min_cash_position == 0.1
 
 
+def test_portfolio_request_normalizes_single_asset_1d_returns_to_matrix() -> None:
+    """Single-asset time series must be reshaped to observations x 1 at the API boundary."""
+    request = PortfolioRequest(
+        tickers=[" petr4 "],
+        returns=[0.01, -0.02, 0.03],
+        risk_appetite=0.4,
+    )
+
+    assert request.tickers == ["PETR4"]
+    assert request.returns == [[0.01], [-0.02], [0.03]]
+
+
 def test_portfolio_request_rejects_impossible_constraint_combination() -> None:
     """Impossible capital-allocation constraints must fail fast at the API boundary."""
     with pytest.raises(
@@ -115,4 +127,18 @@ def test_portfolio_request_rejects_impossible_constraint_combination() -> None:
             risk_appetite=0.4,
             max_ticker_weight=0.2,
             min_cash_position=0.1,
+        )
+
+
+def test_portfolio_request_rejects_invalid_b3_ticker_at_api_boundary() -> None:
+    """Ticker format must fail in the request schema before reaching the optimizer."""
+    with pytest.raises(ValidationError, match=r"String should match pattern"):
+        PortfolioRequest(
+            tickers=["PETR4", "vale"],
+            returns=[
+                [0.01, 0.02],
+                [0.015, 0.018],
+                [0.012, -0.01],
+            ],
+            risk_appetite=0.4,
         )

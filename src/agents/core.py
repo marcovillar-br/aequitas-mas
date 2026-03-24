@@ -80,6 +80,22 @@ def _build_blocked_core_analysis(reason: str) -> CoreAnalysis:
     )
 
 
+def _build_blocked_result(
+    rationale: str,
+    source_urls: list[str],
+) -> CoreConsensusNodeResult:
+    """Build a fully immutable blocked patch for every degradation path."""
+    return {
+        "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
+            update={"source_urls": source_urls}
+        ),
+        "audit_log": [f"[Core/Consensus] {rationale}"],
+        "messages": [AIMessage(content=rationale, name="core_consensus")],
+        "executed_nodes": ["core_consensus"],
+        "optimization_blocked": True,
+    }
+
+
 def _collect_source_urls(state: AgentState) -> list[str]:
     """Aggregate unique traceability URLs from specialist analyses."""
     urls: list[str] = []
@@ -137,30 +153,14 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
             "Consenso indisponível: o supervisor não conseguiu sintetizar as análises "
             f"especialistas para '{ticker}'."
         )
-        return {
-            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
-                update={"source_urls": source_urls}
-            ),
-            "audit_log": [f"[Core/Consensus] {rationale}"],
-            "messages": [AIMessage(content=rationale, name="core_consensus")],
-            "executed_nodes": ["core_consensus"],
-            "optimization_blocked": True,
-        }
+        return _build_blocked_result(rationale, source_urls)
 
     if decision.approval_status == "block":
         logger.info("core_consensus_blocked", ticker=ticker)
         rationale = (
             f"{decision.rationale} A etapa de otimização foi bloqueada por consenso."
         )
-        return {
-            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
-                update={"source_urls": source_urls}
-            ),
-            "audit_log": [f"[Core/Consensus] {rationale}"],
-            "messages": [AIMessage(content=rationale, name="core_consensus")],
-            "executed_nodes": ["core_consensus"],
-            "optimization_blocked": True,
-        }
+        return _build_blocked_result(rationale, source_urls)
 
     portfolio_tickers = state.portfolio_tickers or [ticker]
     if not state.portfolio_returns or state.risk_appetite is None:
@@ -174,14 +174,7 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
             f"{decision.rationale} O consenso foi positivo, mas a otimização não pôde "
             "ser executada porque faltam `portfolio_returns` ou `risk_appetite` no estado."
         )
-        return {
-            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
-                update={"source_urls": source_urls}
-            ),
-            "audit_log": [f"[Core/Consensus] {rationale}"],
-            "messages": [AIMessage(content=rationale, name="core_consensus")],
-            "executed_nodes": ["core_consensus"],
-        }
+        return _build_blocked_result(rationale, source_urls)
 
     try:
         benchmarks = fetch_benchmarks_as_of(state.as_of_date)
@@ -201,29 +194,14 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
         rationale = (
             f"{decision.rationale} A etapa determinística de otimização falhou: {exc}"
         )
-        return {
-            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
-                update={"source_urls": source_urls}
-            ),
-            "audit_log": [f"[Core/Consensus] {rationale}"],
-            "messages": [AIMessage(content=rationale, name="core_consensus")],
-            "executed_nodes": ["core_consensus"],
-        }
+        return _build_blocked_result(rationale, source_urls)
 
     if optimization is None:
         rationale = (
             f"{decision.rationale} A etapa determinística de otimização degradou para "
             "None devido a dados numéricos inválidos ou matriz de covariância singular."
         )
-        return {
-            "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
-                update={"source_urls": source_urls}
-            ),
-            "audit_log": [f"[Core/Consensus] {rationale}"],
-            "messages": [AIMessage(content=rationale, name="core_consensus")],
-            "executed_nodes": ["core_consensus"],
-            "optimization_blocked": True,
-        }
+        return _build_blocked_result(rationale, source_urls)
 
     core_analysis = CoreAnalysis(
         recommended_weights=optimization.weights,

@@ -103,8 +103,14 @@ Esse patch usa `TypedDict` para evitar retorno solto e documentar explicitamente
 os campos mutáveis do nó.
 
 Mandatory state rule:
-- when `optimize_portfolio(...)` degrades to `None`, the patch must explicitly
+- every blocked or degraded deterministic optimization path must explicitly
   set `optimization_blocked=True`
+- missing `portfolio_returns` or `risk_appetite` must block optimization
+  without raising unhandled exceptions
+- blocked patches must preserve `source_urls`, emit `audit_log`, and include a
+  matching `AIMessage` rationale
+- the supervisor may authorize or block optimization qualitatively, but it must
+  never hallucinate substitute weights when the deterministic tool fails
 
 ## 3. Secret Management Cloud-First
 
@@ -163,6 +169,16 @@ Contrato:
   `HistoricalDataLoader` e executa `BacktestEngine`
 - falhas de validação devem resultar em erro HTTP explícito
 - falhas internas devem ser encapsuladas sem fabricar replay sintético
+
+### 4.4 Endpoint `/portfolio`
+
+Contrato:
+- body: `PortfolioRequest`
+- retorno: `PortfolioOptimizationResult`
+- o handler deve encaminhar apenas dados já tipados e validados na boundary
+- falhas determinísticas do otimizador devem retornar mensagem estável em
+  pt-BR, nunca `str(exc)` bruto
+- degradações para `None` devem resultar em `HTTP 400` explícito
 
 ## 5. Backtesting Determinístico
 
@@ -309,9 +325,12 @@ Os documentos operacionais do projeto devem preferir:
 Os documentos não devem reintroduzir vocabulário legado de grafo linear nem
 contratos baseados em coleções ou payloads não tipados.
 
-## 7. Próxima Extensão Planejada
+## 7. Estado Atual de Extensão
 
-Os próximos passos de Sprint 7 focam em:
-- benchmarks e fatores externos
-- restrições dinâmicas de portfólio
-- eventual formalização futura do endpoint `/portfolio`
+Sprint 8 consolidou:
+- o endpoint determinístico `/portfolio`
+- a integração resiliente do otimizador no `core_consensus_node`
+- o fechamento formal do risco residual que havia sido carregado da Sprint 7
+
+As próximas extensões devem partir desse baseline já consolidado, sem
+reintroduzir contratos provisórios ou fluxos operacionais fragmentados.
