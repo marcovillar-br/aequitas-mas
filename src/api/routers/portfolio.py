@@ -31,7 +31,12 @@ def optimize_portfolio_endpoint(request: PortfolioRequest) -> PortfolioOptimizat
             min_cash_position=request.min_cash_position,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning(
+            "api_portfolio_optimize_invalid_input",
+            tickers=request.tickers,
+            error=str(exc),
+        )
+        raise HTTPException(status_code=400, detail=_INVALID_PORTFOLIO_INPUT) from exc
     except Exception as exc:
         logger.error(
             "api_portfolio_optimize_failed",

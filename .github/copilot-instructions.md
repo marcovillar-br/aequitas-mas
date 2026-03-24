@@ -107,7 +107,7 @@ Always put findings first. Keep the overview brief.
 Use this structure:
 
 1. `[DOGMA VIOLATION]` or `[BUG]` or `[SCOPE WARNING]` followed by the core issue
-2. File reference and affected lines
+2. File reference and affected lines, always when they can be identified
 3. Why it is risky
 4. What condition or test is missing
 

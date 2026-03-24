@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 import math
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -231,7 +231,7 @@ class PortfolioRequest(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    tickers: list[str] = Field(
+    tickers: list[Annotated[str, Field(pattern=_B3_TICKER_PATTERN)]] = Field(
         ...,
         description="Ordered B3 ticker universe to optimize.",
         min_length=1,
@@ -298,17 +298,26 @@ class PortfolioRequest(BaseModel):
             if width != asset_count and height != asset_count:
                 raise ValueError("2D returns input must align with ticker count on one axis.")
 
+            normalized_matrix: list[list[float]] = []
             for row in matrix:
+                normalized_row: list[float] = []
                 for item in row:
-                    _coerce_finite_float(item, field_name="returns")
+                    normalized_row.append(
+                        _coerce_finite_float(item, field_name="returns")
+                    )
+                normalized_matrix.append(normalized_row)
         else:
             vector = returns_value
             if asset_count != 1:
                 raise ValueError(
                     "1D returns input is only valid when optimizing a single ticker."
                 )
+            normalized_vector: list[float] = []
             for item in vector:
-                _coerce_finite_float(item, field_name="returns")
+                normalized_vector.append(
+                    _coerce_finite_float(item, field_name="returns")
+                )
+            normalized_matrix = [[item] for item in normalized_vector]
 
         if self.max_ticker_weight is not None and self.min_cash_position is not None:
             invested_capital = 1.0 - self.min_cash_position
@@ -317,4 +326,5 @@ class PortfolioRequest(BaseModel):
                     "max_ticker_weight and min_cash_position define an impossible constraint set."
                 )
 
+        object.__setattr__(self, "returns", normalized_matrix)
         return self
