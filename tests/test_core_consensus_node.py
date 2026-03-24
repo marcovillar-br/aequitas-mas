@@ -256,4 +256,6 @@ def test_core_consensus_node_flags_blocked_when_optimizer_raises(
     assert result["optimization_blocked"] is True
     assert result["messages"][0].content == result["core_analysis"].rational
     assert "falhou" in result["core_analysis"].rational
+    assert "covariance exploded" not in result["core_analysis"].rational
+    assert "covariance exploded" not in result["messages"][0].content
     assert "covariance exploded" in result["audit_log"][0]
