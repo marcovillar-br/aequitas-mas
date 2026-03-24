@@ -1,51 +1,76 @@
-# 🗺️ Current Plan: Documentation Integrity Audit & Sprint 8 Closure
+# 🗺️ Current Plan: Agent Prompt Hardening & Governance
 
 ## 1. Objective
-Realizar uma auditoria abrangente da documentação e limpeza para eliminar 'Context Poisoning' e otimizar o Signal-to-Noise Ratio para os agentes. Encerrar oficialmente a Sprint 8, atualizando os documentos arquiteturais chave para refletir as entregas.
+Analyze and harden the active prompts in `src/agents/` so the agent layer becomes more consistent, reviewable, and dogma-safe. The next implementation cycle should standardize prompt construction, tighten qualitative boundaries, and eliminate user-facing leakage of internal failures while preserving the current graph topology and deterministic tooling contracts.
 
 ## 2. Scope & Constraints
-- **Diretórios Alvo:** `.ai/handoffs/`, `.ai/adr/`, `.context/`, `docs/official/`, `README.md`.
-- **Exclusão:** O diretório `.ai/archive/` e seus subdiretórios devem ser ignorados.
-- **Alinhamento com Blackboard:** Todas as atualizações devem reforçar a Arquitetura de Blackboard Orientada a Artefatos.
-- **Sem Alucinação de LLM:** O Implementador deve seguir estritamente o plano, sem inferir mudanças adicionais.
+- **Target Files:** `src/agents/core.py`, `src/agents/fisher.py`, `src/agents/graham.py`, `src/agents/macro.py`, `src/agents/marks.py`.
+- **Primary Goal:** Prompt governance, not feature expansion.
+- **Hard Constraints:**
+  - no financial math may move into prompts or LLM-facing logic
+  - no regression in `as_of_date` / temporal invariance rules
+  - deterministic tools remain the only place for calculations
+  - LLM-visible degradation messages must stay stable and user-facing in pt-BR
+- **Out of Scope:**
+  - graph topology changes
+  - new endpoints
+  - infrastructure adapters
+  - speculative prompt experimentation outside the existing agent roles
 
-## 3. Implementation Steps (For SDD Implementer)
+## 3. Findings From Prompt Analysis
 
-### Step 1: Correção Crítica de Bug (Pré-Fechamento da Sprint 8)
-- [x] **Aplicar Patch em `src/agents/core.py`:** Implementar a correção identificada na auditoria anterior para garantir que `optimization_blocked=True` seja definido em **todas** as ramificações de falha do otimizador.
+### 3.1 Prompt Construction Is Inconsistent
+- `core.py` and `macro.py` already use `ChatPromptTemplate.from_messages(...)`.
+- `marks.py` uses an inline `ChatPromptTemplate.from_template(...)`.
+- `graham.py` and `fisher.py` still build prompts as raw strings.
+- The resulting agent layer mixes prompt styles and makes review/audit harder than necessary.
 
-### Step 2: Poda de Arquivos Obsoletos
-- [x] **Verificar Manual Legado:** Confirmar que `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_RPI_SDD_v2_pt-BR.md` já não existe mais no repositório. O manual ativo permanece a versão Blackboard v3.
+### 3.2 Guardrails Are Uneven Across Agents
+- `core.py` and `graham.py` are explicit about “no math in prompts”.
+- `macro.py` documents Risk Confinement well, but the guardrails are embedded differently across HyDE and synthesis stages.
+- `fisher.py` and `marks.py` rely more on descriptive prose than on compact, repeatable guardrail structure.
 
-### Step 3: Atualizar Status da Sprint e Documentação Principal
-- [x] **Atualizar `.context/current-sprint.md`:**
-  - Marcar o Step 3 como concluído: `[x] Step 3: Graph Integration (resilient optimizer integration in core_consensus_node, ensuring optimization_blocked=True and logging rationale upon degradation).`
-  - Mudar o status da Sprint 8 para `DONE`.
-  - Atualizar os Macro-Objetivos da Sprint 8 para refletir a entrega bem-sucedida do endpoint `/portfolio` determinístico e da integração resiliente no `core_consensus_node`.
-- [x] **Atualizar `README.md`:**
-  - Na seção "Next", atualizar "Sprint 8: TBD" para "Sprint 8: Portfolio API & Resilient Graph Integration (DONE)".
-  - Adicionar um breve resumo das entregas chave da Sprint 8 (ex: endpoint `/portfolio` determinístico, `core_consensus_node` resiliente).
-- [x] **Atualizar `.context/PLAN.md`:**
-  - Remover as seções "Immediate Priority" e "Próximos passos", pois estão obsoletas.
-  - Atualizar o status da "Sprint 7 Closed — Real Data Ingestion & Dynamic Constraints" para `DONE`.
-  - Adicionar uma nova seção para "Sprint 8 — Portfolio API & Resilient Graph Integration" com seu status como `DONE` e um resumo de suas entregas.
-  - Garantir que não haja resquícios do fluxo "RPI" nas seções de planejamento ativas.
-- [x] **Atualizar `.context/SPEC.md`:**
-  - Revisar a Seção 2.4 "Contrato do Supervisor" para garantir que esteja totalmente alinhada com a integração resiliente do otimizador e a flag `optimization_blocked=True`.
-  - Garantir que não haja referências diretas ao fluxo "RPI" ou à toolchain fragmentada na especificação ativa.
-- [x] **Atualizar `setup.md`:**
-  - Na Seção 1 "Engineering Team Topology", garantir que a descrição do GCA esteja alinhada com a Arquitetura de Blackboard e o uso de `.ai/handoffs/current_plan.md`.
-  - Na Seção 9 "API Runtime", atualizar a lista de endpoints ativos para incluir `POST /portfolio`.
-  - Revisar "System Version" e "Architecture Version" para ver se precisam ser atualizados para `6.0.0` e `3.0` respectivamente, refletindo as entregas da Sprint 8 e a arquitetura Blackboard.
+### 3.3 Failure Output Hygiene Still Needs Cross-Agent Standardization
+- `core.py` was recently hardened to keep raw optimizer exceptions out of user-facing rationale.
+- `fisher.py` still injects raw exception strings into `key_risks` placeholder outputs.
+- `marks.py` still embeds raw exception text into `audit_log` / `marks_verdict`.
+- Prompt and failure-governance should be treated as one review surface.
 
-### Step 4: Auditoria Final e Resumo de Fim de Dia (EOD)
-- [x] **Executar SDD Auditor:** Após todas as modificações, acionar a skill `sdd-auditor` para realizar uma auditoria final de integridade da documentação.
-- [x] **Gerar Resumo EOD:** Criar um novo `.ai/handoffs/eod_summary.md` resumindo a conclusão da limpeza da documentação e o encerramento da Sprint 8.
+## 4. Implementation Steps (For SDD Implementer)
 
-## 4. Definition of Done
-- O bug crítico em `src/agents/core.py` foi corrigido.
-- Todos os artefatos de documentação obsoletos foram deletados ou arquivados corretamente.
-- `README.md` e `.context/current-sprint.md` refletem com precisão o encerramento da Sprint 8.
-- `.context/PLAN.md` e `.context/SPEC.md` estão totalmente modernizados e livres de resquícios do RPI.
-- Uma auditoria final da documentação confirma a ausência de links quebrados ou inconsistências.
-- Um `eod_summary.md` abrangente para esta limpeza e encerramento da Sprint 8 foi gerado.
+### Phase 1: Normalize Prompt Topology
+- [ ] Extract or refactor each agent prompt into an explicit, reviewable prompt-construction surface.
+- [ ] Prefer named helpers or module-level prompt templates over ad-hoc inline string assembly when practical.
+- [ ] Ensure every prompt makes these items explicit:
+  - agent role
+  - allowed evidence
+  - forbidden behavior
+  - required language (`pt-BR`)
+  - expected output contract
+
+### Phase 2: Standardize Dogma Guardrails
+- [ ] Review prompts across all five agents and align the language used for:
+  - Risk Confinement
+  - Controlled Degradation
+  - source traceability
+  - “do not invent facts / do not invent numbers”
+- [ ] Ensure prompt wording does not leave ambiguity about when the model must degrade instead of speculate.
+
+### Phase 3: Harden Failure Messaging Adjacent to Prompts
+- [ ] Remove raw internal exception text from user-facing `AIMessage`, `rational`, `marks_verdict`, or placeholder qualitative outputs.
+- [ ] Keep technical detail only in structured logs and, when necessary, in audit-facing traces.
+- [ ] Preserve stable pt-BR wording for degraded states across agents.
+
+### Phase 4: Regression Coverage
+- [ ] Add or update `pytest` coverage for any agent whose failure semantics change.
+- [ ] Include explicit tests for:
+  - sanitized failure messaging
+  - blocked/degraded state shape
+  - unchanged deterministic boundaries
+
+## 5. Definition of Done
+- Prompt construction across `src/agents/` is materially more consistent and easier to audit.
+- No active prompt path allows financial arithmetic or hidden tool substitution by the LLM.
+- User-facing degraded outputs no longer leak raw internal exception strings.
+- Updated tests cover the new prompt/failure-governance behavior.
+- The agent layer remains aligned with the Artifact-Driven Blackboard architecture and the five dogmas.

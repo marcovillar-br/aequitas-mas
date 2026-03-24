@@ -130,6 +130,19 @@ setup contract.
   - resilient optimizer handoff integrated into `core_consensus_node`
   - Artifact-Driven Blackboard remains the active coordination model through `.ai/handoffs/current_plan.md`
 
+### Academic & SOTA Roadmap 2026-2027
+With the core architecture delivered ahead of schedule, the long-term vision now aligns with the 2026-2027 academic research calendar:
+- **Q1-Q2 2026:** Blackboard Engineering (FinRobot CoT emulation), Advanced Telemetry, and async LangGraph streaming via FastAPI.
+- **Q3 2026:** Shift-Left Statistical Testing & Econometric Validation (Damodar Gujarati methodology) for Macro and Fisher agents.
+- **Q4 2026:** Cyclic Graph Refinement (ReAct & Tree-of-Thought) focusing on risk assessment (Marks Agent).
+- **Q1 2027:** Institutional Quantitative Factors integration, Semantic Chunking for Earnings Calls (MarketSenseAI), and Final Large-Scale Backtesting for Alpha generation evaluation.
+
+### Cross-Cutting Engineering Track (AWS Serverless & FinOps)
+Running in parallel to the academic research, the infrastructure track focuses on cloud deployment and cost optimization:
+- **Q2 2026 (API Deployment):** Packaging the FastAPI gateway for AWS Lambda (Scale-to-Zero) with DynamoDB and OpenSearch Serverless adapters.
+- **Q3 2026 (CI/CD & IaC):** Activating GitHub Actions to apply Terraform state and execute automated shift-left tests in the cloud.
+- **Q1 2027 (Cloud Backtesting):** Executing the final quantitative backtesting on AWS to prove architectural FinOps viability.
+
 ## Quality Gates
 
 ```bash
