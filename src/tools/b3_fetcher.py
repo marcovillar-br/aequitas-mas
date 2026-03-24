@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import pandas as pd
 import requests
+import structlog
 import yfinance as yf
 
 from src.core.state import GrahamMetrics
@@ -17,6 +18,7 @@ from src.tools.backtesting.historical_ingestion import HistoricalMarketData
 
 _SELIC_SERIES_CODE = 432
 _DEFAULT_TIMEOUT_SECONDS = 5
+logger = structlog.get_logger(__name__)
 
 
 def _validate_ticker(ticker: str) -> None:
@@ -91,6 +93,15 @@ class B3HistoricalFetcher:
 
     def _fetch_price_as_of(self, market_client: Any, as_of_date: date) -> Optional[float]:
         """Fetch the latest visible close at or before the requested date."""
+        today = date.today()
+        is_today_request = as_of_date == today
+        logger.info(
+            "b3_fetcher.price_as_of_date_comparison",
+            as_of_date=as_of_date,
+            as_of_date_type=type(as_of_date).__name__,
+            today=today,
+            is_today_request=is_today_request,
+        )
         try:
             history = market_client.history(
                 start=as_of_date - timedelta(days=7),
@@ -98,43 +109,52 @@ class B3HistoricalFetcher:
                 auto_adjust=False,
             )
         except Exception:
-            if as_of_date == date.today():
-                return self._fetch_intraday_price(market_client)
+            if is_today_request:
+                return self._fetch_intraday_price(self._fetch_snapshot_info(market_client))
             return None
 
         if history is None or getattr(history, "empty", True):
-            if as_of_date == date.today():
-                return self._fetch_intraday_price(market_client)
+            if is_today_request:
+                return self._fetch_intraday_price(self._fetch_snapshot_info(market_client))
             return None
 
         if "Close" not in history:
-            if as_of_date == date.today():
-                return self._fetch_intraday_price(market_client)
+            if is_today_request:
+                return self._fetch_intraday_price(self._fetch_snapshot_info(market_client))
             return None
 
         history_index = pd.to_datetime(history.index)
         visible_history = history.loc[history_index.date <= as_of_date]
         if visible_history.empty:
-            if as_of_date == date.today():
-                return self._fetch_intraday_price(market_client)
+            if is_today_request:
+                return self._fetch_intraday_price(self._fetch_snapshot_info(market_client))
             return None
 
         closes = pd.to_numeric(visible_history["Close"], errors="coerce").dropna()
         if closes.empty:
-            if as_of_date == date.today():
-                return self._fetch_intraday_price(market_client)
+            if is_today_request:
+                return self._fetch_intraday_price(self._fetch_snapshot_info(market_client))
             return None
 
         return _coerce_optional_finite_float(closes.iloc[-1])
 
-    def _fetch_intraday_price(self, market_client: Any) -> Optional[float]:
-        """Fetch the provider intraday snapshot for the active trading day only."""
-        snapshot_info = self._fetch_snapshot_info(market_client)
-        current_price = _coerce_optional_finite_float(snapshot_info.get("currentPrice"))
-        if current_price is not None:
-            return current_price
+    def _fetch_intraday_price(self, info: dict[str, Any]) -> Optional[float]:
+        """Fetch intraday prices using a deterministic provider-key cascade."""
+        logger.info(
+            "b3_fetcher.intraday_info_keys",
+            available_info_keys=list(info.keys()),
+        )
+        for key in ("currentPrice", "regularMarketPrice", "previousClose"):
+            normalized_price = _coerce_optional_finite_float(info.get(key))
+            logger.info(
+                "b3_fetcher.intraday_fallback_attempt",
+                candidate_key=key,
+                candidate_value=normalized_price,
+            )
+            if normalized_price is not None:
+                return normalized_price
 
-        return _coerce_optional_finite_float(snapshot_info.get("regularMarketPrice"))
+        return None
 
     def _fetch_snapshot_info(self, market_client: Any) -> dict[str, Any]:
         """Fetch provider snapshot info with controlled degradation."""

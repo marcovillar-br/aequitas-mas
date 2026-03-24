@@ -72,7 +72,6 @@ def test_graham_agent_uses_deterministic_valuation_and_interpretation(
     mock_loader_cls.assert_called_once_with(
         start_date=as_of_date,
         end_date=as_of_date,
-        price_history={},
     )
     mock_loader.get_data_as_of.assert_called_once_with("PETR4", as_of_date)
     mock_get_graham_data.assert_called_once_with("PETR4")

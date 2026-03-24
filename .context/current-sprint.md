@@ -1,5 +1,41 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 10 — AWS Serverless Deployment & Deterministic Presentation
+**Status:** DONE
+
+### Objective
+Enable FinOps-aligned "Scale-to-Zero" AWS deployment for the FastAPI gateway using Mangum, and finalize the `Thesis-CoT` presentation layer by implementing a deterministic PDF Generator adapter that consumes the strictly typed `ThesisReportPayload`.
+
+### Planned Steps
+- [x] Step 1: Initialize the AWS Lambda entrypoint (`Mangum` wrapper) for the FastAPI application.
+- [x] Step 2: Implement the `PdfPresentationAdapter` inside `src/infra/adapters/` adhering to the `PresentationAdapter` boundary.
+- [x] Step 3: Establish the deterministic report generation logic (HTML-to-PDF) ensuring zero LLM visual hallucinations.
+
+### Delivered Scope
+1. `src/api/serverless.py` now exposes a minimal AWS Lambda-compatible
+   `Mangum` handler wrapping the shared FastAPI `app`.
+2. `src/infra/adapters/pdf_presentation_adapter.py` now implements the
+   `PresentationAdapter` protocol as a deterministic downstream consumer of
+   `ThesisReportPayload`.
+3. The presentation adapter renders stable HTML and a lightweight mock PDF byte
+   stream without introducing heavy native rendering dependencies, preserving
+   the 250MB Lambda size hypothesis for now.
+4. `pyproject.toml` now declares `mangum` as a standard dependency for the
+   serverless entrypoint.
+5. Unit coverage now validates both the serverless handler contract and the
+   deterministic presentation adapter behavior.
+
+### Definition of Done
+- [x] `src/api/serverless.py` exposes a generic ASGI handler compatible with AWS Lambda API Gateway integrations.
+- [x] `PdfPresentationAdapter` correctly implements `render_report(payload: ThesisReportPayload) -> bytes`.
+- [x] No mathematical or visual rendering logic is leaked into the LLM prompts or domain layers.
+- [x] The presentation layer safely consumes frozen Pydantic payloads.
+
+### Residual Risks
+- Managing heavy visual dependencies (e.g., WeasyPrint, Matplotlib) within an AWS Lambda layer could risk exceeding deployment size limits (250MB unzipped). Dependency grouping needs careful FinOps evaluation.
+
+---
+
 ## Sprint 6 — API Gateway, Boundary Hardening & Backtesting
 **Status:** DONE
 

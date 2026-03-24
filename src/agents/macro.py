@@ -46,7 +46,6 @@ except ImportError:  # pragma: no cover - defensive import guard
 
 from src.core.llm import require_gemini_api_key
 from src.core.interfaces.vector_store import (
-    NullVectorStore,
     VectorSearchResult,
     VectorStorePort,
 )
@@ -412,10 +411,15 @@ def create_macro_agent(
     return macro_agent
 
 
-# ---------------------------------------------------------------------------
-# Module-level default (backward compatibility + local/offline mode)
-# ---------------------------------------------------------------------------
-# Uses NullVectorStore (Controlled Degradation): the agent runs without
-# retrieval, relying on the LLM's internal knowledge with all Optional[float]
-# fields set to None if not explicitly present in the LLM response.
-macro_agent = create_macro_agent(NullVectorStore())
+def macro_agent(state: AgentState) -> dict:
+    """
+    Guard against accidental direct imports without dependency wiring.
+
+    Production/runtime code must use ``create_macro_agent(...)`` with an
+    injected ``VectorStorePort`` or consume the fully wired node exported by
+    ``src.core.graph``.
+    """
+    raise RuntimeError(
+        "macro_agent requires explicit vector store wiring. "
+        "Use create_macro_agent(vector_store) or import src.core.graph.macro_agent."
+    )

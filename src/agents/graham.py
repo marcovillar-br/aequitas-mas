@@ -47,7 +47,6 @@ def _build_historical_market_data(state: AgentState) -> HistoricalMarketData:
     loader = HistoricalDataLoader(
         start_date=as_of_date,
         end_date=as_of_date,
-        price_history={},
     )
     price = loader.get_data_as_of(ticker, as_of_date)
     snapshot_metrics = get_graham_data(ticker)

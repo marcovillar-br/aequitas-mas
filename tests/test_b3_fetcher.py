@@ -157,14 +157,25 @@ def test_b3_historical_fetcher_never_uses_future_prices() -> None:
     assert result.selic_rate is None
 
 
-def test_fetch_price_as_of_uses_intraday_fallback_only_for_today() -> None:
-    """Today's missing close may degrade to an intraday snapshot price."""
+@pytest.mark.parametrize(
+    ("snapshot_info", "expected_price"),
+    [
+        ({"currentPrice": 41.25, "regularMarketPrice": 41.0, "previousClose": 40.5}, 41.25),
+        ({"currentPrice": None, "regularMarketPrice": 41.0, "previousClose": 40.5}, 41.0),
+        ({"currentPrice": math.nan, "regularMarketPrice": None, "previousClose": 40.5}, 40.5),
+    ],
+)
+def test_intraday_cascade_resolves_prices_in_order_for_today(
+    snapshot_info: dict[str, float | None],
+    expected_price: float,
+) -> None:
+    """Today's missing close must use the intraday fallback cascade in order."""
     market_client = MagicMock()
     market_client.history.return_value = pd.DataFrame(
         {"Close": [math.nan]},
         index=pd.to_datetime(["2026-03-24"]),
     )
-    market_client.info = {"currentPrice": 41.25}
+    market_client.info = snapshot_info
     fetcher = B3HistoricalFetcher()
 
     with patch("src.tools.b3_fetcher.date") as mock_date:
@@ -172,7 +183,7 @@ def test_fetch_price_as_of_uses_intraday_fallback_only_for_today() -> None:
 
         result = fetcher._fetch_price_as_of(market_client, date(2026, 3, 24))
 
-    assert result == pytest.approx(41.25)
+    assert result == pytest.approx(expected_price)
 
 
 def test_fetch_price_as_of_never_uses_intraday_fallback_for_past_dates() -> None:
