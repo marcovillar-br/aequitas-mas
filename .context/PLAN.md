@@ -52,7 +52,7 @@ O baseline arquitetural vigente do repositório já entrega:
    - `BacktestEngine`
 
 ## Sprint 7 — Real Data Ingestion & Dynamic Constraints
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ### Objetivo
 
@@ -86,33 +86,6 @@ Controlled Degradation ou Zero Trust.
   - `selic_rate`
 - `/backtest/run` ativado no gateway com wiring determinístico de ponta a ponta
 
-### Immediate Priority
-
-1. **Benchmark and Factor Inputs (CDI/IBOV)**
-   - integrate reference series into `HistoricalDataLoader`
-   - preserve strict `as_of_date` filtering for benchmark and factor series
-   - degrade unavailable benchmark points to `None`, never to synthetic zeros
-2. **Dynamic Portfolio Constraints**
-   - implement deterministic logic for concentration and regime-aware allocation
-   - keep the full decision path outside the LLM
-   - expose outcomes through immutable Pydantic contracts
-
-### Próximos passos
-
-#### Passo 2 — Benchmark and Factor Inputs
-- Adicionar séries de benchmark e fatores opcionais ao engine
-- Proibir qualquer preenchimento com dados futuros
-- Formalizar faltas de benchmark como degradação explícita, não como zero
-
-#### Passo 3 — Dynamic Portfolio Constraints
-- Introduzir restrições dinâmicas para concentração, liquidez e regime
-- Executar a lógica exclusivamente em tooling determinístico
-- Expor resultados por modelos Pydantic imutáveis
-
-#### Passo 4 — API Boundary Extension
-- Avaliar entrega de `/portfolio` apenas quando houver contrato final validado
-- Manter o gateway baseado em providers, nunca em SDKs cloud diretos
-
 ### Definition of Done — Sprint 7
 
 - ingestão histórica real conectada ao backtester
@@ -121,3 +94,34 @@ Controlled Degradation ou Zero Trust.
 - restrições dinâmicas formalizadas fora do caminho LLM
 - novos contratos tipados documentados e testados
 - nenhuma regressão em anti-look-ahead ou Controlled Degradation
+
+## Sprint 8 — Portfolio API & Resilient Graph Integration
+**Status:** DONE
+
+### Objetivo
+
+Finalizar a boundary do otimizador determinístico e integrá-la ao supervisor
+do grafo sem permitir cálculo financeiro no caminho LLM.
+
+### Entregas consolidadas
+
+1. `POST /portfolio` entregue no gateway FastAPI com contratos tipados para:
+   - universo ordenado de tickers B3
+   - matriz de retornos validada na boundary
+   - constraints determinísticas opcionais
+2. Hardening da API concluído com:
+   - normalização defensiva de tickers
+   - reshape explícito de série 1D para matriz `observations x 1`
+   - mensagens estáveis em pt-BR para falhas do otimizador
+3. `core_consensus_node` endurecido para:
+   - bloquear otimização ao faltar `portfolio_returns` ou `risk_appetite`
+   - bloquear otimização quando o tool falha ou degrada para `None`
+   - retornar patch imutável e auditável com `optimization_blocked=True`
+4. Artefatos operacionais consolidados em `.ai/handoffs/` para fechamento da Sprint 8.
+
+### Definition of Done — Sprint 8
+
+- endpoint `/portfolio` ativo fora do caminho LLM
+- contratos HTTP alinhados ao comportamento do tool determinístico
+- `core_consensus_node` falhando fechado com rastreabilidade explícita
+- documentação ativa refletindo Blackboard Architecture sem resquícios do fluxo RPI

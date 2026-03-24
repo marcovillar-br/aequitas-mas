@@ -1,5 +1,5 @@
 ---
-summary_id: eod-sprint-8-step-3-graph-integration
+summary_id: eod-sprint-8-closure-and-documentation-pruning
 plan_source: .ai/handoffs/current_plan.md
 status: completed
 tests_run:
@@ -14,17 +14,19 @@ dogmas_respected:
 
 ## 1. Implementation Summary
 
-Executed Sprint 8 Step 3 to harden `core_consensus_node` in `src/agents/core.py` against deterministic optimizer degradation.
+Executed the Sprint 8 closure plan with three outcomes:
 
-- Added a shared blocked-result builder so every fallback path returns an immutable `CoreAnalysis` with `recommended_weights=[]`, preserved `source_urls`, an explicit `audit_log` entry, a matching `AIMessage`, and `optimization_blocked=True`.
-- Closed the remaining failure gaps for missing optimizer inputs and optimizer exceptions, keeping the LLM out of any weight-generation path.
-- Expanded unit coverage in `tests/test_core_consensus_node.py` for missing inputs, optimizer `None` degradation, and raised exceptions.
+- hardened `src/agents/core.py` so every deterministic optimization failure path returns the same immutable blocked patch shape, preserving `source_urls`, `audit_log`, `messages`, and `optimization_blocked=True`
+- pruned obsolete operational noise by keeping `.ai/handoffs/` focused on the active plan and EOD artifacts only
+- updated the active project documents (`README.md`, `.context/current-sprint.md`, `.context/PLAN.md`, `.context/SPEC.md`, `setup.md`) to reflect Sprint 8 as fully delivered under the Artifact-Driven Blackboard architecture
 
 ## 2. Validation
 
-- All RED-GREEN-REFACTOR assertions passed in the focused `core_consensus_node` test suite.
-- Graph-level regression tests stayed green, confirming the hardened blocked patch remains compatible with routing and state contracts.
+- focused consensus-node regression tests passed
+- graph routing regressions remained green after the immutable blocked-patch refactor
+- active documentation no longer advertises Sprint 8 as pending or `/portfolio` as deferred
+- the legacy RPI workflow manual was already absent from `docs/official/`, so no further deletion was needed there
 
 ## 3. Notes
 
-Sprint 8 Step 3 is complete. The graph now fails closed whenever deterministic optimization cannot run, and the degradation rationale remains fully auditable in state.
+The `sdd-auditor` skill was not available in this session, so the final documentation audit was executed manually through targeted repository inspection and reference checks. Sprint 8 is now formally closed in the active planning artifacts.
