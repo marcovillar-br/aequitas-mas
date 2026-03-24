@@ -1,7 +1,7 @@
 ---
 name: aequitas-mas-orchestrator
 description: Architecture planner and ethics orchestrator for Aequitas-MAS.
-model: Gemini 2.5 Pro
+model: Gemini 3.1 Pro Preview
 user-invocable: true
 agents:
   - aequitas-mas-implementer
