@@ -1,40 +1,49 @@
 ---
-plan_id: plan-systemic-mapping-omission-prevention-001
+plan_id: plan-cross-tool-alignment-001
 target_files:
-  - ".context/SPEC.md"
-  - "src/core/state.py"
-  - "tests/test_graham_agent.py"
-enforced_dogmas: [defensive-typing, fail-fast, risk-confinement]
+  - "README.md"
+  - ".vscode/settings.json"
+  - ".github/copilot-instructions.md"
+  - "CLAUDE.md"
+  - ".gitignore"
+enforced_dogmas: [artifact-driven-communication, topology-boundaries, risk-confinement]
 validation_scale: FACTS (Mean: 5.0)
 ---
 
 ## 1. Intent & Scope
-Design a systemic prevention plan against Silent Mapping Omissions. By enforcing the "Strict Boundary Mapping" rule, we require that all Pydantic boundary schemas define `Optional[T]` fields WITHOUT `default=None`. This forces explicit mapping at instantiation, ensuring developers cannot accidentally forget to pass a calculated metric (like the recent `price_to_earnings` bug), as Pydantic will raise a `ValidationError` if the field is omitted.
+Execute a Cross-Tool Cognitive Alignment Audit. The goal is to synchronize peripheral tooling configurations (IDE settings, Copilot/Claude instructions, `.gitignore`, and the root `README.md`) with the mature Aequitas-MAS Artifact-Driven Blackboard architecture, ensuring no legacy protocols, legacy terms ("AlphaX"), or outdated sprint states remain.
 
-## 2. File Implementation
+## 2. File Implementation: Tooling & Metadata Updates
 
-### Step 2.1: Update Architectural Rules
-* **Target:** `.context/SPEC.md`
-* **Action:** Add the "Strict Boundary Mapping" rule to section 2 (Contratos de Tipagem Estrita). The rule must state: "In Pydantic schemas acting as boundaries, fields may be typed as `Optional[T]`, but MUST NOT use `default=None`. All properties must be explicitly mapped during instantiation, even if passed as `None`."
-* **Constraints:** Maintain the existing mandate for `ConfigDict(frozen=True)`.
-* **Signatures:** N/A (Documentation only).
+### Step 2.1: Update `README.md` (Sprint 10 Alignment)
+* **Target:** `README.md`
+* **Action:** 
+  - Update title references from "Delivered Through Sprint 8" to "Delivered Through Sprint 10".
+  - Move Sprints 8, 9, and 10 to the "Delivered" roadmap section, highlighting the AWS Serverless Deployment and PDF Presentation Adapter integrations.
+  - Ensure no legacy "AlphaX" terminology exists in the file.
 
-### Step 2.2: Harden State Schemas
-* **Target:** `src/core/state.py`
-* **Action:** Remove `default=None` from all `Optional` fields in `GrahamMetrics` (e.g., `vpa`, `lpa`, `price_to_earnings`, `fair_value`, `margin_of_safety`).
-* **Constraints:** Do NOT change the type hint (they must remain `Optional[float]`). Only remove the default assignment so Pydantic enforces their presence.
-* **Signatures:** `vpa: Optional[float] = Field(description="...")`
+### Step 2.2: Refactor `.vscode/settings.json` (Remove Legacy Protocols)
+* **Target:** `.vscode/settings.json`
+* **Action:** 
+  - Delete all legacy `gpt.codex.slashCommands` (`plan`, `implement`, `review`, `audit`, etc.) that reference the deleted `.context/protocol/*.md` files.
+  - Ensure `gpt.codex.customInstructions` strictly instruct the AI to use the "Artifact-Driven Blackboard Architecture" and point to `.ai/handoffs/current_plan.md`.
 
-### Step 2.3: TDD Enforcement and Fixes
-* **Target:** `tests/test_graham_agent.py`
-* **Action:** Update all instantiations and assertions of `GrahamMetrics` to explicitly include all fields. For example, `GrahamMetrics(ticker="PETR4")` must become `GrahamMetrics(ticker="PETR4", vpa=None, lpa=None, price_to_earnings=None, fair_value=None, margin_of_safety=None)`.
-* **Constraints:** Ensure the Happy Path tests strictly assert the presence and correct mapping of all attributes, not just the existence of the object.
-* **Signatures:** N/A (Test updates only).
+### Step 2.3: Harden Copilot & Claude Instructions
+* **Target:** `.github/copilot-instructions.md` and `CLAUDE.md`
+* **Action:**
+  - Add an explicit, non-negotiable rule forbidding AI assistants from proposing or implementing architectural changes without a predefined `.ai/handoffs/current_plan.md`.
+  - Re-verify that the ban on `decimal.Decimal` at LangGraph boundaries is prominently and explicitly stated.
+
+### Step 2.4: Explicit `.gitignore` Policies for the Blackboard
+* **Target:** `.gitignore`
+* **Action:**
+  - Add an explicit rule section for the `.ai/` directory.
+  - Allow tracking of `.ai/handoffs/` (since these are canonical architectural state files) and `.ai/skills/`.
+  - Ensure `.ai/archive/` is ignored from version control to prevent deprecated data from polluting diffs.
 
 ## 3. Definition of Done (DoD)
-- [ ] `SPEC.md` contains the new "Strict Boundary Mapping" rule.
-- [ ] `GrahamMetrics` in `src/core/state.py` has no `default=None` on its fields.
-- [ ] All `GrahamMetrics` instantiations in tests provide all arguments explicitly.
-- [ ] `tests/test_graham_agent.py` asserts the full explicit mapping in happy paths.
-- [ ] Code passes standard static analysis (`ruff check`).
-- [ ] `pytest` runs successfully without validation errors.
+- [ ] `README.md` accurately reflects the completion of Sprint 10 and Serverless/FinOps delivery.
+- [ ] `.vscode/settings.json` is clean of legacy `.context/protocol/` dependencies.
+- [ ] Copilot and Claude instructions strictly mandate `.ai/handoffs/current_plan.md` for architectural changes.
+- [ ] `.gitignore` correctly manages the `.ai/` directory bounds.
+- [ ] No files in scope contain Python source code modifications or modifications to core `.context/` docs.

@@ -18,6 +18,7 @@ Do not proceed with any task until these files have been read and their constrai
 
 Violation of any rule below is a hard architectural error. Stop and correct before continuing.
 
+- **FORBIDDEN:** Proposing or implementing architectural changes without a predefined `.ai/handoffs/current_plan.md`.
 - **FORBIDDEN:** `decimal.Decimal` in LangGraph state schemas. Use `Optional[float] = None`.
 - **FORBIDDEN:** `boto3` or cloud SDKs inside `/src/agents/` or `/src/core/`. Use `/src/infra/adapters/`.
 - **FORBIDDEN:** Financial calculations inside LLM prompts or agent nodes. Delegate to `/src/tools/`.
@@ -42,3 +43,5 @@ We no longer use legacy slash commands. All non-trivial tasks MUST follow the Ar
 1. **Plan:** Trigger the `sdd-writing-plans` skill to generate `.ai/handoffs/current_plan.md`.
 2. **Implement:** Trigger the `sdd-implementer` skill to execute the plan via RED-GREEN-REFACTOR TDD.
 3. **Audit:** Trigger the `sdd-auditor` skill to verify dogma compliance before committing.
+
+No assistant may propose or execute architecture changes outside this workflow.

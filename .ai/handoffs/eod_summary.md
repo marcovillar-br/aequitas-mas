@@ -1,67 +1,46 @@
 ---
-summary_id: eod-plan-systemic-mapping-omission-prevention-001
+summary_id: eod-plan-cross-tool-alignment-001
 status: completed
 target_files:
-  - ".context/SPEC.md"
-  - "src/core/state.py"
-  - "src/agents/graham.py"
-  - "tests/test_graham_agent.py"
-  - "tests/test_api_schemas.py"
-  - "tests/test_core_consensus_node.py"
-  - "tests/test_graph_routing.py"
-  - ".ai/handoffs/eod_summary.md"
+  - "README.md"
+  - ".vscode/settings.json"
+  - ".github/copilot-instructions.md"
+  - "CLAUDE.md"
+  - ".gitignore"
 tests_run:
-  - "poetry run pytest tests/test_graham_agent.py"
-  - "poetry run pytest tests/test_api_schemas.py tests/test_core_consensus_node.py tests/test_graph_routing.py"
-  - "poetry run ruff check ."
-  - "poetry run pytest"
+  - "rg -n 'AlphaX|\\.context/protocol|Delivered Through Sprint 8' README.md .vscode/settings.json .github/copilot-instructions.md CLAUDE.md .gitignore"
+  - "rg -n 'current_plan\\.md|decimal\\.Decimal|Artifact-Driven Blackboard' .vscode/settings.json .github/copilot-instructions.md CLAUDE.md README.md"
 dogmas_respected:
-  - defensive-typing
-  - fail-fast
-  - risk-confinement
   - artifact-driven-communication
+  - topology-boundaries
+  - risk-confinement
+  - scope-discipline
 ---
 
 ## 1. Implementation Summary
 
-Executed the approved systemic prevention plan from
-`.ai/handoffs/current_plan.md` and completed the required boundary hardening.
+Executed the approved cross-tool alignment plan from `.ai/handoffs/current_plan.md` and synchronized the peripheral toolchain with the mature Artifact-Driven Blackboard architecture.
 
-- Updated `.context/SPEC.md` to permanently document the new
-  **Strict Boundary Mapping** rule under strict typing contracts.
-- Hardened `GrahamMetrics` in `src/core/state.py` by removing `default=None`
-  from all `Optional` financial fields so Pydantic now requires explicit field
-  mapping at instantiation time.
-- Updated `src/agents/graham.py` and `tests/test_graham_agent.py` so every
-  `GrahamMetrics` instantiation explicitly maps all fields, including
-  `None` values when degradation is intended.
+- Updated `README.md` to reflect delivery through Sprint 10, moving Sprints 8, 9, and 10 into the delivered roadmap, and highlighting the AWS Serverless Deployment and PDF Presentation Adapter integrations.
+- Removed legacy `.context/protocol/*` slash-command dependencies from `.vscode/settings.json` and rewired the Codex custom instructions around `.ai/handoffs/current_plan.md` and the `decimal.Decimal` ban.
+- Hardened `.github/copilot-instructions.md` and `CLAUDE.md` with explicit blocking rules against architecture changes without a predefined `.ai/handoffs/current_plan.md`.
+- Added explicit `.ai/` ignore policy boundaries in `.gitignore`, keeping `.ai/archive/` ignored while preserving `.ai/handoffs/` and `.ai/skills/` as tracked Blackboard assets.
 
-## 2. TDD Execution
+## 2. Referential and Dogma Alignment
 
-- RED: Strengthened `tests/test_graham_agent.py` to require explicit full-field
-  mapping. After hardening `GrahamMetrics`, the first targeted run failed with
-  `ValidationError` because degraded paths in `src/agents/graham.py` still
-  instantiated `GrahamMetrics` with omitted fields.
-- GREEN: Fixed all `GrahamMetrics` instantiations in `src/agents/graham.py` so
-  the Graham hot path and degraded paths now map every field explicitly.
-- REFACTOR: Ran the full suite, which exposed additional systemic omissions in
-  `tests/test_api_schemas.py`, `tests/test_core_consensus_node.py`, and
-  `tests/test_graph_routing.py`. Updated those instantiations to comply with
-  the new boundary rule without changing business logic.
+- No remaining `AlphaX` references were found in the scoped files.
+- No remaining `.context/protocol/` references were found in the scoped files.
+- `current_plan.md` is now explicitly referenced as the required control artifact in the IDE and assistant instruction surfaces.
+- `decimal.Decimal` remains prominently and explicitly banned in the assistant instruction surfaces that guide implementation and review behavior.
 
 ## 3. Validation
 
-- `poetry run pytest tests/test_graham_agent.py` passed with `3 passed`.
-- `poetry run pytest tests/test_api_schemas.py tests/test_core_consensus_node.py tests/test_graph_routing.py`
-  passed with `31 passed`.
-- `poetry run ruff check .` passed successfully.
-- `poetry run pytest` passed successfully with `182 passed in 78.79s`.
+- Confirmed `.vscode/settings.json` remains valid JSON.
+- Confirmed `README.md` no longer says `Delivered Through Sprint 8` and correctly points to Sprint 10.
+- Confirmed the scoped files contain the expected Blackboard and `decimal.Decimal` guardrail language.
+- Confirmed this execution did not modify Python source files or core `.context/` documentation.
 
-## 4. Dogma Compliance
+## 4. Scope Control
 
-- Defensive typing is now stronger: silent omission of `GrahamMetrics` fields
-  is prevented by schema construction itself.
-- Fail-fast behavior is now systemic: missing mappings raise
-  `ValidationError` immediately instead of silently degrading by omission.
-- Risk confinement is preserved: no prompt math, `Decimal`, or domain
-  architecture drift was introduced while hardening the boundary contract.
+- This execution was documentation and configuration-only; no Python tests were created or run.
+- The change remained confined strictly to the files explicitly listed in the plan.

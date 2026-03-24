@@ -1,5 +1,10 @@
 # 📐 SPEC: Especificações de Engenharia — Aequitas-MAS
 
+Este documento é o **SSOT arquitetural** do projeto. Contratos de runtime,
+boundaries, ingestão, apresentação, segurança e backtesting vivem aqui.
+`setup.md` permanece operacional; `.context/rules/coding-guidelines.md`
+permanece normativo para estilo, tipagem e topologia de execução.
+
 ## 1. Topologia Vigente do Sistema
 
 O Aequitas-MAS opera como **Cyclic Graph** com semântica de
@@ -165,8 +170,9 @@ acoplamento direto da camada de domínio a um provider específico.
 
 ### 3.3 Consequência arquitetural
 
-O sistema fica preparado para um futuro `AWSSecretsManagerAdapter` sem exigir
-mudança em `src/agents/` ou `src/core/`.
+O sistema fica preparado para futuros adapters, como
+`AWSSecretsManagerAdapter`, sem exigir mudança em `src/agents/` ou
+`src/core/`.
 
 ## 4. FastAPI Gateway
 

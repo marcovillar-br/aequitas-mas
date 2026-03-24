@@ -28,3 +28,10 @@ infra/terraform/tfplan*
 # Variáveis de Ambiente e Segredos
 .env
 .env.local
+
+# Artifact-Driven Blackboard (.ai/)
+.ai/archive/
+!.ai/handoffs/
+!.ai/handoffs/**
+!.ai/skills/
+!.ai/skills/**
