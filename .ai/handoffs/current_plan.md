@@ -14,29 +14,8 @@ Realizar uma auditoria abrangente da documentação e limpeza para eliminar 'Con
 ### Step 1: Correção Crítica de Bug (Pré-Fechamento da Sprint 8)
 - [x] **Aplicar Patch em `src/agents/core.py`:** Implementar a correção identificada na auditoria anterior para garantir que `optimization_blocked=True` seja definido em **todas** as ramificações de falha do otimizador.
 
-```diff
---- a/home/marco/projects/aequitas-mas/src/agents/core.py
-+++ b/home/marco/projects/aequitas-mas/src/agents/core.py
-@@ -134,6 +134,7 @@
-             "audit_log": [f"[Core/Consensus] {rationale}"],
-             "messages": [AIMessage(content=rationale, name="core_consensus")],
-             "executed_nodes": ["core_consensus"],
-+            "optimization_blocked": True,
-        }
-
-    try:
-@@ -155,6 +156,7 @@
-             "audit_log": [f"[Core/Consensus] {rationale}"],
-             "messages": [AIMessage(content=rationale, name="core_consensus")],
-             "executed_nodes": ["core_consensus"],
-+            "optimization_blocked": True,
-        }
-
-    if decision.approval_status == "block":
-```
-
 ### Step 2: Poda de Arquivos Obsoletos
-- [x] **Deletar Manual Legado:** Executar `git rm docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_RPI_SDD_v2_pt-BR.md`. (Este arquivo foi substituído pela versão v3 do manual Blackboard).
+- [x] **Verificar Manual Legado:** Confirmar que `docs/official/Aequitas-MAS_50_Manual_Engenharia_Fluxo_Trabalho_RPI_SDD_v2_pt-BR.md` já não existe mais no repositório. O manual ativo permanece a versão Blackboard v3.
 
 ### Step 3: Atualizar Status da Sprint e Documentação Principal
 - [x] **Atualizar `.context/current-sprint.md`:**

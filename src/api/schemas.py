@@ -274,6 +274,25 @@ class PortfolioRequest(BaseModel):
             return None
         return _coerce_finite_float(value, field_name=info.field_name)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_single_asset_returns(cls, data: Any) -> Any:
+        """Reshape a single-asset 1D series before the frozen model is built."""
+        if not isinstance(data, dict):
+            return data
+
+        tickers = data.get("tickers")
+        returns = data.get("returns")
+        if not isinstance(tickers, list) or not isinstance(returns, list) or not returns:
+            return data
+
+        if len(tickers) != 1 or isinstance(returns[0], list):
+            return data
+
+        normalized = dict(data)
+        normalized["returns"] = [[item] for item in returns]
+        return normalized
+
     @model_validator(mode="after")
     def validate_returns_and_constraints(self) -> "PortfolioRequest":
         """Ensure the optimizer contract is structurally coherent before routing."""
@@ -298,26 +317,17 @@ class PortfolioRequest(BaseModel):
             if width != asset_count and height != asset_count:
                 raise ValueError("2D returns input must align with ticker count on one axis.")
 
-            normalized_matrix: list[list[float]] = []
             for row in matrix:
-                normalized_row: list[float] = []
                 for item in row:
-                    normalized_row.append(
-                        _coerce_finite_float(item, field_name="returns")
-                    )
-                normalized_matrix.append(normalized_row)
+                    _coerce_finite_float(item, field_name="returns")
         else:
             vector = returns_value
             if asset_count != 1:
                 raise ValueError(
                     "1D returns input is only valid when optimizing a single ticker."
                 )
-            normalized_vector: list[float] = []
             for item in vector:
-                normalized_vector.append(
-                    _coerce_finite_float(item, field_name="returns")
-                )
-            normalized_matrix = [[item] for item in normalized_vector]
+                _coerce_finite_float(item, field_name="returns")
 
         if self.max_ticker_weight is not None and self.min_cash_position is not None:
             invested_capital = 1.0 - self.min_cash_position
@@ -326,5 +336,4 @@ class PortfolioRequest(BaseModel):
                     "max_ticker_weight and min_cash_position define an impossible constraint set."
                 )
 
-        object.__setattr__(self, "returns", normalized_matrix)
         return self

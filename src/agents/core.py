@@ -83,13 +83,18 @@ def _build_blocked_core_analysis(reason: str) -> CoreAnalysis:
 def _build_blocked_result(
     rationale: str,
     source_urls: list[str],
+    audit_detail: str | None = None,
 ) -> CoreConsensusNodeResult:
     """Build a fully immutable blocked patch for every degradation path."""
+    audit_entry = f"[Core/Consensus] {rationale}"
+    if audit_detail:
+        audit_entry = f"{audit_entry} Detalhe técnico: {audit_detail}"
+
     return {
         "core_analysis": _build_blocked_core_analysis(rationale).model_copy(
             update={"source_urls": source_urls}
         ),
-        "audit_log": [f"[Core/Consensus] {rationale}"],
+        "audit_log": [audit_entry],
         "messages": [AIMessage(content=rationale, name="core_consensus")],
         "executed_nodes": ["core_consensus"],
         "optimization_blocked": True,
@@ -192,9 +197,10 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
     except Exception as exc:
         logger.error("core_consensus_optimizer_failed", ticker=ticker, error=str(exc))
         rationale = (
-            f"{decision.rationale} A etapa determinística de otimização falhou: {exc}"
+            f"{decision.rationale} A etapa determinística de otimização falhou "
+            "devido a uma condição interna do motor quantitativo."
         )
-        return _build_blocked_result(rationale, source_urls)
+        return _build_blocked_result(rationale, source_urls, audit_detail=str(exc))
 
     if optimization is None:
         rationale = (
