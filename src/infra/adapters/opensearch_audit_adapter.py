@@ -16,8 +16,10 @@ import os
 from typing import Any
 
 import structlog
+from pydantic import BaseModel
 
-from src.core.interfaces.audit import AuditSinkPort, DecisionPathEvent
+from src.core.interfaces.audit import DecisionPathEvent
+from src.core.interfaces.audit_store import AuditStorePort
 
 logger = structlog.get_logger(__name__)
 
@@ -28,7 +30,7 @@ _DEFAULT_TIMEOUT_SECONDS = 30
 _DEFAULT_MAX_RETRIES = 3
 
 
-class OpenSearchAuditAdapter(AuditSinkPort):
+class OpenSearchAuditAdapter(AuditStorePort):
     """Infrastructure adapter that writes Decision Path events to OpenSearch."""
 
     def __init__(self, client: Any, index: str = _DEFAULT_AUDIT_INDEX) -> None:
@@ -103,35 +105,41 @@ class OpenSearchAuditAdapter(AuditSinkPort):
 
         return cls(client=client, index=index)
 
-    def record_decision_event(self, event: DecisionPathEvent) -> None:
+    def record_event(self, event: BaseModel) -> None:
         """
-        Write a Decision Path event to OpenSearch.
+        Write an immutable audit event to OpenSearch.
 
         This method is observational by contract. Any indexing failure is
         logged and swallowed so the graph execution path remains unaffected.
         """
         payload = self._build_document(event)
+        event_thread_id = getattr(event, "thread_id", "unknown")
+        event_node_name = getattr(event, "node_name", "unknown")
+        event_phase = getattr(event, "phase", "unknown")
 
         try:
             self._client.index(index=self._index, body=payload, refresh=False)
             logger.info(
                 "decision_path_event_indexed",
                 index=self._index,
-                thread_id=event.thread_id,
-                node_name=event.node_name,
-                phase=event.phase,
+                thread_id=event_thread_id,
+                node_name=event_node_name,
+                phase=event_phase,
             )
         except Exception as exc:
-            logger.error(
+            logger.warning(
                 "decision_path_event_index_failed",
                 index=self._index,
-                thread_id=event.thread_id,
-                node_name=event.node_name,
-                phase=event.phase,
+                thread_id=event_thread_id,
+                node_name=event_node_name,
+                phase=event_phase,
                 error=str(exc),
-                exc_info=True,
             )
 
-    def _build_document(self, event: DecisionPathEvent) -> dict[str, Any]:
-        """Convert the Decision Path payload into an OpenSearch-ready document."""
+    def record_decision_event(self, event: DecisionPathEvent) -> None:
+        """Backward-compatible entrypoint retained for the existing graph code."""
+        self.record_event(event)
+
+    def _build_document(self, event: BaseModel) -> dict[str, Any]:
+        """Convert a validated audit payload into an OpenSearch-ready document."""
         return event.model_dump(mode="json")

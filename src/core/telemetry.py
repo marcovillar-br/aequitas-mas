@@ -19,6 +19,7 @@ import structlog
 _DEFAULT_SERVICE_NAME = "aequitas-mas"
 _DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = False
 _TELEMETRY_RUNTIME: "TelemetryRuntime | None" = None
+logger = structlog.get_logger(__name__)
 
 
 class SpanLike(Protocol):
@@ -141,6 +142,22 @@ def _configure_structlog(force: bool = False) -> None:
     _DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = True
 
 
+def _add_span_processor_safely(provider: Any, processor: Any) -> None:
+    """Attach a span processor without allowing telemetry failures to bubble up."""
+    add_span_processor = getattr(provider, "add_span_processor", None)
+    if not callable(add_span_processor):
+        return
+
+    try:
+        add_span_processor(processor)
+    except Exception as exc:
+        logger.warning(
+            "telemetry_span_processor_degraded",
+            processor=type(processor).__name__,
+            error=str(exc),
+        )
+
+
 def configure_telemetry(
     *,
     service_name: str = _DEFAULT_SERVICE_NAME,
@@ -173,21 +190,29 @@ def configure_telemetry(
         return runtime
 
     provider = tracer_provider
-    if provider is None:
-        provider = TracerProvider(
-            resource=Resource.create({"service.name": service_name})
+    try:
+        if provider is None:
+            provider = TracerProvider(
+                resource=Resource.create({"service.name": service_name})
+            )
+            for processor in span_processors or []:
+                _add_span_processor_safely(provider, processor)
+            try:
+                trace.set_tracer_provider(provider)
+            except Exception:
+                pass
+        else:
+            for processor in span_processors or []:
+                _add_span_processor_safely(provider, processor)
+    except Exception as exc:
+        logger.warning(
+            "telemetry_configuration_degraded",
+            service_name=service_name,
+            error=str(exc),
         )
-        for processor in span_processors or []:
-            provider.add_span_processor(processor)
-        try:
-            trace.set_tracer_provider(provider)
-        except Exception:
-            pass
-    else:
-        for processor in span_processors or []:
-            add_span_processor = getattr(provider, "add_span_processor", None)
-            if callable(add_span_processor):
-                add_span_processor(processor)
+        runtime = TelemetryRuntime(tracer_provider=None, enabled=False)
+        _TELEMETRY_RUNTIME = runtime
+        return runtime
 
     runtime = TelemetryRuntime(tracer_provider=provider, enabled=True)
     _TELEMETRY_RUNTIME = runtime

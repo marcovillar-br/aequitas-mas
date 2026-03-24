@@ -69,6 +69,32 @@ def test_record_decision_event_swallows_indexing_failures() -> None:
     mock_client.index.assert_called_once()
 
 
+def test_record_decision_event_swallows_timeout_failures_as_warnings() -> None:
+    """Timeouts in the OpenSearch adapter must degrade without bubbling up."""
+    mock_client = MagicMock()
+    mock_client.index.side_effect = TimeoutError("timed out")
+
+    adapter = OpenSearchAuditAdapter(client=mock_client)
+    event = DecisionPathEvent(
+        timestamp="2026-03-24T12:00:00Z",
+        thread_id="thread-789",
+        target_ticker="ITUB4",
+        node_name="core_consensus",
+        phase="success",
+        executed_nodes_snapshot=["graham", "fisher", "macro", "marks", "core_consensus"],
+        degradation_reason=None,
+        source_urls=[],
+        latency_ms=12.0,
+        optimizer_invoked=True,
+    )
+
+    with patch("src.infra.adapters.opensearch_audit_adapter.logger.warning") as mock_warning:
+        adapter.record_decision_event(event)
+
+    mock_client.index.assert_called_once()
+    mock_warning.assert_called_once()
+
+
 def test_from_env_builds_client_with_timeout_and_retries(monkeypatch) -> None:
     """The production adapter should tolerate slower first-write data plane responses."""
     mock_client = MagicMock()

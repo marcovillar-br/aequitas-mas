@@ -98,24 +98,43 @@ class B3HistoricalFetcher:
                 auto_adjust=False,
             )
         except Exception:
+            if as_of_date == date.today():
+                return self._fetch_intraday_price(market_client)
             return None
 
         if history is None or getattr(history, "empty", True):
+            if as_of_date == date.today():
+                return self._fetch_intraday_price(market_client)
             return None
 
         if "Close" not in history:
+            if as_of_date == date.today():
+                return self._fetch_intraday_price(market_client)
             return None
 
         history_index = pd.to_datetime(history.index)
         visible_history = history.loc[history_index.date <= as_of_date]
         if visible_history.empty:
+            if as_of_date == date.today():
+                return self._fetch_intraday_price(market_client)
             return None
 
         closes = pd.to_numeric(visible_history["Close"], errors="coerce").dropna()
         if closes.empty:
+            if as_of_date == date.today():
+                return self._fetch_intraday_price(market_client)
             return None
 
         return _coerce_optional_finite_float(closes.iloc[-1])
+
+    def _fetch_intraday_price(self, market_client: Any) -> Optional[float]:
+        """Fetch the provider intraday snapshot for the active trading day only."""
+        snapshot_info = self._fetch_snapshot_info(market_client)
+        current_price = _coerce_optional_finite_float(snapshot_info.get("currentPrice"))
+        if current_price is not None:
+            return current_price
+
+        return _coerce_optional_finite_float(snapshot_info.get("regularMarketPrice"))
 
     def _fetch_snapshot_info(self, market_client: Any) -> dict[str, Any]:
         """Fetch provider snapshot info with controlled degradation."""

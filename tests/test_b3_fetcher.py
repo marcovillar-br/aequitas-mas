@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from datetime import date
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -155,3 +155,42 @@ def test_b3_historical_fetcher_never_uses_future_prices() -> None:
     assert result.book_value_per_share is None
     assert result.earnings_per_share is None
     assert result.selic_rate is None
+
+
+def test_fetch_price_as_of_uses_intraday_fallback_only_for_today() -> None:
+    """Today's missing close may degrade to an intraday snapshot price."""
+    market_client = MagicMock()
+    market_client.history.return_value = pd.DataFrame(
+        {"Close": [math.nan]},
+        index=pd.to_datetime(["2026-03-24"]),
+    )
+    market_client.info = {"currentPrice": 41.25}
+    fetcher = B3HistoricalFetcher()
+
+    with patch("src.tools.b3_fetcher.date") as mock_date:
+        mock_date.today.return_value = date(2026, 3, 24)
+
+        result = fetcher._fetch_price_as_of(market_client, date(2026, 3, 24))
+
+    assert result == pytest.approx(41.25)
+
+
+def test_fetch_price_as_of_never_uses_intraday_fallback_for_past_dates() -> None:
+    """Past dates must degrade to None when history is missing, avoiding look-ahead."""
+    market_client = MagicMock()
+    market_client.history.return_value = pd.DataFrame(
+        {"Close": [math.nan]},
+        index=pd.to_datetime(["2026-03-20"]),
+    )
+    market_client.info = {
+        "currentPrice": 41.25,
+        "regularMarketPrice": 41.0,
+    }
+    fetcher = B3HistoricalFetcher()
+
+    with patch("src.tools.b3_fetcher.date") as mock_date:
+        mock_date.today.return_value = date(2026, 3, 24)
+
+        result = fetcher._fetch_price_as_of(market_client, date(2026, 3, 20))
+
+    assert result is None
