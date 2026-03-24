@@ -27,6 +27,10 @@ Regras:
 - `as_of_date: date` é obrigatório como referência temporal point-in-time
 - métricas financeiras ausentes ou inválidas devem degradar para
   `Optional[float] = None`
+- Strict Boundary Mapping: em schemas Pydantic que atuam como boundaries,
+  campos podem ser tipados como `Optional[T]`, mas NÃO devem usar
+  `default=None`; todas as propriedades devem ser explicitamente mapeadas na
+  instanciação, mesmo quando o valor passado for `None`
 - o estado nunca deve transportar valores baseados em `Decimal`
 
 ### 2.2 Contrato Vetorial

@@ -104,10 +104,19 @@ def _build_metrics_from_historical_data(
     margin_of_safety: float | None = None,
 ) -> GrahamMetrics:
     """Map deterministic valuation inputs and outputs into the graph schema."""
+    price_to_earnings: float | None = None
+    if (
+        historical_data.price is not None
+        and historical_data.earnings_per_share is not None
+        and historical_data.earnings_per_share != 0.0
+    ):
+        price_to_earnings = historical_data.price / historical_data.earnings_per_share
+
     return GrahamMetrics(
         ticker=historical_data.ticker,
         vpa=historical_data.book_value_per_share,
         lpa=historical_data.earnings_per_share,
+        price_to_earnings=price_to_earnings,
         fair_value=intrinsic_value,
         margin_of_safety=margin_of_safety,
     )
@@ -202,7 +211,14 @@ def graham_agent(state: AgentState) -> dict:
             ),
             name="graham",
         )
-        failed_metrics = GrahamMetrics(ticker=ticker)
+        failed_metrics = GrahamMetrics(
+            ticker=ticker,
+            vpa=None,
+            lpa=None,
+            price_to_earnings=None,
+            fair_value=None,
+            margin_of_safety=None,
+        )
         return {
             "metrics": failed_metrics,
             "audit_log": [audit_message],
@@ -223,7 +239,14 @@ def graham_agent(state: AgentState) -> dict:
             name="graham",
         )
         return {
-            "metrics": GrahamMetrics(ticker=ticker),
+            "metrics": GrahamMetrics(
+                ticker=ticker,
+                vpa=None,
+                lpa=None,
+                price_to_earnings=None,
+                fair_value=None,
+                margin_of_safety=None,
+            ),
             "audit_log": [fallback_message],
             "messages": [user_message],
             "executed_nodes": ["graham"],

@@ -1,33 +1,40 @@
 ---
-plan_id: plan-instrumentation-b3-fetcher-diagnostic-001
+plan_id: plan-systemic-mapping-omission-prevention-001
 target_files:
-  - "src/tools/b3_fetcher.py"
-enforced_dogmas: [observability, type-safety]
+  - ".context/SPEC.md"
+  - "src/core/state.py"
+  - "tests/test_graham_agent.py"
+enforced_dogmas: [defensive-typing, fail-fast, risk-confinement]
 validation_scale: FACTS (Mean: 5.0)
 ---
 
 ## 1. Intent & Scope
-Implement diagnostic instrumentation in `src/tools/b3_fetcher.py` using `structlog` to gain deep visibility into the intraday fallback logic. The goal is to explicitly log the state, types, and values of date comparisons and cascade dictionary resolutions without altering the existing deterministic logic. All new logs must be emitted at the `INFO` level to ensure terminal visibility during development execution.
+Design a systemic prevention plan against Silent Mapping Omissions. By enforcing the "Strict Boundary Mapping" rule, we require that all Pydantic boundary schemas define `Optional[T]` fields WITHOUT `default=None`. This forces explicit mapping at instantiation, ensuring developers cannot accidentally forget to pass a calculated metric (like the recent `price_to_earnings` bug), as Pydantic will raise a `ValidationError` if the field is omitted.
 
 ## 2. File Implementation
 
-### Step 2.1: Instrument `_fetch_price_as_of` Date Evaluation
-* **Target:** `src/tools/b3_fetcher.py`
-* **Action:** Before executing the `as_of_date == date.today()` condition, inject a `logger.info` statement capturing the comparison context.
-* **Constraints:** Must log the raw value of `as_of_date`, `type(as_of_date).__name__`, the raw value of `date.today()`, and the boolean result of the equality check.
-* **Signatures:** N/A (Telemetry injection only).
+### Step 2.1: Update Architectural Rules
+* **Target:** `.context/SPEC.md`
+* **Action:** Add the "Strict Boundary Mapping" rule to section 2 (Contratos de Tipagem Estrita). The rule must state: "In Pydantic schemas acting as boundaries, fields may be typed as `Optional[T]`, but MUST NOT use `default=None`. All properties must be explicitly mapped during instantiation, even if passed as `None`."
+* **Constraints:** Maintain the existing mandate for `ConfigDict(frozen=True)`.
+* **Signatures:** N/A (Documentation only).
 
-### Step 2.2: Instrument `_fetch_intraday_price` Cascade Resolution
-* **Target:** `src/tools/b3_fetcher.py`
-* **Action:** Inject `logger.info` statements at the start and throughout the fallback cascade.
-* **Constraints:** 
-  - Log `list(info.keys())` to preview available provider data.
-  - Log the resolved (or coerced) value for each fallback step (`currentPrice`, then `regularMarketPrice`, then `previousClose`) to visualize the exact point of early return or final degradation.
-* **Signatures:** N/A (Telemetry injection only).
+### Step 2.2: Harden State Schemas
+* **Target:** `src/core/state.py`
+* **Action:** Remove `default=None` from all `Optional` fields in `GrahamMetrics` (e.g., `vpa`, `lpa`, `price_to_earnings`, `fair_value`, `margin_of_safety`).
+* **Constraints:** Do NOT change the type hint (they must remain `Optional[float]`). Only remove the default assignment so Pydantic enforces their presence.
+* **Signatures:** `vpa: Optional[float] = Field(description="...")`
+
+### Step 2.3: TDD Enforcement and Fixes
+* **Target:** `tests/test_graham_agent.py`
+* **Action:** Update all instantiations and assertions of `GrahamMetrics` to explicitly include all fields. For example, `GrahamMetrics(ticker="PETR4")` must become `GrahamMetrics(ticker="PETR4", vpa=None, lpa=None, price_to_earnings=None, fair_value=None, margin_of_safety=None)`.
+* **Constraints:** Ensure the Happy Path tests strictly assert the presence and correct mapping of all attributes, not just the existence of the object.
+* **Signatures:** N/A (Test updates only).
 
 ## 3. Definition of Done (DoD)
-- [ ] `structlog` is imported and initialized at the module level in `b3_fetcher.py` if not already present.
-- [ ] Date comparison types and values are explicitly logged at the `INFO` level.
-- [ ] The `info` dictionary keys and the cascade candidate resolutions are logged at the `INFO` level.
+- [ ] `SPEC.md` contains the new "Strict Boundary Mapping" rule.
+- [ ] `GrahamMetrics` in `src/core/state.py` has no `default=None` on its fields.
+- [ ] All `GrahamMetrics` instantiations in tests provide all arguments explicitly.
+- [ ] `tests/test_graham_agent.py` asserts the full explicit mapping in happy paths.
 - [ ] Code passes standard static analysis (`ruff check`).
-- [ ] Zero logical modifications were made to the fallback rules themselves.
+- [ ] `pytest` runs successfully without validation errors.

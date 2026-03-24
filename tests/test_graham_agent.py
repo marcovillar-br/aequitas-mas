@@ -52,6 +52,9 @@ def test_graham_agent_uses_deterministic_valuation_and_interpretation(
         ticker="PETR4",
         vpa=20.0,
         lpa=3.0,
+        price_to_earnings=None,
+        fair_value=None,
+        margin_of_safety=None,
     )
     mock_get_risk_free_rate.return_value = 0.10
     mock_calculate_dynamic_graham.return_value = GrahamValuationResult(
@@ -103,6 +106,7 @@ def test_graham_agent_uses_deterministic_valuation_and_interpretation(
         ticker="PETR4",
         vpa=20.0,
         lpa=3.0,
+        price_to_earnings=5.0,
         fair_value=24.49489742783178,
         margin_of_safety=0.38762756430420553,
     )
@@ -137,6 +141,9 @@ def test_graham_agent_bypasses_llm_when_valuation_degrades_to_none(
         ticker="PETR4",
         vpa=20.0,
         lpa=3.0,
+        price_to_earnings=None,
+        fair_value=None,
+        margin_of_safety=None,
     )
     mock_get_risk_free_rate.return_value = 0.10
     mock_calculate_dynamic_graham.return_value = None
@@ -148,6 +155,9 @@ def test_graham_agent_bypasses_llm_when_valuation_degrades_to_none(
         ticker="PETR4",
         vpa=20.0,
         lpa=3.0,
+        price_to_earnings=None,
+        fair_value=None,
+        margin_of_safety=None,
     )
     assert result["audit_log"] == [
         "Valuation skipped: Insufficient data or negative earnings/book value "
@@ -173,7 +183,14 @@ def test_graham_agent_reports_deterministic_data_preparation_failures(
     result = graham_agent(initial_state)
 
     mock_get_graham_data.assert_called_once_with("PETR4")
-    assert result["metrics"] == GrahamMetrics(ticker="PETR4")
+    assert result["metrics"] == GrahamMetrics(
+        ticker="PETR4",
+        vpa=None,
+        lpa=None,
+        price_to_earnings=None,
+        fair_value=None,
+        margin_of_safety=None,
+    )
     assert result["executed_nodes"] == ["graham"]
     assert "CRÍTICO: Motor quantitativo falhou para 'PETR4'" in result["audit_log"][0]
     assert isinstance(result["messages"][0], AIMessage)

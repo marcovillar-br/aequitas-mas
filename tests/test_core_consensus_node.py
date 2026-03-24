@@ -22,6 +22,7 @@ def _build_state() -> AgentState:
             ticker="PETR4",
             vpa=35.0,
             lpa=8.0,
+            price_to_earnings=None,
             fair_value=45.0,
             margin_of_safety=30.0,
         ),

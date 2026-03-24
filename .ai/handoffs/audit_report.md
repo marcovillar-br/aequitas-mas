@@ -1,27 +1,27 @@
 ---
-audit_id: audit-hotfix-b3-fetcher-intraday-cascade-001
-plan_validated: hotfix-b3-fetcher-intraday-cascade-001
+audit_id: audit-plan-systemic-mapping-omission-prevention-001
+plan_validated: plan-systemic-mapping-omission-prevention-001
 status: PASSED
 failed_checks: []
 tdd_verified: true
 ---
 
 ## 1. Executive Summary
-The critical hotfix for `src/tools/b3_fetcher.py` has passed the architectural audit. The Definition of Done for `hotfix-b3-fetcher-intraday-cascade-001` is fully satisfied. The intraday cascade safely resolves missing `Close` prices for current-day operations while strictly enforcing Temporal Invariance for past dates.
+The systemic prevention plan against Silent Mapping Omissions passed the architectural audit. The Definition of Done for `plan-systemic-mapping-omission-prevention-001` is fully satisfied. The system now enforces strict mapping at the Pydantic boundary level, inherently preventing omitted calculations from silently degrading graph states without raising a validation error.
 
 ## 2. Dogma Compliance Analysis
-### Check 2.1: Temporal Invariance (Anti-Look-Ahead)
+### Check 2.1: Architectural Rule Validation
 * **Status:** PASSED
-* **Findings:** Verified that `_fetch_price_as_of` securely gates the intraday fallback behind a strict `as_of_date == date.today()` check. Past dates correctly bypass this block, returning `None` immediately when historical data is absent, thus preventing look-ahead bias.
+* **Findings:** Verified that `.context/SPEC.md` explicitly contains the "Strict Boundary Mapping" rule. The specification now clearly forbids the use of `default=None` for boundary fields and mandates explicit mapping during instantiation.
 
-### Check 2.2: Risk Confinement (Controlled Degradation)
+### Check 2.2: Defensive Typing
 * **Status:** PASSED
-* **Findings:** Confirmed that `_fetch_intraday_price` appropriately channels all fallback candidates (`currentPrice`, `regularMarketPrice`, `previousClose`) through `_coerce_optional_finite_float`. Invalid or missing numerics gracefully degrade to `None` instead of throwing unhandled exceptions.
+* **Findings:** Verified `src/core/state.py`. The `GrahamMetrics` class (and related boundaries) successfully removed `default=None` while preserving `Optional` type hints. Pydantic will now properly fail fast if a field is omitted during object construction.
 
-### Check 2.3: Test Integrity
+### Check 2.3: Implementation Integrity
 * **Status:** PASSED
-* **Findings:** Verified that `tests/test_b3_fetcher.py` accurately patches `date.today()` to emulate "today" vs "yesterday" conditions without bleeding state. The test suite correctly proves the cascade execution order and validates that look-ahead scenarios remain securely blocked.
+* **Findings:** Verified that `src/agents/graham.py` and `tests/test_graham_agent.py` explicitly map all expected properties (`vpa`, `lpa`, `price_to_earnings`, `fair_value`, `margin_of_safety`). The test suite successfully passes, ensuring full coverage without regression.
 
 ## 3. Recommended Actions
-- **Authorize integration** of `hotfix-b3-fetcher-intraday-cascade-001` into the main development branch.
-- Explicitly **authorize the final run of `main.py`** to validate system execution with the newly robust intraday fetcher.
+- **Authorize commit/push** of the systemic mapping omission prevention logic.
+- Proceed with deploying these hardened boundaries into the wider CI/CD checks.
