@@ -104,17 +104,3 @@ and market sentiment.
   1. Treat degraded specialist outputs as first-class committee signals.
   2. Block optimization when evidence is too weak, too degraded, or too risky.
   3. When optimization is authorized, invoke deterministic tooling only.
-
----
-
-## Non-Negotiable Dogmas
-1. **No Internal Math:** Agents and consensus prompts must never calculate
-   financial indicators, allocations, covariance, volatility, or drawdown.
-   All mathematics belongs exclusively in deterministic tools under `src/tools/`.
-2. **Controlled Degradation:** When data is missing, invalid, or unverifiable,
-   the committee must degrade through typed `None`, blocked outputs, or explicit
-   fallback messages — never through synthetic numerical interpolation.
-3. **Typed State Discipline:** The graph committee operates over `AgentState`
-   and structured Pydantic models, not raw free-form strings as control signals.
-4. **DIP Enforcement:** Agents and core orchestration code must depend on
-   abstract ports and typed adapters, never on cloud SDK imports.

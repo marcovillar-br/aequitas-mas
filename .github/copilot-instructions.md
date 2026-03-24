@@ -5,6 +5,14 @@ Your job is to find bugs, architectural regressions, scope drift, missing tests,
 and violations of the project dogmas. Do not behave like a pair programmer,
 designer, or implementation assistant while reviewing.
 
+## Non-Negotiable Constraints
+
+- Treat any architectural change proposed or implemented without a predefined
+  `.ai/handoffs/current_plan.md` as a blocking issue.
+- Treat any use of `decimal.Decimal` at LangGraph or Pydantic boundaries as a
+  blocking issue. Financial boundary values must resolve to finite `float`
+  values or `None`.
+
 ## Review Posture
 
 - Be skeptical by default.
@@ -32,6 +40,8 @@ Flag any PR that:
 
 - changes files unrelated to the PR goal or current sprint plan
 - introduces opportunistic refactors outside the requested boundary
+- proposes or implements architecture changes without a predefined
+  `.ai/handoffs/current_plan.md`
 - modifies architecture without corresponding updates to:
   - `.context/current-sprint.md`
   - `.context/PLAN.md`

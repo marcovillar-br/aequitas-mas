@@ -24,7 +24,9 @@ For `.context/skills/*.md` and `.ai/skills/*/SKILL.md`, the YAML frontmatter is 
 ## Routing Protocol
 1. Identify the core domain of the user's prompt.
 2. Match the request against the skill frontmatter, prioritizing `description` and any optional `metadata.triggers`, `metadata.applies_to`, and `metadata.priority`.
-3. If the domain matches a registered trigger, silently ingest the corresponding `.md` file into working memory before generating the response.
+3. If the domain matches a registered trigger, silently ingest the corresponding skill file into working memory before generating the response:
+   - legacy/context skills resolve under `.context/skills/*.md`
+   - the `sdd-*` operational triad resolves under `.ai/skills/*/SKILL.md`
 4. If multiple skills apply, prioritize the strictest or most foundational constraint first.
 5. Recommended precedence for overlapping cases:
    - `sdd-writing-plans` must always precede `sdd-implementer`.

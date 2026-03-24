@@ -28,7 +28,7 @@ The system state is carried through immutable Pydantic v2 models under
 `src/core/state.py`, with `Optional[float] = None` used whenever evidence is
 missing or invalid.
 
-## Delivered Through Sprint 8
+## Delivered Through Sprint 10
 
 - FastAPI gateway under `src/api/` with:
   - `POST /analyze`
@@ -121,14 +121,17 @@ setup contract.
 - Sprint 7: real B3-compatible historical ingestion, benchmark support,
   dynamic portfolio constraints, and graph integration of deterministic
   allocation bounds
+- Sprint 8: Portfolio API and resilient graph integration
+- Sprint 9: deterministic Piotroski/Altman tools, CoT prompt refinement,
+  intraday fallback hardening, audit IoC, and presentation contracts
+- Sprint 10: AWS Lambda serverless packaging via `Mangum`, PDF Presentation
+  Adapter delivery, Poetry lock consistency guardrails, and cross-tool
+  Blackboard alignment
 
 ### Next
 
-- Sprint 8: Portfolio API & Resilient Graph Integration (DONE)
-- Key outcomes:
-  - deterministic `POST /portfolio` endpoint delivered
-  - resilient optimizer handoff integrated into `core_consensus_node`
-  - Artifact-Driven Blackboard remains the active coordination model through `.ai/handoffs/current_plan.md`
+- Sprint 11+: advanced telemetry, async LangGraph streaming, and deeper
+  delivery hardening over the Blackboard workflow
 
 ### Academic & SOTA Roadmap 2026-2027
 With the core architecture delivered ahead of schedule, the long-term vision now aligns with the 2026-2027 academic research calendar:
@@ -139,7 +142,7 @@ With the core architecture delivered ahead of schedule, the long-term vision now
 
 ### Cross-Cutting Engineering Track (AWS Serverless & FinOps)
 Running in parallel to the academic research, the infrastructure track focuses on cloud deployment and cost optimization:
-- **Q2 2026 (API Deployment):** Packaging the FastAPI gateway for AWS Lambda (Scale-to-Zero) with DynamoDB and OpenSearch Serverless adapters.
+- **Q2 2026 (API Deployment):** Packaging the FastAPI gateway for AWS Lambda (Scale-to-Zero) with DynamoDB and OpenSearch Serverless adapters. Sprint 10 delivered the initial serverless wrapper and presentation adapter boundary.
 - **Q3 2026 (CI/CD & IaC):** Activating GitHub Actions to apply Terraform state and execute automated shift-left tests in the cloud.
 - **Q1 2027 (Cloud Backtesting):** Executing the final quantitative backtesting on AWS to prove architectural FinOps viability.
 

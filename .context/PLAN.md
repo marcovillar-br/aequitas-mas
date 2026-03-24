@@ -2,15 +2,15 @@
 
 ## 1. Arquitetura Baseline (Status: Sprints 1 a 8 Concluídas)
 
-O baseline arquitetural vigente do repositório entrega as seguintes capacidades:
+Capacidades entregues no baseline:
 
-- **Orquestração (LangGraph):** Cyclic Graph com semântica de Iterative Committee (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`).
-- **Estado (Pydantic):** `AgentState` imutável, tipado defensivamente e ancorado temporalmente via `as_of_date`.
-- **RAG & Contexto (HyDE):** Retrieval qualitativo time-aware operando via `VectorStorePort`.
-- **Ingestão Histórica (B3):** Ingestão real via `B3HistoricalFetcher` conectada ao engine de backtesting determinístico com degradação controlada.
-- **Otimização de Portfólio:** Ferramenta matemática determinística isolada, acessível de forma resiliente pelo `core_consensus_node` (que falha fechado com `optimization_blocked=True`).
-- **API Gateway (FastAPI):** Fronteiras HTTP tipadas para `/analyze`, `/backtest/run` e `/portfolio`, operando com sanitização de erros.
-- **Infraestrutura e Segurança:** Gerenciamento de credenciais via `SecretStorePort` (Zero Trust) e documentação unificada sob a arquitetura de Blackboard.
+- **Orquestração:** LangGraph em modo Iterative Committee (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`).
+- **Estado:** `AgentState` imutável, tipado defensivamente e ancorado por `as_of_date`.
+- **RAG macro:** Retrieval time-aware via `VectorStorePort`.
+- **Dados históricos:** `B3HistoricalFetcher` e `HistoricalDataLoader` com degradação controlada.
+- **Otimização:** tool determinístico isolado, consumido pelo `core_consensus_node` com fail-closed (`optimization_blocked=True`).
+- **API:** FastAPI com fronteiras tipadas para `/analyze`, `/backtest/run` e `/portfolio`.
+- **Segurança e infraestrutura:** credenciais via `SecretStorePort`, adapters desacoplados e disciplina Blackboard.
 
 ## 2. Academic & SOTA Roadmap 2026-2027 (Integrated V2)
 

@@ -14,7 +14,7 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Implementer (The Muscle):** Executes the approved artifact and writes code/tests with no scope drift.
 - **Auditor (Unified QA):** Verifies dogmas, regressions, and artifact completeness before closure.
 - **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
-- **GEM (Architect):** Responsible for designing specifications (`SPEC.md`) and execution plans (`PLAN.md`).
+- **GEM (Architect):** Responsible for designing specifications (`.context/SPEC.md`) and execution plans (`.context/PLAN.md`).
 - **Google AI Studio (Scientist):** Sandboxed environment for validating prompts, temperature, and LLM parameters prior to codebase integration.
 - **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `current_plan.md` using the Artifact-Driven Blackboard (SDD) methodology via Superpowers skills.
 
@@ -37,9 +37,9 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Prompt Constraints**: System Prompts must be highly directive, utilizing Markdown formatting and clear "Do's and Don'ts".
 
 ## 4. State Management & Controlled Degradation (CRITICAL)
-- **Defensive Typing in State:** LangGraph State definitions and LLM-facing Pydantic schemas MUST use `Optional[float] = None` for financial metrics. This overrides traditional financial engineering rules that strictly demand `Decimal`.
-- **Why:** If a data point is missing, the schema must gracefully fall back to `None` to ensure "Controlled Degradation" and explicitly prevent the LLM from hallucinating a probabilistic guess.
-- **Mathematical Delegation:** LLMs are strictly forbidden from performing calculations. Complex formulas must be written in pure, testable Python inside `/src/tools/`. Internal tools may use `Decimal` for precision but must cast to `float` or `None` when returning data to the Graph State.
+- **Defensive Typing in State:** LangGraph state definitions and LLM-facing Pydantic schemas MUST use `Optional[float] = None` for financial metrics.
+- **Boundary Rule:** `decimal.Decimal` is forbidden at graph or schema boundaries; deterministic tools must return `float` or `None`.
+- **Mathematical Delegation:** Financial formulas belong in deterministic Python under `/src/tools/`, never in prompts or domain prose.
 
 ## 5. Quality & Testing (TDD)
 - **Framework**: `pytest` and `pytest-asyncio`.
@@ -48,9 +48,10 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Methodology**: Follow the **Artifact-Driven Blackboard (SDD)** flow using Superpowers skills (`sdd-writing-plans`, `sdd-implementer`, `sdd-auditor`) for all new features.
 
 ## 6. Security & Cloud Agnosticism
-- **Dependency Inversion:** Cloud SDKs (e.g., `import boto3`) are strictly forbidden inside the `/src/agents/` directory. Cloud interactions must be abstracted via adapters in `/src/infra/`.
-- **Secrets**: Never commit keys. `.env` is for local development only. Use AWS Secrets Manager in production.
-- **Data Sanitization**: Sanitize all logs before emitting to avoid exposing PII, API Keys, or sensitive financial context.
+- **Dependency Inversion:** Cloud SDKs (for example `boto3`) are forbidden inside `/src/agents/` and `/src/core/`.
+- **Adapter Boundary:** Provider-specific integrations must live under `/src/infra/` behind ports/interfaces.
+- **Secret Access:** Domain and agent code must not call `os.getenv` directly; resolve secrets through adapters.
+- **Data Sanitization:** Sanitize logs before emitting to avoid exposing PII, API keys, or sensitive financial context.
 
 ## 7. Architectural Principles
 - **DDD**: Respect Bounded Contexts. Do not mix quantitative domains (Graham) with qualitative domains (Fisher) within the same entity.

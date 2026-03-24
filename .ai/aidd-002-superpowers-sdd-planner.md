@@ -16,7 +16,7 @@ temporal_anchor: agnostic
 
 This skill overrides default behavior to enforce the **Artifact-Driven Blackboard Architecture**.
 
-* **Input:** The agent operates in read-only mode, scanning `SPEC.md` and `.ai/handoffs/RESEARCH_FINDINGS.md`.
+* **Input:** The agent operates in read-only mode, scanning `.context/SPEC.md` and `.ai/handoffs/RESEARCH_FINDINGS.md`.
 * **Validation:** Every proposed task must pass the **FACTS Scale** (Factual, Actionable, Clear, Testable, Small - max 2-5 minutes of work).
 * **Output:** A strict YAML-headed Markdown file saved exclusively to `.ai/handoffs/current_plan.md`.
 
