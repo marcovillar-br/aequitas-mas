@@ -1,99 +1,177 @@
-# 🎯 Project Status: Aequitas-MAS
+# Project Status: Aequitas-MAS
+
+## Sprint 6 — API Gateway, Boundary Hardening & Backtesting
+**Status:** DONE
+
+### Delivered Scope
+1. FastAPI gateway delivered under `src/api/` with:
+   - `POST /analyze`
+   - `POST /backtest/run`
+2. Startup-scoped dependency injection delivered for:
+   - the compiled LangGraph application
+   - the concrete `BaseCheckpointSaver`
+3. Strict interface typing completed with immutable boundaries:
+   - `VectorSearchResult`
+   - `PortfolioOptimizationResult`
+   - `BacktestResult`
+4. Cloud-first secret management delivered through:
+   - `SecretStorePort`
+   - `EnvSecretAdapter`
+5. `core_consensus_node` hardened with a typed patch contract (`TypedDict`)
+   instead of a loose untyped return payload.
+6. Deterministic backtesting delivered with:
+   - `HistoricalDataLoader`
+   - anti-look-ahead `as_of_date` enforcement
+   - `Optional[float] = None` degradation for missing historical values
+7. Post-delivery API and state hardening validated in EOD:
+   - sanitized `/analyze` failures to avoid leaking raw exception text
+   - corrected `core_consensus_node` to set `optimization_blocked=True` when
+     optimizer degradation returns `None`
+   - added regression tests for API error sanitization and graph state integrity
+
+### Architecture Snapshot
+- **Graph model:** `Cyclic Graph` with `Iterative Committee` semantics
+- **Committee order:** `graham -> fisher -> macro -> marks -> core_consensus -> __end__`
+- **Shared state:** `AgentState`
+- **Secret boundary:** domain depends on `SecretStorePort`, local runtime uses
+  `EnvSecretAdapter`
+- **Retrieval boundary:** `VectorStorePort -> list[VectorSearchResult]`
+- **Optimizer boundary:** `optimize_portfolio(...) -> Optional[PortfolioOptimizationResult]`
+
+### Definition of Done
+- [x] Analyze endpoint wired to the compiled LangGraph workflow
+- [x] Checkpointer and graph app injected through shared providers
+- [x] Backtesting request/response contracts delivered
+- [x] Historical replay engine implemented with anti-look-ahead guardrails
+- [x] Stability hardening completed for typed retrieval and optimizer boundaries
+- [x] Secret management abstraction aligned with Zero Trust
+- [x] API boundary hardening completed for sanitized `/analyze` error handling
+- [x] `core_consensus_node` now sets `optimization_blocked=True` on optimizer degradation
+- [x] Regression coverage added for API sanitization and graph state integrity
+
+### Residual Risks
+- `/portfolio` remains intentionally deferred until the dynamic-constraints
+  contract is finalized
 
 ---
 
-# 🎯 Project Status: Aequitas-MAS
+## Sprint 7 Closed — Real Data Ingestion & Dynamic Constraints
+**Status:** CLOSED
+
+### Objective
+Replace synthetic/local backtesting inputs with real historical ingestion and
+introduce deterministic dynamic constraints for allocation and replay.
+The official MAS communication protocol is now "Artifact-Driven" via `.ai/handoffs/` due to its superior stability.
+
+### Step Status
+- Step 1 — Real Historical Ingestion & Backtest Activation: **DONE**
+- Step 2 — Benchmark and Factor Inputs (CDI/IBOV): **DONE**
+- Step 3 — Dynamic Concentration and Regime-Aware Constraints: **DONE**
+- Step 4 — Graph Integration of Dynamic Constraints: **DONE**
+
+### Delivered Scope
+1. Step 1 completed with real historical price ingestion delivered via
+   `B3HistoricalFetcher`
+   returning immutable `HistoricalMarketData`.
+2. `HistoricalMarketData` established as the canonical point-in-time boundary
+   for:
+   - `price`
+   - `book_value_per_share`
+   - `earnings_per_share`
+   - `selic_rate`
+   - formal temporal invariance reference:
+     `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
+3. `HistoricalDataLoader` refactored to inject `B3HistoricalFetcher` through
+   dependency injection while preserving backward compatibility for the engine.
+4. `BacktestEngine` upgraded to consume `get_market_data_as_of(...)` and log:
+   - `observed_price`
+   - `vpa`
+   - `lpa`
+   - `selic_rate`
+5. Graham quantitative flow upgraded to consume deterministic point-in-time
+   valuation inputs with strict `as_of_date` enforcement.
+6. Time-aware retrieval propagated through qualitative boundaries:
+   - `AgentState.as_of_date`
+   - `VectorStorePort`
+   - OpenSearch adapter
+   - Fisher and Macro agents
+7. `/backtest/run` unlocked at the API boundary and now executes the real
+   backtesting pipeline through:
+   - `B3HistoricalFetcher`
+   - `HistoricalDataLoader`
+   - `BacktestEngine`
+8. Honest Scaffolding is fully removed from the backtesting path; the public
+   endpoint now reflects the live deterministic integration.
+9. **Artifact-Driven Protocol:** Adopted `.ai/handoffs/` for reliable Master Orchestrator planning and auditing.
+10. **Risk Confinement in Core:** `core_consensus_node` now enforces constraints by fetching the CDI regime and computing dynamic bounds (`max_ticker_weight`, `min_cash_position`) *before* delegating to the deterministic portfolio optimizer.
+11. SOTA Unit testing successfully completed (144 tests passing).
+
+### Definition of Done
+- [x] real historical price ingestion adapter connected to the backtester
+- [x] `/backtest/run` unlocked with deterministic real-data wiring
+- [x] `as_of_date` elevated to a first-class state boundary across quantitative
+  and retrieval flows
+- [x] full backtest step logs enriched with fundamental context
+- [x] benchmark and factor series support implemented
+- [x] dynamic constraints implemented outside the LLM path
+- [x] new boundary updates fully documented and regression-tested end-to-end
+
+### Residual Risks
+- Residual risk from the deferred `/portfolio` boundary was closed in Sprint 8.
 
 ---
 
-## 🔄 Sprint Ativa: 3.3 — Provisionamento OpenSearch e Teste End-to-End Real
-**Status:** IN PROGRESS — Iniciada em 10/03/2026. Branch: `feat/macro-hyde-opensearch-integration` (PR pendente para `development`).
+## Sprint 8 — Portfolio API & Dynamic Constraints Finalization
+**Status:** DONE
 
-### 🛠️ Objetivos da Sessão SOD (Amanhã)
+### Objective
+Finalize the dynamic-constraints contract and expose the deterministic portfolio optimizer through a stable `/portfolio` API boundary, with resilient graph integration and strict Risk Confinement.
 
-1. **Provisionamento AWS (Terraform):**
-   Refatorar e aplicar domínio OpenSearch Serverless. O script `opensearch.tf` atual mapeou o *Agente Fisher* (`aqm-fisher`), necessitando ajuste para a collection `aequitas-macro-docs` (Macro) ou abstração para suportar ambos.
-   Restrição: Sem `terraform apply` automático em CI — execução manual supervisionada pelo Tech Lead.
+### Macro-Objectives
+- Typed request/response contracts for deterministic portfolio optimization delivered.
+- `POST /portfolio` implemented and wired in the FastAPI gateway.
+- `core_consensus_node` hardened to fail closed with `optimization_blocked=True` and auditable rationale whenever deterministic optimization cannot proceed.
 
-2. **Script de Ingestão (Isomorfismo BCB/FED):**
-   Criar `src/tools/opensearch_indexer.py` — script Python isomorfo para indexar atas do COPOM (BCB) e *minutes* do FED com geração de embeddings.
-   Campos obrigatórios por documento: `content`, `source_url`, `document_id`, `published_at`.
+### Planned Steps
+- [x] Step 1: Architecture and schema design for `PortfolioRequest` and `PortfolioResponse`.
+- [x] Step 2: TDD implementation of the `/portfolio` route and DI wiring.
+- [x] Step 3: Graph Integration (resilient optimizer integration in `core_consensus_node`, ensuring `optimization_blocked=True` and logging rationale upon degradation).
 
-3. **Integração E2E Real:**
-   Configurar `OPENSEARCH_ENDPOINT` no ambiente `dev` e executar `macro_agent` com retrieval real.
-   Validar `source_urls` e `audit_log` registrando scores de cosseno > 0.0.
-
-### Concluído Hoje (10/03/2026)
-* **SSOT (Single Source of Truth) Agnóstico:** Criação do diretório central `.ai/context.md` como repositório canônico de dogmas de arquitetura para todos os assistentes IA (Claude, Copilot, Gemini, NotebookLM).
-* **Limpeza de Diretórios RPI:** Reestruturação topológica dos *slash commands* (`/research`, `/plan`, `/implement`, `/eod`) em `.claude/commands/`.
-* **CI/CD Quality Gates:** Implementação do job `quality` no `pipeline.yml` com bloqueio estrito contra violações de dogma arquitetural (`decimal.Decimal` e `boto3` fora dos limites permitidos).
-* **Degradação Controlada de Persistência:** Refatoração de `src/core/graph.py` com *lazy import* de `DynamoDBSaver` e introdução de `_SOFT_ENVS = {"local", "ci"}` para fallback automático ao `MemorySaver`.
-* **Testes de Resiliência:** Adição de cobertura (`test_graph.py`) e mecanismo de pulo amigável no CI (`pytest.importorskip("boto3")` em `test_dynamo_saver.py`).
-* **Dívida Arquitetural Liquidada:** Geração dos ADRs formais 005, 006 e 007 mapeando o pipeline HyDE RAG, a estratégia de Shared Collection OpenSearch e as limitações dos Dogma Audits via grep estático.
-* **Refatoração IaC:** Refatoração da configuração Terraform (`opensearch.tf`, `variables.tf`) para provisionar a collection compartilhada `aequitas-vector-store`, desbloqueando a Sprint 3.3 sem aumento de footprint de custo AWS.
-
-### Próximos Passos
-* Ready for Macro Agent vector ingestion and OpenSearch `terraform apply` review.
-
-### 🚧 Impedimentos / Débitos Técnicos (Check-out 10/03/2026)
-* **Desalinhamento Terraform:** O provisionamento AWS em `infra/terraform/opensearch.tf` foi construído visando o escopo do Fisher (`aqm-fisher`) em vez do Macro. Ação necessária no próximo SOD: duplicar/refatorar o `.tf` para garantir suporte à coleção `aequitas-macro-docs`.
-* **Script de Ingestão Pendente:** A estrutura da AWS está sendo levantada, mas o injetor de vetores não foi desenvolvido hoje.
-
-### ✅ Definition of Done (DoD)
-
-- [ ] Domínio OpenSearch Serverless provisionado via Terraform (`dev`) com collection `macro` correta.
-- [ ] Ao menos 10 documentos indexados com embeddings (atas COPOM 2024-2025).
-- [ ] `macro_agent` executando com `OPENSEARCH_ENDPOINT` real.
-- [ ] `pytest tests/` — 40+ testes passando.
-- [ ] PR `feat/macro-hyde-opensearch-integration` → `development` aprovado.
 ---
 
-## ✅ Histórico — Sprint 3.2: Agente Macro e RAG HyDE (OpenSearch)
-**Status:** DONE — Entregue em 09/03/2026. Branch: `feat/macro-hyde-opensearch-integration`. Commits: `1e27dea` → `d94ab5b`.
+## Sprint 9 — Quantitative Tools, CoT Prompts & Presentation Prep
+**Status:** IN PROGRESS
 
-### 🛠️ Objetivos Entregues
+### Objective
+Advance the Blackboard reasoning layer with deterministic fundamental metrics,
+next-generation CoT prompts for the specialist triad, and preparation for the
+next Telemetry & Presentation Adapter planning phase.
 
-- [x] **Integração OpenSearch (Substituição de mocks por adaptador real):**
-  Pipeline HyDE de três estágios implementado em `src/agents/macro.py`. O mock generativo
-  foi substituído por chamada real ao adaptador vetorizado via `VectorStorePort`:
-  - Stage 1: LLM gera documento hipotético COPOM/FED (`_HYDE_PROMPT` — texto puro, sem *structured output*).
-  - Stage 2: Documento hipotético usado como query k-NN via `VectorStorePort.search_macro_context(hyde_text, top_k=5)`.
-  - Stage 3: LLM sintetiza `MacroAnalysis` grounded no contexto recuperado do OpenSearch.
-  `OpenSearchAdapter.from_env()` consome `OPENSEARCH_ENDPOINT` e autentica via AWS SigV4.
-  `NullVectorStore` garante execução local sem infraestrutura (Controlled Degradation).
+### Step Status
+- Step 1 — Quantitative Tools & CoT Prompt Refinement: **DONE**
+- Step 2 — Telemetry & Presentation Adapter: **NEXT**
 
-- [x] **Rastreabilidade Ética (Preenchimento de `source_urls` no schema `MacroAnalysis`):**
-  `source_urls` preenchido deterministicamente a partir dos metadados do retrieval via
-  `_extract_source_urls(retrieved_docs)` e injetado com
-  `raw_result.model_copy(update={"source_urls": dynamic_urls})` — nunca alucinado pelo LLM.
-  `audit_log` registra score de cosseno e URL de cada documento selecionado pelo critério HyDE.
+### Delivered Scope
+1. `src/tools/fundamental_metrics.py` now exposes deterministic Piotroski
+   F-Score and Altman Z-Score helpers under strict quantitative confinement.
+2. The new immutable boundaries `PiotroskiInputs` and `AltmanInputs` use
+   `ConfigDict(frozen=True)` and controlled degradation via
+   `Optional[float] = None`.
+3. `tests/tools/test_fundamental_metrics.py` delivers RED-GREEN-REFACTOR
+   coverage for success paths, boundary degradation, and denominator guards.
+4. New CoT prompt artefacts were created for Graham, Fisher, and Marks under
+   `.ai/prompts/`, each explicitly forbidding LLM-side financial math.
+5. Sprint 9 Blackboard artefacts were archived under
+   `.ai/archive/handoffs/sprint9/` to keep `.ai/handoffs/` clean for the next
+   orchestration cycle.
 
-- [x] **Confinamento de Infraestrutura (DIP aplicado via `/src/infra/adapters/`):**
-  `import boto3` e `from opensearchpy import ...` confinados exclusivamente em
-  `src/infra/adapters/opensearch_client.py`. Auditoria estática confirmou zero SDKs de
-  infraestrutura em `src/agents/`. `VectorStorePort` injetado via `create_macro_agent(vector_store)`.
+### Definition of Done
+- [x] Deterministic Piotroski and Altman tools implemented in `src/tools/`
+- [x] Unit tests added and passing for the new financial tooling
+- [x] Graham, Fisher, and Marks CoT prompts created under `.ai/prompts/`
+- [x] `ruff check` passing
+- [x] Full test suite passing
 
-- [x] **Correções de Code Review (GitHub Copilot):**
-  Prompts HyDE e síntese reescritos em English (`coding-guidelines §1`). `Optional` não
-  utilizado removido (`Ruff F401`). `-> VectorStorePort` e `ImportError` adicionados ao
-  `_resolve_vector_store()`. Docstrings de testes traduzidos para English.
-
-- [x] **Correções de Auditoria SOTA:**
-  `Decimal` erradicado dos fixtures de teste (substituído por `float` literal).
-  `RECURSION_LIMIT: int = 15` formalizado como constante nomeada em `graph.py`.
-  `pytest-asyncio` adicionado ao grupo `dev`. `boto3`/`opensearch-py` movidos para grupo
-  opcional `[infra]` em `pyproject.toml`.
-
-### ✅ Definition of Done (DoD) — CONCLUÍDA
-
-- [x] `macro_agent` realizando *retrieval* dinâmico via `OpenSearchAdapter` (produção) ou `NullVectorStore` (local/offline).
-- [x] `Optional[float] = None` enforced para campos numéricos ausentes. Testado em 2 cenários de falha de conexão OpenSearch.
-- [x] Suite completa: **40 passed, 0 regressões** (09/03/2026).
-- [x] Auditoria SOTA aprovada: zero `🚨 Critical Blockers`, zero `⚠️ Warnings` remanescentes.
-
-### 📊 Cobertura de Testes Adicionada
-
-| Arquivo | Testes | Cobertura |
-|---|---|---|
-| `tests/test_macro_agent.py` | 13 | Pipeline HyDE, degradação, falha OpenSearch, helpers privados, protocolo |
-| `tests/test_graph.py` | +2 | DI do VectorStorePort, shape do AgentState recebido pelo macro |
+### Next Planning Target
+- Telemetry instrumentation and Presentation Adapter design for Thesis-CoT
+  reporting.
