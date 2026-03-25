@@ -1,0 +1,19 @@
+{
+    "python-envs.pythonProjects": [],
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "chat.agentFilesLocations": {
+        ".ai/agents": true,
+        ".context/agents": true
+    },
+    "gpt.codex.customInstructions": [
+        "Use the Artifact-Driven Blackboard Architecture for every non-trivial task.",
+        "Do not propose or implement architectural changes without a predefined .ai/handoffs/current_plan.md.",
+        "Read the active plan from .ai/handoffs/current_plan.md and report delivery through .ai/handoffs/eod_summary.md.",
+        "Every generated agent MUST include status() and get_context() methods.",
+        "Use English (en-US) for all technical output and Portuguese (pt-BR) for explanations.",
+        "Stop generation immediately after the logic block to avoid redundant comments.",
+        "Strictly adhere to the Zero Numerical Hallucination dogma: Financial metrics MUST be Optional[float] = None if not explicitly found in context. NEVER guess or perform mental math.",
+        "decimal.Decimal is forbidden at LangGraph and Pydantic boundaries; return finite float values or None."
+    ],
+    "github.copilot.commitMessageGeneration.template": "feat/fix/refactor: brief description following Conventional Commits"
+}

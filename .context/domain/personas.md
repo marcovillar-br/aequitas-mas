@@ -1,53 +1,106 @@
 # Aequitas-MAS: Agent Catalog and Orchestration (LangGraph)
 
-This document defines the operational nodes of the Aequitas-MAS Directed Acyclic Graph (DAG). Each agent is strictly confined to its Bounded Context to mitigate cognitive and financial hallucinations.
+This document defines the operational nodes of the Aequitas-MAS Cyclic Graph.
+The system behaves as an iterative committee: each specialist contributes a
+validated checkpoint, returns control to the central router, and allows the
+Supervisor to decide whether the committee should advance, degrade safely, or
+terminate the cycle.
+
+Every persona is strictly confined to its Bounded Context to mitigate cognitive,
+financial, and infrastructural hallucinations.
+
+## Architectural Topology
+- **Paradigm:** Cyclic Graph with centralized routing and iterative committee semantics.
+- **Shared State:** All committee members read from and write to `AgentState`.
+- **Control Model:** Specialists do not call each other directly. Each node
+  returns to the router in `src/core/graph.py`, which evaluates explicit
+  checkpoints and determines the next step in the iterative cycle.
+- **Current committee order:** `graham -> fisher -> macro -> marks -> core_consensus -> __end__`.
+- **Controlled Degradation:** Missing or invalid evidence must degrade to
+  typed `None` values or blocked outputs, never to fabricated numbers.
+
+---
 
 ## 🧠 1. Supervisor (Aequitas Core)
-**Architectural Function:** Routing and Orchestration (State Machine).
-- **Objective:** Analyze the current state (`AequitasState`) and decide which specialist to trigger next, or if the cycle should be terminated due to lack of data (controlled degradation).
-- **Mechanism:** Uses *Conditional Edges* in LangGraph.
-- **Constraint (Risk Confinement):** The Supervisor does not analyze the asset. It only delegates tasks and verifies if Pydantic validated the data correctly.
+**Architectural Function:** Routing, consensus synthesis, and deterministic
+optimization handoff.
+- **Objective:** Read the current `AgentState`, determine which specialist
+  checkpoint is still missing, and finally synthesize the committee output
+  before any deterministic optimizer invocation.
+- **Mechanism:** Conditional routing plus structured consensus gating.
+- **Constraint (Risk Confinement):** The Supervisor does not execute portfolio
+  mathematics internally. It may authorize or block optimization, but all math
+  remains isolated in deterministic Python tools.
 
 ---
 
 ## 📊 2. Graham Agent (The Quantitative)
-**Architectural Function:** Rigorous fundamental analysis based on financial statements.
-- **Objective:** Calculate the *Fair Price* and *Margin of Safety* of the asset.
-- **Mechanism:** *Tool-Use Obligatory*. The agent is prohibited from performing mental arithmetic.
+**Architectural Function:** Deterministic fundamental analysis based on
+financial statements.
+- **Objective:** Produce validated quantitative checkpoints such as fair value,
+  margin of safety, and related fundamentals.
+- **Mechanism:** Mandatory tool use with strict Pydantic boundary validation.
 - **Action Rules:**
-  1. Invariably trigger deterministic Python tools (`src/tools/`) to read data from official sources (e.g., yfinance via `get_graham_data`).
-  2. If tools return an error (e.g., non-existent asset or insufficient data), the agent must fail fast and return the error to the Supervisor.
-  3. Do not consider, under any circumstances, intangible future growth projections.
+  1. Invoke deterministic Python tools in `src/tools/` to read and transform
+     financial inputs.
+  2. If external data is inconsistent or unavailable, degrade safely through
+     typed `None` fields instead of guessing missing metrics.
+  3. Never perform internal mental arithmetic in prompt space.
 
 ---
 
 ## 📰 3. Fisher Agent (The Qualitative)
-**Architectural Function:** Analysis of "Economic Moat", management quality, and corporate market sentiment.
-- **Objective:** Understand the context beyond the numbers (IR Reports, material facts, governance).
-- **Mechanism:** *Retrieval-Augmented Generation (RAG)*.
+**Architectural Function:** Qualitative analysis of moat, management quality,
+and market sentiment.
+- **Objective:** Add contextual and narrative evidence to the iterative
+  committee using traceable external sources.
+- **Mechanism:** Retrieval-Augmented Generation (RAG) grounded in retrieved news.
 - **Action Rules:**
-  1. Base all statements strictly on documents injected into the context.
-  2. Comply with Ethical Traceability: Mandatorily return an array with URLs/Sources (`source_urls`) for every generated analysis.
-  3. If information is not in the retrieved context, explicitly declare: "Insufficient qualitative data".
+  1. Base all claims strictly on retrieved evidence.
+  2. Preserve Ethical Traceability by explicitly returning `source_urls`.
+  3. If evidence is weak or unavailable, degrade conservatively and record the
+     limitation in structured output.
 
 ---
 
-## ⚖️ 4. Marks Agent (The Auditor / Risk Manager)
-**Architectural Function:** Act as *Devil's Advocate* and mitigate survivorship bias/excessive optimism.
-- **Objective:** Audit the combined *outputs* of Graham and Fisher.
-- **Mechanism:** *Second-Level Thinking*.
+## 🌐 4. Macro Agent (The Holistic)
+**Architectural Function:** Holistic macroeconomic analysis for the committee.
+- **Objective:** Assess liquidity cycles, macro direction, and systemic risk
+  factors that influence valuation and portfolio exposure.
+- **Mechanism:** HyDE + vector retrieval + grounded synthesis.
 - **Action Rules:**
-  1. Evaluate the current phase of the Market Pendulum (Market Cycle).
-  2. Challenge Graham's thesis: "Does the margin of safety compensate for the governance risk pointed out by Fisher?".
-  3. Generate the final audit log that approves or vetoes the recommendation, adding restrictions focused on capital protection (Drawdown).
+  1. Use retrieval-backed context to inform macro synthesis.
+  2. Inject `source_urls` deterministically from retrieval metadata.
+  3. Preserve Controlled Degradation by returning `None` for unresolved numeric
+     macro fields and fallback narratives when retrieval or synthesis fails.
 
 ---
 
-## 🌐 5. Macro Agent (The Holistic)
-**Architectural Function:** Avaliação holística do ambiente macroeconômico.
-- **Objective:** Compreender os ciclos de liquidez e direcionamento macro que afetam o valuation.
-- **Mechanism:** *Geração Aumentada por Recuperação baseada em Hypothetical Dense Embeddings (HyDE)* para ingestão de atas do COPOM e relatórios do FED.
+## ⚖️ 5. Marks Agent (The Auditor / Risk Manager)
+**Architectural Function:** Devil's Advocate and committee risk auditor.
+- **Objective:** Challenge optimistic conclusions, audit specialist outputs,
+  and surface capital-preservation constraints before consensus is finalized.
+- **Mechanism:** Second-Level Thinking over specialist checkpoints already
+  present in `AgentState`.
 - **Action Rules:**
-  1. Avaliar vetores de política monetária (ex: tendências da taxa Selic e Fed Funds).
-  2. Emitir sínteses curtas indicando impacto e riscos sistêmicos em nível de índice/mercado.
-  3. Preservar "Degradação Controlada" assumindo None/Neutral caso atas ou documentações oficiais estejam indisponíveis.
+  1. Evaluate whether the combined qualitative and quantitative thesis remains
+     defensible under adverse conditions.
+  2. If risk thresholds are breached, Marks must emit an audit verdict that
+     forces committee reconsideration pressure.
+  3. In the current graph implementation, this re-evaluation pressure is
+     realized operationally by degrading or blocking the downstream consensus
+     path before deterministic optimization, while preserving the cyclic
+     extension points for future rerouting.
+
+---
+
+## 🧩 6. Core Consensus Node (Committee Synthesizer)
+**Architectural Function:** Final structured synthesis of the iterative committee.
+- **Objective:** Consolidate Graham, Fisher, Macro, and Marks into a single
+  consensus checkpoint and decide whether deterministic optimization is allowed.
+- **Mechanism:** Structured LLM decision followed by deterministic optimizer
+  handoff when the committee remains approved.
+- **Action Rules:**
+  1. Treat degraded specialist outputs as first-class committee signals.
+  2. Block optimization when evidence is too weak, too degraded, or too risky.
+  3. When optimization is authorized, invoke deterministic tooling only.

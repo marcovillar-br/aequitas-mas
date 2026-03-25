@@ -12,6 +12,7 @@ python = "^3.12"
 langgraph = "^0.2.0"
 # Validação e Tipagem (Norma v5.0)
 pydantic = "^2.0.0"
+fastapi = "^0.115.0"
 # Motor Quantitativo (Agente Graham)
 yfinance = "^0.2.40"
 pandas = "^2.0.0"
@@ -23,6 +24,11 @@ langchain-core = "^0.3.0"
 langchain-google-genai = "^2.0.0"
 ddgs = "^9.10.0"
 structlog = "^25.5.0"
+scipy = "^1.17.1"
+opentelemetry-api = "^1.40.0"
+opentelemetry-sdk = "^1.40.0"
+uvicorn = {extras = ["standard"], version = "^0.41.0"}
+mangum = "^0.17.0"
 
 [tool.poetry.group.infra.dependencies]
 # Cloud infrastructure SDKs — optional, not required for local/offline execution.

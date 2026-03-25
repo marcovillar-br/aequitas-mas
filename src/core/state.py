@@ -9,11 +9,15 @@ as `Optional[float]` and validated to avoid non-finite values (NaN/Inf).
 Classes:
     GrahamMetrics: Pydantic schema for the Graham Agent's metrics.
     FisherAnalysis: Pydantic schema for the Fisher Agent's qualitative analysis.
+    PortfolioWeight: Pydantic schema for optimized ticker weights.
+    PortfolioOptimizationResult: Pydantic schema for deterministic optimizer output.
+    CoreAnalysis: Pydantic schema for supervisor optimization output.
     AgentState: Pydantic BaseModel representing the complete graph state.
 """
 
 import math
 import operator
+from datetime import date
 from typing import Annotated, Any, List, Optional
 
 from langchain_core.messages import BaseMessage
@@ -45,25 +49,20 @@ class GrahamMetrics(BaseModel):
 
     # Campos financeiros obrigatórios para a fórmula de Graham.
     vpa: Optional[float] = Field(
-        default=None,
         description="Valor Patrimonial por Ação (VPA).",
     )
     lpa: Optional[float] = Field(
-        default=None,
         description="Lucro por Ação (LPA).",
     )
 
     # Optional fields that depend on calculations or data availability.
     price_to_earnings: Optional[float] = Field(
-        default=None,
         description="Índice Preço/Lucro (P/L).",
     )
     fair_value: Optional[float] = Field(
-        default=None,
         description="Valor intrínseco calculado pela fórmula de Graham.",
     )
     margin_of_safety: Optional[float] = Field(
-        default=None,
         description="Margem de segurança percentual.",
     )
 
@@ -153,6 +152,118 @@ class MacroAnalysis(BaseModel):
         return value
 
 
+class PortfolioWeight(BaseModel):
+    """Deterministic portfolio weight recommendation per ticker."""
+
+    model_config = ConfigDict(frozen=True)
+
+    ticker: str = Field(
+        ...,
+        description="The B3 ticker receiving a portfolio allocation.",
+        pattern=r"^[A-Z0-9]{5,6}$",
+    )
+    weight: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Normalized portfolio weight between 0 and 1.",
+    )
+
+    @field_validator("weight", mode="before")
+    @classmethod
+    def validate_finite_float(cls, v: Any) -> float:
+        """Safely coerces numeric values and rejects NaN/Inf."""
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
+class PortfolioOptimizationResult(BaseModel):
+    """Deterministic optimizer output with controlled-degradation semantics."""
+
+    model_config = ConfigDict(frozen=True)
+
+    weights: List[PortfolioWeight] = Field(
+        default_factory=list,
+        description="Normalized optimized portfolio weights per ticker.",
+    )
+    expected_return: Optional[float] = Field(
+        default=None,
+        description="Expected portfolio return derived from the deterministic optimizer.",
+    )
+    expected_volatility: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Expected portfolio volatility derived from the covariance matrix.",
+    )
+    sharpe_ratio: Optional[float] = Field(
+        default=None,
+        description="Optional Sharpe-like ratio derived deterministically when feasible.",
+    )
+
+    @field_validator("expected_return", "expected_volatility", "sharpe_ratio", mode="before")
+    @classmethod
+    def validate_finite_optional_float(cls, v: Any) -> Optional[float]:
+        """Safely coerce optional optimizer metrics and reject NaN/Inf."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
+class CoreAnalysis(BaseModel):
+    """Supervisor-level deterministic portfolio optimization output."""
+
+    model_config = ConfigDict(frozen=True)
+
+    recommended_weights: List[PortfolioWeight] = Field(
+        default_factory=list,
+        description="Optimized portfolio allocations for each analyzed ticker.",
+    )
+    total_risk_score: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Aggregate portfolio risk score derived from the optimizer output.",
+    )
+    rational: str = Field(
+        ...,
+        description="Deterministic rationale for the optimized allocation.",
+    )
+    source_urls: List[str] = Field(
+        default_factory=list,
+        description="Consolidated source URLs from specialist agents.",
+    )
+
+    @field_validator("total_risk_score", mode="before")
+    @classmethod
+    def validate_finite_float(cls, v: Any) -> Optional[float]:
+        """Safely coerces numeric values and rejects NaN/Inf."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+
 # 2. GRAPH STATE DEFINITION (LANGGRAPH)
 # The state is the "living object" that circulates among the agents.
 
@@ -177,6 +288,24 @@ class AgentState(BaseModel):
         description="O código de negociação do ativo na bolsa B3.",
         pattern=r"^[A-Z0-9]{5,6}$",
     )
+    as_of_date: date = Field(
+        default_factory=date.today,
+        description="Strict point-in-time reference for historical queries.",
+    )
+
+    # Deterministic portfolio optimization inputs.
+    portfolio_tickers: List[str] = Field(
+        default_factory=list,
+        description="Ordered asset universe used by the deterministic optimizer.",
+    )
+    portfolio_returns: List[List[float]] = Field(
+        default_factory=list,
+        description="Historical returns aligned with portfolio_tickers.",
+    )
+    risk_appetite: Optional[float] = Field(
+        default=None,
+        description="Supervisor-provided risk appetite in the [0, 1] interval.",
+    )
 
     # Decision Tensors (Structured Data).
     # Optional because they are filled progressively.
@@ -184,7 +313,50 @@ class AgentState(BaseModel):
     metrics: Optional[GrahamMetrics] = None
     qual_analysis: Optional[FisherAnalysis] = None
     macro_analysis: Optional[MacroAnalysis] = None
+    fisher_rag_score: Optional[float] = None
+    macro_rag_score: Optional[float] = None
+    marks_verdict: Optional[str] = None
+    core_analysis: Optional[CoreAnalysis] = None
+    optimization_blocked: bool = False
 
     # Audit Log from the Marks Agent (The Devil's Advocate).
     # Annotated + operator.add allows accumulating critiques without overwriting.
     audit_log: Annotated[List[str], operator.add] = Field(default_factory=list)
+
+    # Explicit execution ledger used by the router to avoid re-running nodes.
+    executed_nodes: Annotated[List[str], operator.add] = Field(default_factory=list)
+
+    @field_validator("risk_appetite", mode="before")
+    @classmethod
+    def validate_risk_appetite(cls, v: Any) -> Optional[float]:
+        """Safely coerces risk appetite values and rejects NaN/Inf."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        return value
+
+    @field_validator("fisher_rag_score", "macro_rag_score", mode="before")
+    @classmethod
+    def validate_optional_unit_interval_score(cls, v: Any) -> Optional[float]:
+        """Safely coerce confidence scores and reject NaN/Inf or invalid bounds."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Could not convert value '{v}' to float.") from exc
+
+        if not math.isfinite(value):
+            raise ValueError(f"Value '{v}' is not a valid finite number.")
+
+        if value < 0.0 or value > 1.0:
+            raise ValueError(f"Value '{v}' must be within the [0.0, 1.0] interval.")
+
+        return value

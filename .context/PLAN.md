@@ -1,155 +1,50 @@
+---
+id: context-plan
+title: "Plano de Execução de Engenharia — Aequitas-MAS"
+status: active
+last_updated: "2026-03-24"
+tags: [context, plan, roadmap, academic, sprints]
+---
+
 # 🗺️ PLAN: Execução de Engenharia — Aequitas-MAS
 
-O desenvolvimento deve ser estritamente sequencial. O implementador atuará como "Implementador Cirúrgico". Não avance para o próximo passo sem aprovação do Tech Lead.
+## 1. Arquitetura Baseline (Status: Sprints 1 a 8 Concluídas)
 
----
+Capacidades entregues no baseline:
 
-## 📚 Histórico — Sprints Concluídas
+- **Orquestração:** LangGraph em modo Iterative Committee (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`).
+- **Estado:** `AgentState` imutável, tipado defensivamente e ancorado por `as_of_date`.
+- **RAG macro:** Retrieval time-aware via `VectorStorePort`.
+- **Dados históricos:** `B3HistoricalFetcher` e `HistoricalDataLoader` com degradação controlada.
+- **Otimização:** tool determinístico isolado, consumido pelo `core_consensus_node` com fail-closed (`optimization_blocked=True`).
+- **API:** FastAPI com fronteiras tipadas para `/analyze`, `/backtest/run` e `/portfolio`.
+- **Segurança e infraestrutura:** credenciais via `SecretStorePort`, adapters desacoplados e disciplina Blackboard.
 
-> Registro imutável do desenvolvimento executado. Reflete a ordem sequencial real de
-> implementação e serve como fonte de verdade para auditoria arquitetural e onboarding.
+## 2. Academic & SOTA Roadmap 2026-2027 (Integrated V2)
 
----
+O Aequitas-MAS atingiu maturidade técnica à frente do calendário acadêmico. O planejamento de longo prazo agora se alinha à grade de Pós-Graduação (UFG) e ao estado da arte (SOTA):
 
-### ✅ Sprint 3.1 — Persistência DynamoDB (GitHub Copilot SDD)
-**Status:** CONCLUÍDA — Merge na `development` via PR #22 (commit `76acc5f`).
+- **Mar/26 (ePrompt): Engenharia do Blackboard.** Refinamento dos System Prompts para a "Tríade de Agentes" (Graham, Fisher, Marks) usando Chain-of-Thought (CoT) para emular o paper FinRobot, mantendo a tipagem estrita.
+- **Abr-Mai/26 (Framework & API): Telemetry & Streaming.** Expandir o FastAPI atual com telemetria avançada, auditoria de logs no OpenSearch e streaming assíncrono das respostas do LangGraph.
+  - **Deterministic Thesis-CoT Reporting:** Criação de um gerador de PDF em Python (utilizando Matplotlib e WeasyPrint) que consome o JSON final do LLM (Pydantic) para renderizar um relatório profissional, abolindo alucinações visuais do modelo.
+- **Jun-Jul/26 (DAIA): Shift-Left Testing Avançado.** Expandir a base de testes atual (144 testes) para cobrir Edge Cases estatísticos e comprovar o Risk Confinement.
+- **Ago-Set/26 (EGI & AM): Validação Econométrica.** Aplicar a metodologia de Damodar Gujarati para provar que os sinais do Agente Macro (HyDE RAG) e Agente Fisher possuem significância estatística.
+- **Out-Nov/26 (LLM & Agent): Refinamento do Grafo Cíclico.** Aplicar padrões de Reasoning and Acting (ReAct) e Tree-of-Thought (ToT) no `core_consensus_node`, focando no Agente Marks (Risco).
+- **Dez/26-Jan/27 (EAD): Expansão de Fatores SOTA.** Integrar fatores quantitativos institucionais via Selenium/Pandas para municiar o motor determinístico do Agente Graham. Expansão da boundary `HistoricalMarketData` para suportar o cálculo de Piotroski F-Score (Quality/Value Trap filter) e Altman Z-Score (Bankruptcy Risk) via ferramentas em Python puro.
+- **Jan-Fev/27 (AMLDO): Aprimoramento do RAG (MarketSenseAI).** Focar em Semantic Chunking para transcrições de Earnings Calls, refinando o Agente Fisher.
+- **Fev-Mar/27 (PA): Defesa e TCC Final.** Simulação de Backtesting em larga escala, formatação ABNT/USP-ESALQ e redação do paper final demonstrando a geração de Alpha frente à Fórmula Mágica e ao Ibovespa.
 
-* [x] **Passo 1 (Atômico):** Criar `src/infra/adapters/dynamo_saver.py`. Implementar a classe `DynamoDBSaver` (herdando de `BaseCheckpointSaver`). A classe utiliza Injeção de Dependência em seu construtor (`__init__`) para receber a tabela alvo (`table=None`), instanciando `boto3.resource` apenas se nenhuma tabela for injetada.
-* [x] **Passo 2:** Implementar a lógica de leitura (`get_tuple`) e escrita (`put`) no `dynamo_saver.py`, mapeando `thread_id` para a chave de partição do DynamoDB. Valores `Optional[float] = None` serializados corretamente via `Binary` para evitar quebras no estado LangGraph.
-* [x] **Passo 3:** Criar `tests/test_dynamo_saver.py`. Testes unitários com `pytest-mock` injetando mock da tabela no construtor, garantindo zero interações com a rede (AWS). **4 testes passando.**
-* [x] **Passo 4:** Atualizar `src/core/graph.py` para injetar o *checkpointer* dinamicamente em `create_graph()`. `os.getenv("ENVIRONMENT", "local")` decide entre `MemorySaver()` (local) e `DynamoDBSaver()` (dev/hom/prod).
+## 3. Cross-Cutting Engineering Track (AWS Serverless & FinOps)
 
----
+Em paralelo ao roadmap acadêmico, o Aequitas-MAS executa uma trilha de infraestrutura focada em implantação em nuvem e otimização de custos:
 
-### ✅ Sprint 3.2 — Agente Macro: RAG HyDE + OpenSearch (Claude Code)
-**Status:** CONCLUÍDA — Branch `feat/macro-hyde-opensearch-integration` (commits `1e27dea` → `e54017c`). Aguardando PR para `development`.
+- **API Deployment (Abr-Mai/26):** Empacotamento do gateway FastAPI para AWS Lambda (Serverless) para alcançar a capacidade *Scale-to-Zero*, conectando os adaptadores de persistência do DynamoDB e OpenSearch Serverless.
+- **CI/CD & IAC Pipeline (Jun-Jul/26):** Ativação da esteira de CI/CD via GitHub Actions para aplicar o estado do Terraform e executar os testes automatizados *shift-left* (DAIA) na nuvem.
+- **Cloud Backtesting Engine (Fev-Mar/27):** Execução do backtesting quantitativo final do TCC na infraestrutura AWS para provar a viabilidade arquitetural e de FinOps (custos *Scale-to-Zero* versus Performance).
 
-* [x] **Passo 1 — Implementação da Interface VectorStore em `src/core/interfaces/` (DIP Boundary):**
-  Criar `src/core/interfaces/__init__.py` e `src/core/interfaces/vector_store.py`.
-  Definir `VectorStorePort` como `@runtime_checkable Protocol` com método
-  `search_macro_context(query: str, top_k: int = 5) -> list[dict]`.
-  Adicionar `NullVectorStore` (Null Object Pattern) como implementação de degradação
-  controlada para execução local/offline sem OpenSearch configurado.
+## 4. 🚀 Optional SOTA Backlog (If Time Permits)
 
-* [x] **Passo 2 — Implementação do `OpenSearchAdapter` em `src/infra/adapters/` (Confinamento de Infraestrutura):**
-  Criar `src/infra/adapters/opensearch_client.py`.
-  Implementar `OpenSearchAdapter` satisfazendo `VectorStorePort` por subtipagem estrutural.
-  Autenticação via `AWSV4SignerAuth` + `boto3.Session().get_credentials()` — cadeia padrão
-  AWS (IAM role → env vars → `~/.aws/`). Zero credenciais hardcoded.
-  Factory `from_env()` lê `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `OPENSEARCH_REGION`,
-  `OPENSEARCH_SERVICE` de variáveis de ambiente.
-  Helpers privados `_build_knn_query` e `_parse_hit` isolam o DSL do OpenSearch.
-  `search_macro_context` nunca propaga exceções — retorna `[]` com log estruturado
-  (Controlled Degradation).
-
-* [x] **Passo 3 — Refatoração do `macro_agent` para o Fluxo HyDE (Pipeline RAG):**
-  Refatorar `src/agents/macro.py` introduzindo `create_macro_agent(vector_store: VectorStorePort)`
-  como factory que retorna o nó LangGraph com DI por closure.
-  Pipeline de três estágios:
-  - **Stage 1 (HyDE):** `_HYDE_PROMPT | llm` gera documento hipotético COPOM/FED em texto puro.
-    Sem `with_structured_output` para preservar densidade semântica máxima.
-  - **Stage 2 (Retrieval):** `vector_store.search_macro_context(hyde_text, top_k=5)` realiza
-    busca k-NN. O documento hipotético é o vetor de consulta.
-  - **Stage 3 (Síntese):** `_SYNTHESIS_PROMPT | llm.with_structured_output(MacroAnalysis)`
-    gera análise estruturada grounded no contexto recuperado.
-  `source_urls` injetados deterministicamente via `model_copy(update={"source_urls": urls})`
-  após o retrieval — nunca alucinados pelo LLM (Zero Hallucination).
-  `_build_audit_trace` registra score de cosseno e fonte de cada documento selecionado.
-  `macro_agent` module-level usa `NullVectorStore` para compatibilidade retroativa.
-
-* [x] **Passo 4 — Wiring DI no Grafo:**
-  Atualizar `src/core/graph.py` com `_resolve_vector_store()`: tenta `OpenSearchAdapter.from_env()`,
-  faz fallback para `NullVectorStore` com warning estruturado se `OPENSEARCH_ENDPOINT` ausente.
-  `macro_agent = create_macro_agent(_resolve_vector_store())` preserva o nome no namespace
-  do módulo para manter `patch("src.core.graph.macro_agent")` funcional nos testes.
-
-* [x] **Passo 5 — Cobertura de Testes (TDD):**
-  Criar `tests/test_macro_agent.py` com **13 testes** cobrindo:
-  - Success path (HyDE → retrieval → síntese com `source_urls` reais).
-  - Controlled Degradation por retrieval vazio (`NullVectorStore`).
-  - Deduplicação de `source_urls`.
-  - Fallback por falha de LLM (`ResourceExhausted` e `RuntimeError`).
-  - Falha de conexão OpenSearch (`ConnectionError`) — sem propagação de exceção.
-  - Timeout OpenSearch (`TimeoutError`) — garantia anti-Death Loop no LangGraph.
-  - Helpers privados: `_extract_source_urls`, `_format_retrieved_context`, `_build_audit_trace`.
-  - Conformidade de protocolo: `isinstance(NullVectorStore(), VectorStorePort)`.
-  Expandir `tests/test_graph.py` com **+2 testes de DI**:
-  - Fallback para `NullVectorStore` quando `OPENSEARCH_ENDPOINT` ausente.
-  - `AgentState` recebido pelo macro contém `metrics` e `qual_analysis` populados.
-  **Resultado: 40 passed, 0 regressões** (09/03/2026).
-
----
-
-## 📋 Plano Aprovado — Formalização Arquitetural (Prep Sprint 3.3)
-
-> **Status:** APROVADO pelo Tech Lead em 10/03/2026.
-> Decisões executivas registradas. Pronto para `/implement`.
-
----
-
-### Objetivo
-Formalizar decisões arquiteturais descobertas na auditoria de 10/03/2026 criando os ADRs 005, 006 e 007, e aplicar os patches necessários em CI e infraestrutura Terraform.
-
----
-
-### Step 1 — Criar ADR 005: HyDE RAG Pipeline
-- **File(s):** `.ai/adr/005-hyde-rag-pipeline.md`
-- **Change:** Formalizar a decisão de usar HyDE (Generate → k-NN) em vez de RAG direto. Registrar trade-off: +1 LLM call + latência vs. precisão semântica institucional (MarketSenseAI alignment).
-- **Dogma check:** Documento apenas. CLEAN.
-- **Tests:** N/A.
-
-### Step 2 — Criar ADR 006: OpenSearch Shared Collection Strategy ⚠️ Confirmar antes de executar Step 5
-- **File(s):** `.ai/adr/006-opensearch-shared-collection.md`
-- **Change:** Formalizar Opção B — coleção compartilhada `aequitas-vector-store` com índices separados por agente (`fisher-index`, `macro-index`). Resolve bloqueador da Sprint 3.3.
-- **Dogma check:** Documento apenas. CLEAN.
-- **Tests:** N/A.
-
-### Step 3 — Criar ADR 007: Dogma Audit via Grep Estático
-- **File(s):** `.ai/adr/007-dogma-audit-grep-strategy.md`
-- **Change:** Formalizar grep estático como estratégia pragmática para MVP. Documentar limitação de alias imports como dívida técnica. Registrar decisão de expandir regex neste sprint.
-- **Dogma check:** Documento apenas. CLEAN.
-- **Tests:** N/A.
-
-### Step 4 — Patch CI: Expandir Regex dos Dogma Audits ⚠️ Confirmar antes de executar
-- **File(s):** `.github/workflows/pipeline.yml`
-- **Change:** Audit 1 — adicionar padrão para alias de Decimal (`from decimal import.*Decimal.*as`). Audit 2 — adicionar padrão para alias de boto3 (`import boto3.*as`). Padrões existentes preservados.
-- **Dogma check:** Alteração defensiva no CI, sem impacto em `src/`. CLEAN.
-- **Tests:** Validação: `grep -E` nos padrões expandidos deve retornar vazio na suite atual antes do merge.
-
-### Step 5 — Refatorar Terraform: Shared Collection + Separate Indices ⚠️ Confirmar antes de executar. Sem `terraform apply` automático.
-- **File(s):** `infra/terraform/opensearch.tf`, `infra/terraform/variables.tf`
-- **Change:** Renomear recursos de `AQM_FISHER_*` → `AQM_VECTOR_STORE_*`. Collection: `aequitas-vector-store-${terraform.workspace}`. Adicionar variável `opensearch_index` em `variables.tf` para isolamento lógico por agente (Fisher: `fisher-index`, Macro: `macro-index`). Policies de criptografia/rede/acesso compartilhadas na collection única.
-- **Dogma check:** Infra pura — fora de `src/agents/` e `src/core/`. CLEAN.
-- **Tests:** `terraform validate` (job CI existente). `terraform plan` manual supervisionado pelo Tech Lead antes de qualquer `apply`.
-
----
-
-## 📌 Próxima Sprint — Em Execução
-
----
-
-### 📌 Sprint 3.3 — Provisionamento OpenSearch Serverless + Indexação Real
-**Status:** PLANEJADA — Iniciar na próxima sessão SOD.
-
-* [ ] **Passo 1 — Terraform (AWS OpenSearch Serverless):**
-  Criar módulo Terraform em `infra/terraform/opensearch/` com collection `aequitas-macro-docs`,
-  política de acesso OIDC restrita ao role de execução e pipeline de embedding (neural search).
-  Target environment: `dev`. Sem `terraform apply` automático em CI (Observação aws-advisor §4).
-
-* [ ] **Passo 2 — Script de Indexação Inicial:**
-  Criar `src/tools/opensearch_indexer.py`. Script de ingestão das atas do COPOM 2024-2025
-  (BCB) e minutes do FED, com geração de embeddings via Bedrock ou SageMaker.
-  Campos obrigatórios: `content`, `source_url`, `document_id`, `published_at`.
-
-* [ ] **Passo 3 — Configuração de Ambiente `dev`:**
-  Adicionar `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `OPENSEARCH_REGION` nas variáveis
-  de ambiente do ambiente `dev` (AWS Secrets Manager ou GitHub Actions env secrets).
-
-* [ ] **Passo 4 — Teste E2E com Retrieval Real:**
-  Executar `macro_agent` com `OpenSearchAdapter` real apontando para o índice `dev`.
-  Validar que `source_urls` retorna URLs reais do BCB/FED e que `audit_log` registra
-  scores de cosseno reais (> 0.0).
-
-* [ ] **Passo 5 — Validação Final da Suite e PR:**
-  `pytest tests/` com 40+ testes passando após integração com OpenSearch real.
-  Abrir PR `feat/macro-hyde-opensearch-integration` → `development` para revisão do Tech Lead.
+- **Explainable AI (XAI) Dashboard:** Um frontend em Streamlit ou Gradio consumindo nosso FastAPI para visualizar a execução do LangGraph, a evolução do `AgentState` e o raciocínio CoT (Chain-of-Thought) em tempo real durante a defesa da tese.
+- **Historical Stress Testing:** Expansão do `BacktestEngine` determinístico para executar cenários isolados de "Cisne Negro" (ex: crash da COVID-19, Joesley Day), provando a resiliência do nosso *Risk Confinement* e o valor do Agente Marks.
+- **Regime-Aware Consensus (Dynamic Weights):** Aprimoramento do `core_consensus_node` para que o Supervisor altere dinamicamente os pesos de votação com base na taxa Selic (ex: priorizando Graham/Marks sobre Fisher em ambientes de juros altos).
+- **Graph-of-Thought (GoT) / GraphRAG:** Experimentação com prompting estruturado em grafos e Knowledge Graphs para o Agente Macro mapear causalidades econômicas complexas, referenciando metodologias avançadas (Shao, 2024).

@@ -6,6 +6,7 @@ This module defines the agent responsible for performing qualitative analysis
 based on the Philip Fisher methodology. It analyzes financial news to gauge
 market sentiment and identify potential risks.
 """
+from datetime import date
 from typing import List
 import time
 
@@ -13,11 +14,20 @@ import structlog
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState, FisherAnalysis
 from src.tools.news_fetcher import NewsItem, get_ticker_news
 
 # Initialize structured logger for observability
 logger = structlog.get_logger(__name__)
+
+
+def _resolve_as_of_date(state: AgentState) -> date:
+    """Resolve the point-in-time date from state when available."""
+    as_of_date = getattr(state, "as_of_date", None)
+    if not isinstance(as_of_date, date):
+        raise ValueError("AgentState.as_of_date must be a valid date.")
+    return as_of_date
 
 
 def _format_news_for_prompt(news_items: List[NewsItem]) -> str:
@@ -43,7 +53,8 @@ def fisher_agent(state: AgentState) -> dict:
         A dictionary with the mutated state keys (`qual_analysis` or `audit_log`).
     """
     ticker = state.target_ticker
-    logger.info("agente_fisher_invocado", ticker=ticker)
+    as_of_date = _resolve_as_of_date(state)
+    logger.info("agente_fisher_invocado", ticker=ticker, as_of_date=as_of_date.isoformat())
 
     # Free-Tier Rate Limiting
     logger.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)
@@ -63,12 +74,14 @@ def fisher_agent(state: AgentState) -> dict:
                 source_urls=[],
             )
             message = AIMessage(
-                content=f"Análise qualitativa para {ticker} não pôde ser concluída (sem notícias)."
+                content=f"Análise qualitativa para {ticker} não pôde ser concluída (sem notícias).",
+                name="fisher",
             )
             return {
                 "qual_analysis": analysis,
                 "messages": [message],
                 "audit_log": [audit_message],
+                "executed_nodes": ["fisher"],
             }
 
         urls = [item.url for item in news_items]
@@ -76,7 +89,10 @@ def fisher_agent(state: AgentState) -> dict:
 
         # 2. Define the LLM and Prompt for structured output
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash", temperature=0.1, max_retries=1
+            model="gemini-2.5-flash",
+            temperature=0.1,
+            max_retries=1,
+            google_api_key=require_gemini_api_key(),
         )
         structured_llm = llm.with_structured_output(FisherAnalysis)
 
@@ -117,16 +133,22 @@ def fisher_agent(state: AgentState) -> dict:
         )
 
         message = AIMessage(
-            content=f"Análise qualitativa (Fisher) para {ticker} concluída."
+            content=f"Análise qualitativa (Fisher) para {ticker} concluída.",
+            name="fisher",
         )
-        return {"qual_analysis": analysis_result, "messages": [message]}
+        return {
+            "qual_analysis": analysis_result,
+            "messages": [message],
+            "executed_nodes": ["fisher"],
+        }
 
     except RuntimeError as e:
         # 4. Graceful degradation on tool failure
         logger.error("agente_fisher_ferramenta_falhou", ticker=ticker, error=str(e))
         audit_message = f"CRÍTICO: Ferramenta de notícias falhou para '{ticker}'. A análise qualitativa foi comprometida por falta de dados."
         user_message = AIMessage(
-            content=f"Não foi possível realizar a análise de notícias para {ticker}."
+            content=f"Não foi possível realizar a análise de notícias para {ticker}.",
+            name="fisher",
         )
         # Create a placeholder analysis to avoid breaking the graph flow
         failed_analysis = FisherAnalysis(
@@ -138,13 +160,15 @@ def fisher_agent(state: AgentState) -> dict:
             "qual_analysis": failed_analysis,
             "audit_log": [audit_message],
             "messages": [user_message],
+            "executed_nodes": ["fisher"],
         }
     except Exception as e:
         # 5. Graceful degradation on LLM or other failures
         logger.error("agente_fisher_llm_falhou", ticker=ticker, error=str(e))
         audit_message = f"CRÍTICO: Modelo de linguagem (LLM) falhou ao analisar notícias para '{ticker}'. A análise qualitativa está incompleta ou comprometida."
         user_message = AIMessage(
-            content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}."
+            content=f"Ocorreu um erro inesperado ao analisar as notícias para {ticker}.",
+            name="fisher",
         )
         # Create a placeholder analysis
         failed_analysis = FisherAnalysis(
@@ -156,4 +180,5 @@ def fisher_agent(state: AgentState) -> dict:
             "qual_analysis": failed_analysis,
             "audit_log": [audit_message],
             "messages": [user_message],
+            "executed_nodes": ["fisher"],
         }

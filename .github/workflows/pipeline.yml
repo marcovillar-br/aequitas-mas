@@ -35,6 +35,9 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Validate Poetry Lock Consistency
+        run: poetry check --lock
+
       - name: Install Dependencies
         run: poetry install --without infra
 
@@ -45,8 +48,8 @@ jobs:
       # 3. Dogma Audit — architectural rule enforcement via static grep
       - name: "Dogma Audit 1: Zero Numerical Hallucination (Decimal usage in agents/core)"
         run: |
-          # Catches `decimal.Decimal`, `from decimal import Decimal`, and alias forms
-          if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal)" src/agents/ src/core/; then
+          # Catches `decimal.Decimal`, `from decimal import Decimal`, and explicit alias forms
+          if grep -rn -E "(decimal\.Decimal|from decimal import.*Decimal|from decimal import.*Decimal.*as)" src/agents/ src/core/; then
             echo "DOGMA VIOLATION: The use of the 'decimal' module (including 'decimal.Decimal', 'from decimal import Decimal', and aliases) is strictly forbidden in agents/core. Use float with math.isfinite() validation."
             exit 1
           fi
@@ -55,7 +58,7 @@ jobs:
       - name: "Dogma Audit 2: Dependency Inversion / Risk Confinement (boto3 in agents/core)"
         run: |
           # Catches `import boto3`, `import boto3 as ...`, and `from boto3 import ...`
-          if grep -rn -E "(import boto3|from boto3\b)" src/agents/ src/core/; then
+          if grep -rn -E "(import boto3|from boto3\b|import boto3.*as)" src/agents/ src/core/; then
             echo "DOGMA VIOLATION: boto3 is FORBIDDEN in src/agents/ and src/core/."
             echo "Cloud SDK interactions belong exclusively in src/infra/adapters/."
             exit 1
@@ -65,11 +68,17 @@ jobs:
       # 4. Test suite
       - name: Run Test Suite (pytest)
         env:
-          GOOGLE_API_KEY: "mock-key-for-tests"
+          GEMINI_API_KEY: "mock-key-for-tests"
         run: poetry run pytest tests/ -v --tb=short
 
+      - name: Install Semgrep
+        run: poetry run pip install semgrep
+
+      - name: Run Semgrep Dogma Audit
+        run: poetry run semgrep scan --config .semgrep/ --error src/
+
   terraform:
-    name: "Terraform Execution"
+    name: "Terraform Plan"
     runs-on: ubuntu-latest
     needs: quality
     concurrency:
@@ -79,6 +88,8 @@ jobs:
     env:
       # Sincronização global de região (mapeia para var.AQM_REGION)
       TF_VAR_AQM_REGION: "us-east-1"
+      # Optional developer SSO principal for dev OpenSearch Data Plane access.
+      TF_VAR_developer_sso_arn: ${{ vars.DEVELOPER_SSO_ARN }}
       DEV_ACCOUNT: "355316257214"
 
     defaults:
@@ -117,7 +128,7 @@ jobs:
             -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
-            -backend-config="dynamodb_table=aqm-terraform-state-lock"
+            -backend-config="use_lockfile=true"
 
       # 5. Workspace Selection (Native implementation for idempotency)
       - name: Select Workspace
@@ -130,4 +141,65 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -lock-timeout=5m -no-color
 
-      # 7. Controlled Deployment is intentionally disabled in this development stage.
+      # 7. Controlled deployment to dev is handled by the push-to-development job below.
+
+  terraform-apply-dev:
+    name: "Terraform Apply (dev only)"
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+      - terraform
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/development' }}
+    concurrency:
+      group: terraform-dev-apply
+      cancel-in-progress: false
+
+    env:
+      TF_VAR_AQM_REGION: "us-east-1"
+      TF_VAR_developer_sso_arn: ${{ vars.DEVELOPER_SSO_ARN }}
+      DEV_ACCOUNT: "355316257214"
+
+    defaults:
+      run:
+        working-directory: ./infra/terraform
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Environment Context
+        id: context
+        run: |
+          echo "ACCOUNT_ID=${{ env.DEV_ACCOUNT }}" >> $GITHUB_OUTPUT
+          echo "WORKSPACE=dev" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.context.outputs.ACCOUNT_ID }}:role/Aequitas-MAS-GitHub-CI-CD
+          aws-region: ${{ env.TF_VAR_AQM_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=aqm-terraform-state-${{ steps.context.outputs.ACCOUNT_ID }}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ env.TF_VAR_AQM_REGION }}" \
+            -backend-config="use_lockfile=true"
+
+      - name: Select Workspace
+        run: terraform workspace select -or-create ${{ steps.context.outputs.WORKSPACE }}
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan (saved)
+        run: terraform plan -lock-timeout=5m -no-color -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -lock-timeout=5m -no-color -auto-approve tfplan

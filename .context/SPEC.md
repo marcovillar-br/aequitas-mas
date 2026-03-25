@@ -1,332 +1,414 @@
+---
+id: context-spec
+title: "Especificações de Engenharia — Aequitas-MAS"
+status: active
+last_updated: "2026-03-24"
+tags: [context, spec, architecture, contracts, ssot]
+---
+
 # 📐 SPEC: Especificações de Engenharia — Aequitas-MAS
 
----
+Este documento é o **SSOT arquitetural** do projeto. Contratos de runtime,
+boundaries, ingestão, apresentação, segurança e backtesting vivem aqui.
+`setup.md` permanece operacional; `.context/rules/coding-guidelines.md`
+permanece normativo para estilo, tipagem e topologia de execução.
 
-## ✅ Especificação 3.1: Adaptador Hexagonal DynamoDB (GitHub Copilot SDD)
-**Sprint:** 3.1 | **Status:** CONCLUÍDA (PR #22, commit `76acc5f`)
-**Objetivo:** Implementar persistência Serverless (AWS DynamoDB) via Inversão de Dependência e garantir blindagem arquitetural contra o viés da IA.
+## 1. Topologia Vigente do Sistema
 
-### 1. Contratos de Interface (DIP)
-* **Arquivo-Alvo:** `src/infra/adapters/dynamo_saver.py`
-* **Herança Obrigatória:** `langgraph.checkpoint.base.BaseCheckpointSaver`
-* **Isolamento de Nuvem:** A biblioteca `boto3` DEVE estar confinada a este ficheiro e a testes isolados. É expressamente proibido importar `boto3` em `/src/agents/` ou `/src/core/`.
+O Aequitas-MAS opera como **Cyclic Graph** com semântica de
+**Iterative Committee**. O roteador central em `src/core/graph.py` controla a
+sequência:
 
-### 2. Injeção de Dependência e Segurança (Zero Trust)
-* **Construtor Testável:** A classe `DynamoDBSaver` DEVE suportar Injeção de Dependência no construtor. O recurso AWS (`boto3.resource('dynamodb')`) só deve ser invocado em *runtime* se o parâmetro `table` injetado for nulo. Isso permite que os testes utilizem `pytest-mock` sem estourar *timeouts* de rede.
-* **Credenciais:** É proibida a manipulação e leitura de arquivos `.env` diretamente no código do adaptador.
+`graham -> fisher -> macro -> marks -> core_consensus -> __end__`
 
-### 3. Diretrizes de Tipagem e Anti-Viés
-* **Bloqueio de Decimal:** Fica expressamente proibido o uso, importação ou conversão para `decimal.Decimal` em qualquer camada de persistência. A arquitetura exige que métricas continuem fluindo estritamente como `float` ou `None`.
-* **Degradação Controlada:** Todos os estados baseados no `src/core/state.py` que possuam `Optional[float] = None` devem ter sua ausência mapeada (*null values*) tratada adequadamente durante a transação com o DynamoDB.
+### Invariantes
 
----
+1. O estado compartilhado é sempre `AgentState`.
+2. O grafo não usa matemática em prompts.
+3. Toda fronteira relevante usa modelos Pydantic v2 imutáveis ou `TypedDict`
+   quando o nó retorna patch parcial compatível com LangGraph.
+4. `recursion_limit=15` permanece obrigatório como circuit breaker de FinOps.
 
-## ✅ Especificação 3.2: RAG HyDE & Vetorização Macro (Claude Code)
-**Sprint:** 3.2 | **Status:** CONCLUÍDA (branch `feat/macro-hyde-opensearch-integration`, commits `1e27dea`–`01195e7`)
-**Objetivo:** Substituir o fluxo puramente generativo do Agente Macro por um pipeline RAG (Retrieval-Augmented Generation) baseado em Hypothetical Document Embeddings (HyDE), conectado ao AWS OpenSearch Serverless, garantindo rastreabilidade ética de fontes e confinamento total de SDKs de infraestrutura.
+## 2. Contratos de Tipagem Estrita
 
----
+### 2.1 AgentState
 
-### 1. Contrato do Adaptador de Busca Vetorial (Port/Adapter DIP)
+`src/core/state.py` define o estado canônico do grafo.
 
-A camada de agentes (`/src/agents/`) é vedada a qualquer importação de SDK de nuvem. O acesso ao OpenSearch é mediado exclusivamente por um **contrato de interface** definido em `src/core/interfaces/vector_store.py`.
+Regras:
+- `model_config = ConfigDict(frozen=True)`
+- `as_of_date: date` é obrigatório como referência temporal point-in-time
+- métricas financeiras ausentes ou inválidas devem degradar para
+  `Optional[float] = None`
+- Strict Boundary Mapping: em schemas Pydantic que atuam como boundaries,
+  campos podem ser tipados como `Optional[T]`, mas NÃO devem usar
+  `default=None`; todas as propriedades devem ser explicitamente mapeadas na
+  instanciação, mesmo quando o valor passado for `None`
+- o estado nunca deve transportar valores baseados em `Decimal`
 
-#### 1.1 VectorStorePort — Interface Pública
+### 2.2 Contrato Vetorial
+
+`src/core/interfaces/vector_store.py` define:
 
 ```python
-# src/core/interfaces/vector_store.py
-from typing import Protocol, runtime_checkable
+class VectorSearchResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    document_id: str
+    source_url: str
+    content: str
+    score: float
+
 
 @runtime_checkable
 class VectorStorePort(Protocol):
-    def search_macro_context(self, query: str, top_k: int = 5) -> list[dict]: ...
+    def search_macro_context(
+        self,
+        query: str,
+        as_of_date: date,
+        top_k: int = 5,
+    ) -> list[VectorSearchResult]: ...
 ```
 
-**Contrato do retorno** — cada `dict` da lista DEVE conter:
+#### Regras obrigatórias
 
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `document_id` | `str` | Identificador único do chunk indexado |
-| `source_url` | `str` | URL rastreável da fonte (BCB, FED, etc.) |
-| `content` | `str` | Texto bruto do chunk recuperado |
-| `score` | `float` | Score de similaridade de cosseno `[0.0, 1.0]` |
+1. O retorno do retrieval é sempre uma coleção tipada de `VectorSearchResult`,
+   nunca uma coleção crua baseada em mappings.
+2. Toda consulta qualitativa deve receber `as_of_date` explicitamente para
+   preservar o boundary temporal do grafo.
+3. Campos ausentes devem degradar para string vazia ou `0.0` já na fronteira
+   do adapter.
+4. Falhas de rede ou cluster nunca podem escapar do adapter; o retorno deve ser
+   `[]`.
+5. `NullVectorStore` permanece a implementação local/offline de degradação.
 
-**Regras invioláveis do protocolo:**
-1. O método NUNCA deve propagar exceções para fora — falhas de rede devem retornar `[]` (Controlled Degradation).
-2. Campos ausentes no hit do OpenSearch devem degradar para string vazia `""` ou `0.0` — nunca `KeyError`.
-3. O adaptador concreto (`OpenSearchAdapter`) satisfaz `VectorStorePort` por **subtipagem estrutural** (`typing.Protocol`) — herança explícita não é necessária nem desejada.
+### 2.3 Contrato do Otimizador
 
-#### 1.2 NullVectorStore — Implementação de Degradação
+O tool determinístico de alocação retorna:
 
 ```python
-class NullVectorStore:
-    def search_macro_context(self, query: str, top_k: int = 5) -> list[dict]:
-        return []
+def optimize_portfolio(
+    tickers: Sequence[str],
+    returns: Sequence[Sequence[float]],
+    risk_appetite: float,
+) -> Optional[PortfolioOptimizationResult]: ...
 ```
 
-Implementa o **Null Object Pattern**: garante que o Agente Macro execute em modo offline (local/CI) sem qualquer dependência de AWS, retornando lista vazia e ativando o fluxo de Controlled Degradation.
+`PortfolioOptimizationResult` é um modelo Pydantic imutável e contém:
+- `weights: list[PortfolioWeight]`
+- `expected_return: Optional[float] = None`
+- `expected_volatility: Optional[float] = None`
+- `sharpe_ratio: Optional[float] = None`
 
-#### 1.3 OpenSearchAdapter — Adaptador de Infraestrutura
+#### Regras obrigatórias
 
-**Arquivo:** `src/infra/adapters/opensearch_client.py`
-**Confinamento:** `import boto3` e `from opensearchpy import ...` SOMENTE neste arquivo.
+1. O tool nunca retorna payload genérico não tipado.
+2. Inputs com `NaN`, `Inf`, shape inválido ou covariância singular degradam para
+   `None`.
+3. Toda matemática permanece em `src/tools/`.
 
-| Variável de Ambiente | Obrigatória | Padrão |
-|---|---|---|
-| `OPENSEARCH_ENDPOINT` | **Sim** — `ValueError` se ausente | — |
-| `OPENSEARCH_INDEX` | Não | `aequitas-macro-docs` |
-| `OPENSEARCH_REGION` | Não | `us-east-1` |
-| `OPENSEARCH_SERVICE` | Não | `aoss` (Serverless) |
+### 2.4 Contrato do Supervisor
 
-**Autenticação:** cadeia padrão AWS via `boto3.Session().get_credentials()` — IAM Role → env vars → `~/.aws/credentials`. **Zero credenciais hardcoded.**
+`core_consensus_node` retorna um patch tipado para LangGraph:
 
-**Factory de produção:**
-```python
-adapter = OpenSearchAdapter.from_env()   # produção
-adapter = OpenSearchAdapter(client=mock) # testes (DI por construtor)
-```
+- `core_analysis`
+- `audit_log`
+- `messages`
+- `executed_nodes`
+- `optimization_blocked`
 
-**Diagrama de dependências (DIP enforced):**
-```
-Macro Agent  ──depends on──►  VectorStorePort  (src/core/interfaces/)
-                                      ▲
-                               implementado por
-                                      │
-                             OpenSearchAdapter  (src/infra/adapters/)
-                                      │
-                              boto3 + opensearch-py  (confinados)
-```
+Esse patch usa `TypedDict` para evitar retorno solto e documentar explicitamente
+os campos mutáveis do nó.
 
----
+Mandatory state rule:
+- when `optimize_portfolio(...)` degrades to `None`, the patch must explicitly
+  set `optimization_blocked=True`
 
-### 2. Pipeline HyDE (Hypothetical Document Embeddings)
+### 2.5 Contrato de Apresentação (Thesis-CoT Reporting)
 
-O pipeline HyDE resolve o problema de *vocabulary mismatch* entre a query do usuário e os documentos indexados, substituindo a query por um documento hipotético sintetizado pelo LLM.
+Para evitar alucinações visuais ou formatação corrompida, o sistema adota o
+padrão **Thesis-CoT** (Chain-of-Thought) inspirado no framework FinRobot,
+preservando rastreabilidade, separação de responsabilidades e profissionalismo
+na entrega final do PA.
 
-#### Sequência obrigatória de execução
-
-```
-[AgentState.target_ticker]
-        │
-        ▼
-Stage 1 — HyDE Generation
-  Prompt: _HYDE_PROMPT (texto puro, sem structured_output)
-  Input:  ticker
-  Output: hyde_text (str) — documento hipotético COPOM/FED
-        │
-        ▼
-Stage 2 — Vector Retrieval
-  Input:  hyde_text (usado como query semântica)
-  Call:   vector_store.search_macro_context(hyde_text, top_k=5)
-  Output: retrieved_docs [{ document_id, source_url, content, score }]
-        │
-        ├──► _format_retrieved_context(docs) → context_block (injetado no prompt)
-        ├──► _extract_source_urls(docs)       → dynamic_urls  (injetado no MacroAnalysis)
-        └──► _build_audit_trace(ticker, hyde_text, docs) → audit_entry
-        │
-        ▼
-Stage 3 — Grounded Synthesis
-  Prompt: _SYNTHESIS_PROMPT com {ticker} e {context}
-  LLM:    llm.with_structured_output(MacroAnalysis)
-  Output: raw_result (MacroAnalysis com source_urls=[])
-        │
-        ▼
-Injeção Determinística de source_urls
-  raw_result.model_copy(update={"source_urls": dynamic_urls})
-        │
-        ▼
-Return: { "macro_analysis": result, "audit_log": [audit_entry] }
-```
-
-**Restrição crítica do Stage 1:** O prompt HyDE NÃO deve usar `with_structured_output`. A saída deve ser texto puro de máxima densidade semântica para maximizar a qualidade do embedding de consulta.
-
-**Restrição crítica do Stage 3:** O prompt de síntese DEVE instruir explicitamente o LLM a retornar `source_urls: []`. O preenchimento real é feito deterministicamente pelo código — nunca pelo LLM.
-
----
-
-### 3. Dogma de Tipagem: Optional[float] = None (Zero Numerical Hallucination)
-
-Este dogma é **inviolável** em toda a Sprint 3.2 e nas sprints seguintes.
-
-#### 3.1 Regra Fundamental
-
-> **LLMs não calculam e não estimam métricas numéricas.** Se um valor quantitativo não estiver **explicitamente presente** no contexto recuperado do OpenSearch, o campo correspondente no schema Pydantic DEVE ser `None`.
-
-#### 3.2 Aplicação no Schema `MacroAnalysis`
+Contrato documental de apresentação:
 
 ```python
-class MacroAnalysis(BaseModel):
+class ThesisReportPayload(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    thesis: str
+    evidence: list[str]
+    quantitative_data: dict[str, object]
+
+
+@runtime_checkable
+class PresentationAdapter(Protocol):
+    def render_pdf(self, payload: ThesisReportPayload) -> bytes: ...
+```
+
+Regras obrigatórias:
+1. O output final do Multi-Agent System é um JSON estritamente estruturado e
+   validado via Pydantic, contendo tese, evidências e dados quantitativos já
+   resolvidos pelas fronteiras determinísticas.
+2. A renderização visual pertence exclusivamente a um **Presentation Adapter**
+   desacoplado em Python, capaz de consumir esse JSON para gerar gráficos e
+   relatórios PDF por ferramentas determinísticas como Matplotlib e WeasyPrint.
+3. O LLM é terminantemente proibido de gerar gráficos ASCII, markdown tables
+   com finalidade visual, layout de relatório ou formatação direta de PDF.
+4. A camada de apresentação é downstream do estado estruturado; ela não altera
+   os dados, não recalcula métricas e não move lógica de domínio para prompts.
+
+## 3. Secret Management Cloud-First
+
+### 3.1 Port/Adapter
+
+`src/core/interfaces/secret_store.py` define:
+
+```python
+@runtime_checkable
+class SecretStorePort(Protocol):
+    def get_secret(self, key: str) -> Optional[str]: ...
+```
+
+`src/infra/adapters/env_secret_adapter.py` implementa `EnvSecretAdapter`.
+
+### 3.2 Regra de Runtime
+
+`src/core/llm.py` resolve `GEMINI_API_KEY` por `SecretStorePort`, nunca por
+acoplamento direto da camada de domínio a um provider específico.
+
+### 3.3 Consequência arquitetural
+
+O sistema fica preparado para futuros adapters, como
+`AWSSecretsManagerAdapter`, sem exigir mudança em `src/agents/` ou
+`src/core/`.
+
+## 4. FastAPI Gateway
+
+### 4.1 Dependências compartilhadas
+
+`src/api/dependencies.py` expõe:
+- `get_graph_app()`
+- `get_checkpointer()`
+
+Regras:
+- o gateway reutiliza o grafo compilado
+- o `BaseCheckpointSaver` é resolvido fora das rotas
+- `src/api/` não importa SDK cloud diretamente
+
+### 4.2 Endpoint `/analyze`
+
+Contrato:
+- body: `AnalyzeRequest`
+- dependências: grafo compilado + checkpointer via `Depends`
+- `thread_id` determinístico em `RunnableConfig`
+- retorno: `AnalyzeResponse`
+- internal LangGraph / LLM exceptions must be logged server-side
+- client-facing failures must return a stable, sanitized response instead of
+  raw exception text
+
+### 4.3 Endpoint `/backtest/run`
+
+Contrato:
+- body: `BacktestRequest`
+- a rota está ativa e retorna `BacktestResult`
+- o handler instancia `B3HistoricalFetcher`, injeta o fetcher em
+  `HistoricalDataLoader` e executa `BacktestEngine`
+- falhas de validação devem resultar em erro HTTP explícito
+- falhas internas devem ser encapsuladas sem fabricar replay sintético
+
+## 5. Backtesting Determinístico
+
+Reference: `[.ai/adr/011-point-in-time-architecture-and-temporal-invariance.md]`
+governs temporal synchronization between the Graham path, historical data
+loaders, and RAG/HyDE retrieval so that quantitative and qualitative flows
+share the same `as_of_date` boundary.
+
+### 5.1 HistoricalDataLoader
+
+`HistoricalDataLoader(start_date, end_date, fetcher=...)` é a fronteira de
+acesso a dados históricos point-in-time.
+
+Protocolo obrigatório:
+
+```python
+@runtime_checkable
+class HistoricalDataLoaderPort(Protocol):
+    def get_market_data_as_of(
+        self,
+        ticker: str,
+        current_date: date,
+    ) -> Optional[HistoricalMarketData]: ...
+
+    def get_benchmark_data_as_of(
+        self,
+        benchmark: BenchmarkType,
+        current_date: date,
+    ) -> Optional[HistoricalBenchmarkData]: ...
+```
+
+#### Regras invioláveis
+
+1. Apenas observações com `observed_at <= current_date` podem ser vistas.
+2. Pontos ausentes ou inválidos devem degradar para `None` nos campos do
+   `HistoricalMarketData`.
+3. Não é permitido forward-fill com dados futuros.
+4. Não é permitida interpolação sintética.
+5. Benchmark and factor series must never be shifted beyond `current_date`.
+6. If benchmark data is unavailable for a specific date, the boundary must
+   degrade to `None` and trigger an audit log entry.
+
+### 5.2 Boundary de ingestão
+
+`HistoricalMarketData` é o contrato imutável de mercado/fundamentos e contém:
+
+- `ticker: str`
+- `as_of_date: date`
+- `price: Optional[float] = None`
+- `book_value_per_share: Optional[float] = None`
+- `earnings_per_share: Optional[float] = None`
+- `selic_rate: Optional[float] = None`
+- `piotroski_f_score: Optional[int] = None`
+- `altman_z_score: Optional[float] = None`
+
+`B3HistoricalFetcher.fetch_as_of(ticker, as_of_date)` é o adapter
+determinístico atual para preencher esse boundary.
+
+Regras invioláveis da boundary:
+
+1. `piotroski_f_score` atua como filtro de qualidade/value trap e
+   `altman_z_score` atua como sinal determinístico de risco de insolvência.
+2. Ambos os indicadores devem ser calculados exclusivamente por ferramentas em
+   Python puro sob `src/tools/`.
+3. As assinaturas documentais mínimas para esses cálculos são:
+
+```python
+def calculate_piotroski_f_score(...) -> Optional[int]: ...
+def calculate_altman_z_score(...) -> Optional[float]: ...
+```
+
+4. É proibido ao LLM estimar, inferir probabilisticamente ou recomputar esses
+   indicadores em prompt space.
+5. Quando as evidências de entrada forem ausentes, inválidas ou temporalmente
+   incompatíveis com `as_of_date`, os campos devem degradar para `None`.
+
+### 5.3 Engine
+
+`BacktestEngine` executa um loop diário inclusivo entre `start_date` e
+`end_date`, sempre consultando o loader com o `as_of_date` da iteração.
+
+Saída:
+
+```python
+class BacktestStepLog(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    as_of_date: date
+    observed_price: Optional[float] = None
+    vpa: Optional[float] = None
+    lpa: Optional[float] = None
+    selic_rate: Optional[float] = None
+```
+
+```python
+class BacktestResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    ticker: str
+    start_date: date
+    end_date: date
+    cumulative_return: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    logs: list[BacktestStepLog]
+```
+
+### 5.4 Controlled Degradation
+
+Se o preço inicial, final ou intermediário estiver ausente:
+- métricas derivadas degradam para `None`
+- o replay continua quando possível
+- os logs precisam registrar a degradação explicitamente
+
+Se fundamentos ou taxa livre de risco estiverem ausentes:
+- `vpa`, `lpa` e `selic_rate` permanecem `None`
+- o boundary continua válido sem inventar números
+
+Se os insumos necessários para `piotroski_f_score` ou `altman_z_score`
+estiverem ausentes ou inválidos:
+- `piotroski_f_score` e `altman_z_score` devem degradar para `None`
+- nenhum fallback probabilístico pode ser produzido pelo LLM
+- o cálculo deve permanecer restrito a tooling determinístico em `src/tools/`
+
+Se benchmark ou fator estiver indisponível para uma data específica:
+- `HistoricalBenchmarkData.value` deve degradar para `None`
+- o replay não pode usar forward-fill nem deslocamento temporal para compensar
+- a ausência deve gerar um audit log entry explícito
+
+### 5.5 Benchmark and Factor Contracts
+
+Benchmarks e séries de fatores devem usar uma fronteira tipada e imutável para
+permitir cálculo futuro de alpha, benchmark-relative performance e opportunity
+cost sem violar a invariância temporal do replay.
+
+```python
+class BenchmarkType(str, Enum):
+    CDI = "CDI"
+    IBOV = "IBOV"
+    SELIC = "SELIC"
+    IPCA = "IPCA"
+
+
+class HistoricalBenchmarkData(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    trend_summary: str                    # único campo obrigatório — narrativa qualitativa
-    interest_rate_impact: Optional[float] = None   # ← NUNCA estimado pelo LLM
-    inflation_outlook: Optional[str]      = None   # ← ausente se não recuperado
-    source_urls: list[str]                          # ← injetado do retrieval, nunca do LLM
+    benchmark: BenchmarkType
+    as_of_date: date
+    value: Optional[float] = None
+    description: str
 ```
 
-**Por que `Optional[float]` e não `Decimal`?**
-`Decimal` quebra a serialização do estado LangGraph (não é JSON-serializável por padrão). O schema Pydantic usa `float` com validação `math.isfinite()` para rejeitar `NaN`/`Inf`. Internamente, ferramentas em `/src/tools/` podem usar `Decimal` para precisão, mas DEVEM fazer cast para `float | None` antes de retornar ao estado do grafo.
+Regras obrigatórias:
 
-#### 3.3 Comportamento por Cenário
+1. `CDI`, `IBOV`, `SELIC` e `IPCA` são tratados como séries point-in-time,
+   nunca como constantes globais atemporais.
+2. O loader deve resolver benchmarks somente para datas válidas em
+   `<= current_date`.
+3. Não é permitido forward-fill ou qualquer deslocamento de benchmark para além
+   de `current_date`.
+4. Se uma série estiver indisponível em uma data específica, `value` deve
+   degradar para `None`.
+5. A indisponibilidade de benchmark ou fator deve ser registrada em audit log
+   para preservar observabilidade do replay.
 
-| Cenário | `interest_rate_impact` | `source_urls` | `audit_log` |
-|---|---|---|---|
-| Retrieval bem-sucedido + dado explícito no contexto | `float` (extraído) | URLs reais do BCB/FED | Score de cosseno por documento |
-| Retrieval bem-sucedido + dado ausente no contexto | `None` | URLs reais do BCB/FED | Score de cosseno por documento |
-| Retrieval vazio (`NullVectorStore` / índice vazio) | `None` | `[]` | "nenhum documento recuperado" |
-| Falha de conexão OpenSearch (`ConnectionError`) | `None` | `[]` | `"ALERTA: ..."` |
-| Falha de LLM (`ResourceExhausted`) | `None` | `[]` | `"ALERTA: ..."` |
+## 6. Terminologia Obrigatória
 
-**Invariante absoluto:** em nenhum cenário o Agente Macro propaga uma exceção para o LangGraph. O nó SEMPRE retorna um `dict` com `macro_analysis` presente — garantia anti-Death Loop.
+Os documentos operacionais do projeto devem preferir:
+- `Cyclic Graph`
+- `Iterative Committee`
+- `AgentState`
 
----
+Os documentos não devem reintroduzir vocabulário legado de grafo linear nem
+contratos baseados em coleções ou payloads não tipados.
 
-### 4. Rastreabilidade Ética (audit_log)
+## 7. Próxima Extensão Planejada
 
-O campo `audit_log` do `AgentState` (tipo `Annotated[List[str], operator.add]`) é o veículo de rastreabilidade do sistema. O Agente Macro DEVE sempre adicionar exatamente **uma entrada** ao `audit_log` por execução, independentemente do resultado.
+O baseline consolidado (Sprint 8) já entrega a API de Portfólio e a integração resiliente.
+Os próximos passos (Sprint 9: Mar/26 — ePrompt) focam em:
+- Refinamento cognitivo via Chain-of-Thought (CoT) estruturado para Graham, Fisher e Marks.
+- Implementação das ferramentas determinísticas para Piotroski e Altman em src/tools/.
+- Prototipagem do Presentation Adapter para o Thesis-CoT Reporting.
 
-**Formato obrigatório — execução com retrieval:**
-```
-[Macro/HyDE] Recuperação vetorial concluída para '{ticker}': N documento(s) selecionado(s)
-por similaridade de cosseno.
-Critério de seleção: distância vetorial entre o documento hipotético (HyDE) e os chunks
-indexados do BCB/FED.
-Documentos selecionados:
-  [1] score=0.XXXX | fonte=https://...
-  [2] score=0.XXXX | fonte=https://...
-Consulta HyDE (prévia): "..."
-```
+## 8. SDLC & Git Flow
 
-**Formato obrigatório — execução sem retrieval (degradação):**
-```
-[Macro/HyDE] Análise sem RAG para '{ticker}': nenhum documento recuperado do índice
-vetorial. O agente utilizou conhecimento interno do LLM com Controlled Degradation
-aplicada a todos os campos numéricos.
-Consulta HyDE (prévia): "..."
-```
+Regras obrigatórias:
 
-**Formato obrigatório — falha crítica:**
-```
-ALERTA: Agente Macro degradou para fallback em '{ticker}'. Pipeline HyDE+RAG não
-concluído. Análise macroeconômica indisponível.
-```
-
----
-
-### 5. Wiring de Injeção de Dependência no Grafo
-
-```python
-# src/core/graph.py
-
-def _resolve_vector_store() -> VectorStorePort:
-    try:
-        return OpenSearchAdapter.from_env()      # produção (OPENSEARCH_ENDPOINT obrigatório)
-    except (ValueError, RuntimeError):
-        return NullVectorStore()                 # fallback local/offline
-
-macro_agent = create_macro_agent(_resolve_vector_store())  # nome preservado para patch() em testes
-workflow.add_node("macro", macro_agent)
-```
-
-O nome `macro_agent` DEVE ser preservado como atributo de módulo em `graph.py` para que `patch("src.core.graph.macro_agent")` continue funcional nos testes de integração existentes.
-
----
-
-### 6. Especificação 3.2 — Recuperação Vetorial HyDE: Contrato de Dados e Tipagem Defensiva
-
-Esta seção consolida, em formato de contrato formal, o fluxo de dados do pipeline HyDE+RAG
-e reafirma a aplicação do dogma `Optional[float] = None` em **cada elo** da cadeia de
-recuperação macroeconômica — desde a geração do documento hipotético até a persistência
-no `AgentState`.
-
-#### 6.1 Contrato de Dados: Três Fases Obrigatórias
-
-O Agente Macro DEVE executar as três fases abaixo na ordem exata. Nenhuma fase pode ser
-omitida, reordenada ou substituída por inferência direta do LLM.
-
----
-
-**Fase A — Geração do Documento Hipotético (HyDE Generation)**
-
-| Item | Especificação |
-|---|---|
-| **Responsável** | LLM (`gemini-2.5-flash`, `temperature=0.0`) |
-| **Entrada** | `AgentState.target_ticker` (ex: `"PETR4"`) |
-| **Saída** | `hyde_text: str` — texto puro, denso, sem estrutura JSON |
-| **Formato** | Simulação de trecho de ata COPOM/FED em pt-BR |
-| **Restrição** | `with_structured_output` PROIBIDO — preserva máxima densidade semântica |
-| **Tipo retornado** | `str` (extraído de `AIMessage.content`) |
-
-O documento hipotético NÃO é armazenado no `AgentState`. É utilizado exclusivamente como
-vetor de consulta para a Fase B.
-
----
-
-**Fase B — Recuperação Vetorial (Vector Retrieval)**
-
-| Item | Especificação |
-|---|---|
-| **Responsável** | `VectorStorePort` (injetado via DI) |
-| **Entrada** | `hyde_text: str` (saída da Fase A) |
-| **Chamada** | `vector_store.search_macro_context(hyde_text, top_k=5)` |
-| **Saída** | `retrieved_docs: list[dict]` |
-| **Campos obrigatórios por doc** | `document_id: str`, `source_url: str`, `content: str`, `score: float` |
-| **Comportamento em falha** | Retorna `[]` — NUNCA propaga exceção |
-| **Metadados para rastreabilidade** | `source_url` e `score` extraídos de cada hit do OpenSearch |
-
-O critério de seleção dos documentos é **exclusivamente** a distância vetorial (similaridade
-de cosseno) entre o embedding do `hyde_text` e os embeddings dos chunks indexados.
-Nenhum filtro heurístico ou regra de negócio adicional é aplicado nesta fase.
-
----
-
-**Fase C — Síntese Grounded (Grounded Synthesis)**
-
-| Item | Especificação |
-|---|---|
-| **Responsável** | LLM com `with_structured_output(MacroAnalysis)` |
-| **Entradas** | `ticker: str` + `context_block: str` (chunks formatados da Fase B) |
-| **Saída (LLM)** | `MacroAnalysis` com `source_urls=[]` (instrução explícita no prompt) |
-| **Saída (pós-injeção)** | `MacroAnalysis` com `source_urls=dynamic_urls` (do retrieval) |
-| **Mecanismo de injeção** | `raw_result.model_copy(update={"source_urls": dynamic_urls})` |
-| **Garantia** | `source_urls` NUNCA alucinados pelo LLM — sempre extraídos da Fase B |
-
----
-
-#### 6.2 Tipagem Defensiva `Optional[float] = None` — Reafirmação por Elo da Cadeia
-
-O dogma `Optional[float] = None` é aplicado em **quatro pontos distintos** da cadeia de
-recuperação macroeconômica. A falha em qualquer ponto NÃO deve produzir valores numéricos
-estimados — deve produzir `None`.
-
-```
-Cadeia de Recuperação                   Ponto de aplicação de Optional[float] = None
-─────────────────────────────────────   ──────────────────────────────────────────────────────────
-[1] Fase B — retrieval retorna []       → context_block = fallback text sem dados numéricos
-                                          LLM não encontra valores → interest_rate_impact = None ✓
-
-[2] Fase C — LLM não encontra valor     → Prompt instrui: "se ausente, retorne null"
-    numérico explícito no contexto        interest_rate_impact = None ✓
-
-[3] Fase C — LLM retorna valor inválido → Pydantic field_validator: math.isfinite() rejeita
-    (NaN, Inf, não-numérico)               → ValidationError → Controlled Degradation = None ✓
-
-[4] Fallback crítico (exceção LLM/rede) → MacroAnalysis instanciado diretamente com
-                                           interest_rate_impact=None, inflation_outlook=None ✓
-```
-
-**Regra de ouro:** Se houver qualquer dúvida sobre a proveniência de um valor numérico,
-o campo DEVE ser `None`. A narrativa qualitativa (`trend_summary`) é o único canal
-permitido para informação macroeconômica quando dados quantitativos não estão disponíveis.
-
-#### 6.3 Invariantes do Schema `MacroAnalysis` ao Longo da Cadeia
-
-| Campo | Fase A | Fase B | Fase C (LLM) | Fase C (pós-injeção) | Fallback |
-|---|---|---|---|---|---|
-| `trend_summary` | — | — | **obrigatório** (str) | inalterado | texto fixo de fallback |
-| `interest_rate_impact` | — | — | `float \| None` (se explícito) | inalterado | `None` |
-| `inflation_outlook` | — | — | `str \| None` (se presente) | inalterado | `None` |
-| `source_urls` | — | `dynamic_urls` extraídas | `[]` (instrução) | **`dynamic_urls`** | `[]` |
-
-A coluna "Fase C (pós-injeção)" representa o estado final que entra no `AgentState`.
-É o único estado autorizado a ser gravado no grafo LangGraph.
+1. Cada novo sprint exige uma nova working branch. Antes de iniciar o próximo
+   sprint, a branch do sprint anterior deve estar finalizada e com push
+   realizado para o repositório remoto.
+2. Ao final de todo sprint, e antes de qualquer remote push ser autorizado, o
+   agente Code Reviewer ("The Shield") deve inspecionar o diff da working
+   branch contra sua BASE BRANCH, isto é, a branch exata a partir da qual ela
+   foi criada, como a branch do sprint anterior ou `main`, dependendo da
+   origem. Toda correção resultante da revisão deve ser commitada na própria
+   working branch antes da autorização de push.
+3. O prefixo `fix/` é reservado estritamente para hotfixes de produção.
+   Correções de bugs identificadas durante o sprint ativo devem ser entregues
+   como commits normais na working branch corrente, sem criação de branch
+   `fix/`.

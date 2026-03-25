@@ -27,6 +27,7 @@ DIP Enforcement:
 
 import time
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 
 import structlog
@@ -43,10 +44,22 @@ except ImportError:  # pragma: no cover - defensive import guard
 
     ResourceExhausted = _ResourceExhaustedFallback
 
-from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
+from src.core.llm import require_gemini_api_key
+from src.core.interfaces.vector_store import (
+    VectorSearchResult,
+    VectorStorePort,
+)
 from src.core.state import AgentState, MacroAnalysis
 
 logger = structlog.get_logger(__name__)
+
+
+def _resolve_as_of_date(state: AgentState) -> date:
+    """Resolve the point-in-time date from state when available."""
+    as_of_date = getattr(state, "as_of_date", None)
+    if not isinstance(as_of_date, date):
+        raise ValueError("AgentState.as_of_date must be a valid date.")
+    return as_of_date
 
 # ---------------------------------------------------------------------------
 # Prompt templates
@@ -143,12 +156,12 @@ def _invoke_synthesis_chain(chain: Any, ticker: str, context: str) -> MacroAnaly
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _format_retrieved_context(docs: list[dict]) -> str:
+def _format_retrieved_context(docs: list[VectorSearchResult]) -> str:
     """
     Format retrieved OpenSearch hits into a readable block for the synthesis prompt.
 
     Args:
-        docs: List of result dicts conforming to the VectorStorePort contract.
+        docs: List of typed results conforming to the VectorStorePort contract.
 
     Returns:
         A formatted string with numbered excerpts and source attribution.
@@ -163,17 +176,14 @@ def _format_retrieved_context(docs: list[dict]) -> str:
 
     lines: list[str] = []
     for i, doc in enumerate(docs, start=1):
-        source = doc.get("source_url") or doc.get("document_id") or "fonte desconhecida"
-        content = doc.get("content", "").strip()
-        score = doc.get("score", 0.0)
-        lines.append(
-            f"[{i}] Fonte: {source} (score={score:.4f})\n{content}"
-        )
+        source = doc.source_url or doc.document_id or "fonte desconhecida"
+        content = doc.content.strip()
+        lines.append(f"[{i}] Fonte: {source} (score={doc.score:.4f})\n{content}")
 
     return "\n\n".join(lines)
 
 
-def _extract_source_urls(docs: list[dict]) -> list[str]:
+def _extract_source_urls(docs: list[VectorSearchResult]) -> list[str]:
     """
     Extract non-empty source_url values from retrieved documents.
 
@@ -182,14 +192,18 @@ def _extract_source_urls(docs: list[dict]) -> list[str]:
     seen: set[str] = set()
     urls: list[str] = []
     for doc in docs:
-        url = doc.get("source_url", "").strip()
+        url = doc.source_url.strip()
         if url and url not in seen:
             seen.add(url)
             urls.append(url)
     return urls
 
 
-def _build_audit_trace(ticker: str, hyde_text: str, docs: list[dict]) -> str:
+def _build_audit_trace(
+    ticker: str,
+    hyde_text: str,
+    docs: list[VectorSearchResult],
+) -> str:
     """
     Build a structured reasoning trace for the audit_log.
 
@@ -216,9 +230,8 @@ def _build_audit_trace(ticker: str, hyde_text: str, docs: list[dict]) -> str:
 
     doc_lines: list[str] = []
     for i, doc in enumerate(docs, start=1):
-        score = doc.get("score", 0.0)
-        source = doc.get("source_url") or doc.get("document_id") or "desconhecido"
-        doc_lines.append(f"  [{i}] score={score:.4f} | fonte={source}")
+        source = doc.source_url or doc.document_id or "desconhecido"
+        doc_lines.append(f"  [{i}] score={doc.score:.4f} | fonte={source}")
 
     docs_block = "\n".join(doc_lines)
     return (
@@ -263,7 +276,13 @@ def create_macro_agent(
         Stage 3: Synthesize a validated MacroAnalysis with real source_urls.
         """
         ticker = state.target_ticker
-        logger.info("macro_agent_started", ticker=ticker, pipeline="HyDE+RAG")
+        as_of_date = _resolve_as_of_date(state)
+        logger.info(
+            "macro_agent_started",
+            ticker=ticker,
+            as_of_date=as_of_date.isoformat(),
+            pipeline="HyDE+RAG",
+        )
 
         # Free-Tier rate limiting before first LLM call.
         logger.debug("macro_agent_rate_limit_applied", sleep_seconds=15)
@@ -273,6 +292,7 @@ def create_macro_agent(
             model="gemini-2.5-flash",
             temperature=0.0,
             max_retries=1,  # Tenacity handles robust retry logic.
+            google_api_key=require_gemini_api_key(),
         )
 
         try:
@@ -292,7 +312,11 @@ def create_macro_agent(
             # Stage 2: Retrieval — k-NN search using the hypothesis as query
             # ------------------------------------------------------------------
             logger.info("macro_retrieval_started", ticker=ticker)
-            retrieved_docs = vector_store.search_macro_context(hyde_text, top_k=5)
+            retrieved_docs = vector_store.search_macro_context(
+                hyde_text,
+                as_of_date=as_of_date,
+                top_k=5,
+            )
             logger.info(
                 "macro_retrieval_completed",
                 ticker=ticker,
@@ -327,9 +351,16 @@ def create_macro_agent(
                 sources_count=len(dynamic_urls),
             )
 
+            success_message = AIMessage(
+                content=f"Análise macroeconômica (Macro) para {ticker} concluída.",
+                name="macro",
+            )
+
             return {
                 "macro_analysis": result,
+                "messages": [success_message],
                 "audit_log": [audit_entry],
+                "executed_nodes": ["macro"],
             }
 
         except ResourceExhausted as error:
@@ -374,15 +405,21 @@ def create_macro_agent(
             "macro_analysis": fallback_analysis,
             "messages": [failure_msg],
             "audit_log": [audit_failure],
+            "executed_nodes": ["macro"],
         }
 
     return macro_agent
 
 
-# ---------------------------------------------------------------------------
-# Module-level default (backward compatibility + local/offline mode)
-# ---------------------------------------------------------------------------
-# Uses NullVectorStore (Controlled Degradation): the agent runs without
-# retrieval, relying on the LLM's internal knowledge with all Optional[float]
-# fields set to None if not explicitly present in the LLM response.
-macro_agent = create_macro_agent(NullVectorStore())
+def macro_agent(state: AgentState) -> dict:
+    """
+    Guard against accidental direct imports without dependency wiring.
+
+    Production/runtime code must use ``create_macro_agent(...)`` with an
+    injected ``VectorStorePort`` or consume the fully wired node exported by
+    ``src.core.graph``.
+    """
+    raise RuntimeError(
+        "macro_agent requires explicit vector store wiring. "
+        "Use create_macro_agent(vector_store) or import src.core.graph.macro_agent."
+    )

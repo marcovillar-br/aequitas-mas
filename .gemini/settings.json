@@ -22,7 +22,7 @@
   "rules": [
     {
       "id": "sod-system-prompt-enforcement",
-      "instruction": "MANDATÓRIO: Esta é a sua instrução primária. Antes de gerar qualquer código ou responder a perguntas de arquitetura, você DEVE ler silenciosamente o arquivo '.context/prompts/sod-context-enforcement.md' e assumir todas as regras, personas e restrições de idioma (pt-BR) definidas nele.",
+      "instruction": "MANDATÓRIO: Esta é a sua instrução primária. Antes de gerar qualquer código ou responder a perguntas de arquitetura, você DEVE ler silenciosamente o arquivo '.ai/aidd-003-tech-lead-mentor-prompt.md' e assumir todas as regras, personas e restrições de idioma (pt-BR) definidas nele.",
       "severity": "critical"
     },
     {
@@ -32,14 +32,10 @@
     },
     {
       "id": "strict-type-safety",
-      "instruction": "Toda a mutação de estado obedece a contratos matemáticos. Nenhuma saída de texto livre é aceite como dado estruturado. Use pydantic (v2) e substitua primitive floats por decimal.Decimal para métricas financeiras.",
+      "instruction": "Toda a mutação de estado obedece a contratos matemáticos. Nenhuma saída de texto livre é aceite como dado estruturado. Use pydantic (v2) com ConfigDict(frozen=True). Campos financeiros ausentes ou inválidos DEVEM usar Optional[float] = None. O uso de decimal.Decimal é EXPRESSAMENTE PROIBIDO em qualquer boundary de estado ou agente — viola a serialização JSON do LangGraph e a compatibilidade com checkpointers. Ferramentas determinísticas (src/tools/) devem retornar float validado com math.isfinite(), nunca Decimal.",
       "severity": "critical"
     },
     {
-      "id": "skill-enforcement",
-      "instruction": "Sempre utilize a skill 'gemini-api-dev' para validar implementações de function calling e integração de LLM.",
-      "severity": "high"
-    },   {
       "id": "dependency-inversion-principle",
       "instruction": "O Core do sistema (/src/core e /src/agents) é Cloud-Agnostic. É EXPRESSAMENTE PROIBIDO o uso de importações de SDKs de nuvem (ex: import boto3) nestes diretórios. Infraestrutura é injetada via Adapters.",
       "severity": "high"
@@ -57,7 +53,7 @@
   ],
   "global_styles": {
     "language": "pt-br",
-    "python_version": "3.10+",
-    "preferred_libraries": ["langgraph", "langchain-core", "pydantic", "yfinance", "pandas", "pytest"]
+    "python_version": "3.12+",
+    "preferred_libraries": ["langgraph", "langchain-core", "pydantic", "structlog", "ddgs", "pytest", "mangum", "opensearch-py"]
   }
 }

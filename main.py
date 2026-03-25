@@ -20,12 +20,14 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
+_DEFAULT_TICKER = "BBAS3"
 
 # Ensures Python finds the 'src' directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 
 try:
     from src.core.graph import app
+    from src.core.llm import require_gemini_api_key
     from src.core.state import AgentState
     from langchain_core.runnables.config import RunnableConfig
     from langchain_community.cache import InMemoryCache
@@ -71,7 +73,7 @@ def print_report(final_state: dict) -> None:
     if qual_analysis:
         print("\n📰 ANÁLISE QUALITATIVA (Fisher Agent):")
         print(f"   • Score de Sentimento: {qual_analysis.sentiment_score:.2f} (escala -1 a 1)")
-        print(f"   • Riscos Identificados:")
+        print("   • Riscos Identificados:")
         for risk in qual_analysis.key_risks:
             print(f"     - {risk}")
         if qual_analysis.source_urls:
@@ -98,15 +100,22 @@ def print_report(final_state: dict) -> None:
     # Section 4: Final Verdict (Marks - Risk Auditor)
     print("\n⚖️  VEREDITO FINAL (Marks Agent - Auditor de Risco):")
     print("-" * 80)
-    
-    audit_log = final_state.get("audit_log", [])
-    if audit_log and len(audit_log) > 0:
-        # The last entry in audit_log is the final verdict from Marks
-        final_verdict = audit_log[-1]
+
+    final_verdict = final_state.get("marks_verdict")
+    if final_verdict:
         print(f"\n{final_verdict}\n")
     else:
         print("\n⚠️  ERRO: Veredito final não disponível. A análise de risco não foi concluída.\n")
         logger.error("final_verdict_missing", ticker=ticker)
+
+    print("\n🧠 CORE CONSENSUS RATIONALE:")
+    print("-" * 80)
+
+    core_analysis = final_state.get("core_analysis")
+    if core_analysis:
+        print(f"\n{core_analysis.rational}\n")
+    else:
+        print("\nℹ️  Rationale do Core Consensus indisponível.\n")
     
     print("=" * 80)
     print("Análise concluída. Sistema Aequitas-MAS v2.0")
@@ -153,15 +162,24 @@ def run_analysis(ticker: str) -> None:
         structlog.get_logger().error("graph_execution_failed", error=str(e), exc_info=True)
         print("\n⚠️  ERRO CRÍTICO: A execução do grafo falhou. Verifique os logs para detalhes.\n")
 
+
+def _resolve_ticker(argv: list[str]) -> str:
+    """Return the CLI ticker argument or the project default."""
+    if len(argv) > 1 and argv[1].strip():
+        return argv[1].strip().upper()
+    return _DEFAULT_TICKER
+
 if __name__ == "__main__":
     logger.info("script_started", file="main.py")
-    
-    if not os.getenv("GOOGLE_API_KEY"):
+
+    try:
+        require_gemini_api_key()
+    except RuntimeError:
         logger.error(
-            "missing_api_key", 
-            variable="GOOGLE_API_KEY", 
-            hint="Run 'export GOOGLE_API_KEY=your_key' before executing."
+            "missing_api_key",
+            variable="GEMINI_API_KEY",
+            hint="Set GEMINI_API_KEY in the project .env before executing.",
         )
         sys.exit(1)
-    else:
-        run_analysis("PETR4")
+
+    run_analysis(_resolve_ticker(sys.argv))

@@ -6,6 +6,7 @@ This test suite validates the Fisher Agent's ability to orchestrate
 the news fetching tool and the language model to produce a structured
 qualitative analysis, ensuring data integrity and traceability.
 """
+from datetime import date
 import pytest
 from unittest.mock import patch, MagicMock
 from src.agents.fisher import fisher_agent
@@ -42,6 +43,7 @@ def initial_state() -> AgentState:
     return AgentState(
         messages=[],
         target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
         metrics=None,
         qual_analysis=None,
         audit_log=[],
@@ -78,7 +80,10 @@ def test_fisher_agent_success_and_traceability(
     # 1. Verify that the correct functions were called
     mock_get_news.assert_called_once_with("PETR4")
     mock_chat_model.assert_called_once_with(
-        model="gemini-2.5-flash", temperature=0.1, max_retries=1
+        model="gemini-2.5-flash",
+        temperature=0.1,
+        max_retries=1,
+        google_api_key="test-gemini-key",
     )
     mock_structured_llm.invoke.assert_called_once()
 

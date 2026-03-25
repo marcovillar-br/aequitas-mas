@@ -13,6 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
+from src.core.llm import require_gemini_api_key
 from src.core.state import AgentState
 
 # Initialize structured logger for observability
@@ -68,12 +69,19 @@ def marks_agent(state: AgentState) -> dict:
             has_qual_analysis=bool(qual_analysis),
         )
         # Append to audit_log to make the failure explicit in the final state
-        return {"audit_log": [audit_message]}
+        return {
+            "audit_log": [audit_message],
+            "marks_verdict": audit_message,
+            "executed_nodes": ["marks"],
+        }
 
     # 2. Define LLM and Prompt Template
     # Temperature is set to 0.2 to allow for some creative, critical thinking
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash", temperature=0.2, max_retries=1
+        model="gemini-2.5-flash",
+        temperature=0.2,
+        max_retries=1,
+        google_api_key=require_gemini_api_key(),
     )
     structured_llm = llm.with_structured_output(MarksVerdict)
 
@@ -131,12 +139,25 @@ def marks_agent(state: AgentState) -> dict:
         verdict = response.verdict
         log.info("agente_marks_sucesso", ticker=ticker)
 
-        message = AIMessage(content=verdict)
+        message = AIMessage(content=verdict, name="marks")
         # 4. Return the final verdict to be appended to the audit log
-        return {"audit_log": [verdict], "messages": [message]}
+        return {
+            "audit_log": [verdict],
+            "marks_verdict": verdict,
+            "messages": [message],
+            "executed_nodes": ["marks"],
+        }
 
     except Exception as e:
         audit_message = f"CRÍTICO: Agente Auditor (Marks) falhou ao gerar o veredito. Causa: {e}"
         log.error("agente_marks_llm_falhou", ticker=ticker, error=str(e))
-        user_message = AIMessage(content="Ocorreu um erro inesperado ao gerar o veredito final.")
-        return {"audit_log": [audit_message], "messages": [user_message]}
+        user_message = AIMessage(
+            content="Ocorreu um erro inesperado ao gerar o veredito final.",
+            name="marks",
+        )
+        return {
+            "audit_log": [audit_message],
+            "marks_verdict": audit_message,
+            "messages": [user_message],
+            "executed_nodes": ["marks"],
+        }

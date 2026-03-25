@@ -1,105 +1,159 @@
-# Aequitas-MAS (Multi-Agent System) v5.0
+# Aequitas-MAS
 
-**Aequitas-MAS** is an intelligent agent ecosystem designed for fundamental analysis and high-level financial decision-making. The system transcends static calculations by combining the mathematical rigor of **Value Investing** with qualitative market analysis and risk auditing, utilizing **LangGraph** for orchestration and **Gemini Flash** as the inference engine.
+**Aequitas-MAS** is a multi-agent investment analysis system built around a
+**Cyclic Graph** and an **Iterative Committee** model. Deterministic tools
+perform all math, typed state models guard every boundary, and specialist
+agents contribute structured checkpoints before the supervisor authorizes any
+portfolio action.
 
-## 🧠 Agent Architecture
+The project now operates with an **Artifact-Driven Blackboard Architecture**
+for human/agent coordination. The operational roles are:
+- **Orchestrator (The Brain):** writes plans to `.ai/handoffs/current_plan.md`
+- **Implementer (The Muscle):** reads the artifact and executes the code/test work
+- **Auditor (Unified QA):** validates the result and writes end-of-day summaries
 
-The project uses a Directed Acyclic Graph (DAG) to process financial assets through three critical perspectives, ensuring that intrinsic value is confronted with market reality:
+## Architecture Overview
 
-1. **GRAHAM Node (Quantitative):** 
-* Performs real-time fundamental data collection via `yfinance`.
-* Executes the **Fair Value** calculation based on the Benjamin Graham formula.
-* Establishes the nominal Margin of Safety of the asset.
+The current committee order is:
 
-2. **FISHER Node (Qualitative):** 
-* Evaluates the "Yield Gap" and market sentiment through macroeconomic data.
-* Identifies competitive advantages and dividend sustainability.
-* Processed via **Gemini Flash** (Alias `gemini-flash-latest`).
+`graham -> fisher -> macro -> marks -> core_consensus -> __end__`
 
-3. **MARKS Node (Risk Audit):** 
-* Applies "Second-Level Thinking" (Howard Marks) to challenge the previous nodes.
-* Analyzes institutional, political, and governance risks (especially in state-owned enterprises).
-* Defines the final verdict on the viability of the margin of safety.
+- **Graham:** deterministic fundamental metrics and valuation checkpoints.
+- **Fisher:** qualitative news analysis with traceable `source_urls`.
+- **Macro:** HyDE retrieval flow grounded in vector search results.
+- **Marks:** risk-audit pressure against fragile or optimistic theses.
+- **Core Consensus:** structured synthesis plus deterministic optimizer handoff.
 
-## 🚀 Technical Stack
+The system state is carried through immutable Pydantic v2 models under
+`src/core/state.py`, with `Optional[float] = None` used whenever evidence is
+missing or invalid.
 
-* **Language:** Python 3.10+
-* **Orchestration:** [LangGraph](https://www.langchain.com/langgraph) (State-based agents)
-* **LLM Engine:** Google Gemini Flash (Alias `gemini-flash-latest`)
-* **Dependency Management:** [Poetry](https://python-poetry.org/)
-* **Data:** yfinance, Pandas, Beautifulsoup4
+## Delivered Through Sprint 10
 
-## 🛠️ Installation and Setup
+- FastAPI gateway under `src/api/` with:
+  - `POST /analyze`
+  - `POST /backtest/run` with active deterministic replay over real historical
+    ingestion
+- Startup-scoped dependency injection for the compiled LangGraph app and its
+  `BaseCheckpointSaver`
+- Strict boundary typing with immutable models such as:
+  - `VectorSearchResult`
+  - `PortfolioOptimizationResult`
+  - `BacktestResult`
+- Cloud-first secret management via:
+  - `SecretStorePort`
+  - `EnvSecretAdapter`
+- Deterministic backtesting with:
+  - explicit `start_date` / `end_date`
+  - `as_of_date` anti-look-ahead enforcement
+  - `B3HistoricalFetcher` as the current real-ingestion adapter
+  - `HistoricalDataLoader.get_market_data_as_of(...)`
+  - controlled degradation to `None` for missing historical values
+- Deterministic portfolio optimization exposed through:
+  - `POST /portfolio`
+  - typed `PortfolioRequest` / `PortfolioOptimizationResult` boundaries
+  - stable pt-BR API error contracts for optimizer degradation
+- Resilient `core_consensus_node` integration with:
+  - fail-closed `optimization_blocked=True`
+  - immutable blocked patches
+  - auditable rationale in `audit_log` and `messages`
+
+## Secret Management
+
+The runtime does not depend on direct domain-level `os.getenv(...)` calls for
+Gemini credentials.
+
+- `src/core/interfaces/secret_store.py` defines `SecretStorePort`
+- `src/infra/adapters/env_secret_adapter.py` provides `EnvSecretAdapter`
+- `src/core/llm.py` resolves `GEMINI_API_KEY` through the configured secret store
+
+For local and CI execution, `EnvSecretAdapter` reads process environment
+variables. This preserves Zero Trust boundaries in the domain layer and leaves
+the system ready for a future AWS Secrets Manager adapter without changing
+agent code.
+
+## Technical Stack
+
+- Python 3.12+
+- Poetry
+- LangGraph
+- Pydantic v2
+- FastAPI
+- SciPy
+- OpenSearch Serverless
+- structlog
+
+## Local Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/marcovillar-br/aequitas-mas.git
 cd aequitas-mas
-
-# Link the interpreter and install dependencies via Poetry
-poetry env use python3
 poetry install
 ```
 
-### Environment Variables
+Export local runtime secrets before execution:
 
-Create a `.env` file in the root of the project:
-
-```text
-GOOGLE_API_KEY=your_google_ai_studio_key
+```bash
+export GEMINI_API_KEY="your-key"
 ```
 
-## 📈 Real Use Case: PETR4
+Optional runtime variables for retrieval and environment selection:
 
-The system was validated with an analysis of **PETR4** in February 2026:
+```bash
+export ENVIRONMENT="local"
+export OPENSEARCH_ENDPOINT="https://..."
+export OPENSEARCH_INDEX="macro-index"
+export OPENSEARCH_REGION="us-east-1"
+```
 
-* **Graham Calculation:** Fair Value of **R$ 64.64** (Margin of 41.26%).
-* **Fisher Context:** Attractive dividends (~10%) vs. Geopolitical volatility.
-* **Marks Verdict:** Warning about a "moving target" in state-owned assets, adjusting the perception of the nominal margin.
+See [setup.md](/home/marco/projects/aequitas-mas/setup.md) for the operational
+setup contract.
 
----
+## Roadmap
 
-## 🗺️ Implementation Roadmap (2026-2027)
+### Delivered
 
-This project follows a technical evolution schedule focused on transitioning from a functional prototype to a distributed and resilient analysis infrastructure:
+- Sprint 3: DynamoDB persistence, HyDE retrieval, OpenSearch hardening
+- Sprint 4: Core supervisor and deterministic portfolio optimization
+- Sprint 5: observability baseline and dogma enforcement
+- Sprint 6: FastAPI gateway, typed boundary hardening, and deterministic
+  backtesting foundations
+- Sprint 7: real B3-compatible historical ingestion, benchmark support,
+  dynamic portfolio constraints, and graph integration of deterministic
+  allocation bounds
+- Sprint 8: Portfolio API and resilient graph integration
+- Sprint 9: deterministic Piotroski/Altman tools, CoT prompt refinement,
+  intraday fallback hardening, audit IoC, and presentation contracts
+- Sprint 10: AWS Lambda serverless packaging via `Mangum`, PDF Presentation
+  Adapter delivery, Poetry lock consistency guardrails, and cross-tool
+  Blackboard alignment
 
-* **Q1/2026 - Stabilization and Core:**
-* Dependency environment sanitation (Poetry) and migration to stable `v1` endpoints.
-* Refinement of the **GRAHAM Node** algorithms to support multiple simultaneous assets.
+### Next
 
-* **Q2/2026 - Observability and Testing:**
-* Implementation of structured logs for auditing decisions of the Fisher and Marks agents.
-* Unit and integration test coverage for the state graph (LangGraph).
+- Sprint 11+: advanced telemetry, async LangGraph streaming, and deeper
+  delivery hardening over the Blackboard workflow
 
-* **Q3/2026 - Cloud Native & Containerization:**
-* Application dockerization and CI/CD implementation (GitHub Actions).
-* Experimental deployment on **AWS Fargate** and **AWS Secrets Manager** configuration.
+### Academic & SOTA Roadmap 2026-2027
+With the core architecture delivered ahead of schedule, the long-term vision now aligns with the 2026-2027 academic research calendar:
+- **Q1-Q2 2026:** Blackboard Engineering (FinRobot CoT emulation), Advanced Telemetry, and async LangGraph streaming via FastAPI.
+- **Q3 2026:** Shift-Left Statistical Testing & Econometric Validation (Damodar Gujarati methodology) for Macro and Fisher agents.
+- **Q4 2026:** Cyclic Graph Refinement (ReAct & Tree-of-Thought) focusing on risk assessment (Marks Agent).
+- **Q1 2027:** Institutional Quantitative Factors integration, Semantic Chunking for Earnings Calls (MarketSenseAI), and Final Large-Scale Backtesting for Alpha generation evaluation.
 
-* **Q4/2026 - Persistence and Big Data:**
-* Data Lake implementation on **AWS S3** via Boto3.
-* Historical storage of analyses for performance tracking of "Fair Value" vs. Market.
+### Cross-Cutting Engineering Track (AWS Serverless & FinOps)
+Running in parallel to the academic research, the infrastructure track focuses on cloud deployment and cost optimization:
+- **Q2 2026 (API Deployment):** Packaging the FastAPI gateway for AWS Lambda (Scale-to-Zero) with DynamoDB and OpenSearch Serverless adapters. Sprint 10 delivered the initial serverless wrapper and presentation adapter boundary.
+- **Q3 2026 (CI/CD & IaC):** Activating GitHub Actions to apply Terraform state and execute automated shift-left tests in the cloud.
+- **Q1 2027 (Cloud Backtesting):** Executing the final quantitative backtesting on AWS to prove architectural FinOps viability.
 
-* **Q1/2027 - Intelligent Delivery and API:**
-* Development of an API (FastAPI) for external consumption of analyses.
-* Configuration of an alert system via **AWS SNS** for notification of critical Margins of Safety.
+## Quality Gates
 
----
+```bash
+poetry run ruff check src/ tests/
+poetry run pytest
+```
 
-## AI-Driven Development Workflow
-This repository operates under a strict **Cognitive Hybridization** topology and **Risk Confinement** dogmas. It is designed to be built by a team of Human Tech Leads and AI Assistants.
+## License
 
-**For AI Assistants reading this file:**
-1. **STOP** and immediately read `.ai/context.md`. It is your Single Source of Truth (SSOT).
-2. Understand the "Zero Numerical Hallucination" dogma: Financial values in Graph State MUST use `Optional[float] = None`. `decimal.Decimal` is FORBIDDEN in state schemas.
-3. This project utilizes the RPI (Research, Plan, Implement) workflow. Check `.claude/commands/` for the entry points.
-4. **Topology Context:**
-   - **NotebookLM:** Generates Macro/Micro briefings (`.notebooklm/`).
-   - **Google AI Studio:** Semantic validation and prompt testing (`.ai-studio/`).
-   - **GEM (Web):** The System Architect mapping the Sprints (`.gemini/`).
-   - **VS Code (Claude/Copilot):** The Developer executing defensive coding.
-
----
-
-## 📝 License
-
-This project is strictly for academic purposes and software engineering study. **It does not constitute a recommendation to buy or sell assets.**
+This repository is for academic and engineering study only. It is not
+investment advice.

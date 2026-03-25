@@ -14,6 +14,7 @@ Coverage:
     - Full fallback: LLM failure returns degraded MacroAnalysis + audit entry.
     - NullVectorStore: module-level macro_agent runs without infrastructure.
 """
+from datetime import date
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -26,7 +27,11 @@ from src.agents.macro import (
     create_macro_agent,
     macro_agent,
 )
-from src.core.interfaces.vector_store import NullVectorStore, VectorStorePort
+from src.core.interfaces.vector_store import (
+    NullVectorStore,
+    VectorSearchResult,
+    VectorStorePort,
+)
 from src.core.state import AgentState, MacroAnalysis
 
 # ---------------------------------------------------------------------------
@@ -41,18 +46,18 @@ MOCK_HYDE_TEXT = (
 )
 
 MOCK_RETRIEVED_DOCS = [
-    {
-        "document_id": "bcb-copom-2025-12",
-        "source_url": "https://www.bcb.gov.br/publicacoes/atascopom/cronologico",
-        "content": "A taxa Selic permanece em 10,75% ao ano conforme deliberação do COPOM.",
-        "score": 0.9231,
-    },
-    {
-        "document_id": "fed-minutes-2025-11",
-        "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
-        "content": "The Federal Open Market Committee maintained the target range at 5.25-5.50%.",
-        "score": 0.8874,
-    },
+    VectorSearchResult(
+        document_id="bcb-copom-2025-12",
+        source_url="https://www.bcb.gov.br/publicacoes/atascopom/cronologico",
+        content="A taxa Selic permanece em 10,75% ao ano conforme deliberação do COPOM.",
+        score=0.9231,
+    ),
+    VectorSearchResult(
+        document_id="fed-minutes-2025-11",
+        source_url="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        content="The Federal Open Market Committee maintained the target range at 5.25-5.50%.",
+        score=0.8874,
+    ),
 ]
 
 MOCK_MACRO_ANALYSIS = MacroAnalysis(
@@ -69,6 +74,7 @@ def initial_state() -> AgentState:
     return AgentState(
         messages=[],
         target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
         audit_log=[],
     )
 
@@ -125,7 +131,11 @@ def test_macro_agent_success_path(
         result = agent(initial_state)
 
     # Assert: VectorStore was called with the HyDE text
-    mock_vector_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
+    mock_vector_store.search_macro_context.assert_called_once_with(
+        MOCK_HYDE_TEXT,
+        as_of_date=initial_state.as_of_date,
+        top_k=5,
+    )
 
     # Assert: MacroAnalysis is present and valid
     assert "macro_analysis" in result
@@ -135,7 +145,7 @@ def test_macro_agent_success_path(
     assert analysis.interest_rate_impact == MOCK_MACRO_ANALYSIS.interest_rate_impact
 
     # Assert: source_urls come from retrieval metadata, NOT from LLM output
-    expected_urls = [doc["source_url"] for doc in MOCK_RETRIEVED_DOCS]
+    expected_urls = [doc.source_url for doc in MOCK_RETRIEVED_DOCS]
     assert analysis.source_urls == expected_urls
 
     # Assert: audit_log has exactly one traceability entry
@@ -193,9 +203,24 @@ def test_macro_agent_source_urls_deduplication(
     deduplicate them preserving retrieval order.
     """
     duplicate_docs = [
-        {"document_id": "d1", "source_url": "https://bcb.gov.br/ata1", "content": "...", "score": 0.95},
-        {"document_id": "d2", "source_url": "https://bcb.gov.br/ata1", "content": "...", "score": 0.91},
-        {"document_id": "d3", "source_url": "https://fed.gov/minutes", "content": "...", "score": 0.88},
+        VectorSearchResult(
+            document_id="d1",
+            source_url="https://bcb.gov.br/ata1",
+            content="...",
+            score=0.95,
+        ),
+        VectorSearchResult(
+            document_id="d2",
+            source_url="https://bcb.gov.br/ata1",
+            content="...",
+            score=0.91,
+        ),
+        VectorSearchResult(
+            document_id="d3",
+            source_url="https://fed.gov/minutes",
+            content="...",
+            score=0.88,
+        ),
     ]
     store = MagicMock(spec=VectorStorePort)
     store.search_macro_context.return_value = duplicate_docs
@@ -248,11 +273,11 @@ def test_macro_agent_llm_failure_controlled_degradation(
 
 def test_extract_source_urls_deduplication() -> None:
     docs = [
-        {"source_url": "https://bcb.gov.br/a"},
-        {"source_url": "https://bcb.gov.br/a"},  # duplicate
-        {"source_url": "https://fed.gov/b"},
-        {"source_url": ""},  # empty — must be excluded
-        {"source_url": "https://bcb.gov.br/c"},
+        VectorSearchResult(document_id="1", source_url="https://bcb.gov.br/a", content="", score=0.9),
+        VectorSearchResult(document_id="2", source_url="https://bcb.gov.br/a", content="", score=0.8),
+        VectorSearchResult(document_id="3", source_url="https://fed.gov/b", content="", score=0.7),
+        VectorSearchResult(document_id="4", source_url="", content="", score=0.6),
+        VectorSearchResult(document_id="5", source_url="https://bcb.gov.br/c", content="", score=0.5),
     ]
     result = _extract_source_urls(docs)
     assert result == ["https://bcb.gov.br/a", "https://fed.gov/b", "https://bcb.gov.br/c"]
@@ -293,15 +318,23 @@ def test_null_vector_store_satisfies_protocol() -> None:
     """NullVectorStore must satisfy VectorStorePort structurally."""
     store = NullVectorStore()
     assert isinstance(store, VectorStorePort)
-    assert store.search_macro_context("any query", top_k=3) == []
+    assert store.search_macro_context(
+        "any query",
+        as_of_date=date(2024, 1, 2),
+        top_k=3,
+    ) == []
 
 
-def test_module_level_macro_agent_is_callable() -> None:
+def test_module_level_macro_agent_requires_explicit_wiring(
+    initial_state: AgentState,
+) -> None:
     """
-    The module-level macro_agent (NullVectorStore default) must be callable,
-    ensuring backward compatibility with any code that imports it directly.
+    Direct imports of src.agents.macro.macro_agent must fail fast instead of
+    silently degrading to an unwired NullVectorStore execution path.
     """
     assert callable(macro_agent)
+    with pytest.raises(RuntimeError, match="explicit vector store wiring"):
+        macro_agent(initial_state)
 
 
 # ---------------------------------------------------------------------------
@@ -372,7 +405,11 @@ def test_macro_agent_opensearch_connection_failure_degrades_gracefully(
     ), "messages must contain a degradation AIMessage for graph traceability."
 
     # --- Extra assert: VectorStore was called (HyDE reached the retrieval stage) ---
-    failing_store.search_macro_context.assert_called_once_with(MOCK_HYDE_TEXT, top_k=5)
+    failing_store.search_macro_context.assert_called_once_with(
+        MOCK_HYDE_TEXT,
+        as_of_date=initial_state.as_of_date,
+        top_k=5,
+    )
 
 
 @patch("src.agents.macro.time.sleep")

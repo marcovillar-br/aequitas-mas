@@ -4,7 +4,9 @@ __pycache__/
 *.pyc
 
 # IDEs e Ferramentas
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/mcp.json
 .idx/
 .idea/
 
@@ -21,8 +23,16 @@ htmlcov/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+infra/terraform/tfplan*
 
 # Variáveis de Ambiente e Segredos
 .env
 .env.local
 
+# Artifact-Driven Blackboard (.ai/)
+.ai/archive/
+!.ai/handoffs/
+!.ai/handoffs/**
+!.ai/skills/
+!.ai/skills/**
+.claude/settings.local.json
