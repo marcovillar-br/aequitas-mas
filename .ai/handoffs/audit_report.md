@@ -1,107 +1,74 @@
 ---
-audit_id: "audit-plan-cleanup-legacy-agents-001-20260324"
-plan_validated: "plan-cleanup-legacy-agents-001"
-status: "PASSED"
-failed_checks: []
+audit_id: "audit-plan-sprint11-shift-left-cicd-001-20260325"
+plan_validated: "plan-sprint11-shift-left-cicd-001"
+status: "REJECTED"
+failed_checks:
+  - "no-implementation-evidence"
 tdd_verified: false
-audit_scope: "artifact-deletion"
+audit_scope: "pre-implementation"
 ---
 
 ## 1. Executive Summary
 
-All 7 DoD criteria for `plan-cleanup-legacy-agents-001` are fully satisfied.
-The three legacy passive agent definition files have been staged for deletion
-via `git rm --force`, the `.ai/agents/` directory is confirmed absent from
-the working tree, zero dangling references remain in any active documentation,
-and the SDD Quartet SKILL.md files are all present and intact as the sole
-authoritative SSOT for executor behavior. **Push gate is unblocked for this
-plan's scope.**
+**REJECTED — Implementação não executada.**
+
+O `current_plan.md` aponta para `plan-sprint11-shift-left-cicd-001` (Sprint 11),
+mas o `eod_summary.md` pertence a um plano anterior:
+`eod-plan-doc-integrity-fix-001`. Não existe evidência de que o Implementer
+foi acionado para este plano. O Auditor não pode validar o que ainda não foi
+construído.
+
+O status do Blackboard é consistente com o encerramento de sessão do dia
+anterior: o plano foi escrito e publicado como último artefato, mas a
+execução fica para esta sessão.
+
+**Ação requerida:** Acionar o `sdd-implementer` para executar os Steps
+2.1–2.5 de `plan-sprint11-shift-left-cicd-001` antes de solicitar nova
+auditoria.
 
 ---
 
 ## 2. Dogma Compliance Analysis
 
 ### Check 2.1: Risk Confinement (Math/Decimals)
-* **Status:** PASSED
-* **Findings:** Audit scope is `artifact-deletion`. No Python source files
-  were modified by this plan. Pre-existing `.py` diff (105 lines touching
-  `src/agents/graham.py`, `src/tools/fundamental_metrics.py`, and
-  `tests/tools/test_fundamental_metrics.py`) belongs to the previously
-  audited `plan-hotfix-zero-math-pe-ratio` and is not attributable to this
-  plan. No `decimal.Decimal` violation introduced.
+* **Status:** SKIPPED
+* **Findings:** Nenhum código foi produzido para auditoria.
 
-### Check 2.2: Temporal Invariance (Look-ahead)
-* **Status:** PASSED
-* **Findings:** Audit scope is `artifact-deletion`. No backtesting, ingestion,
-  or retrieval logic was modified. `as_of_date` boundary is untouched.
+### Check 2.2: Temporal Invariance
+* **Status:** SKIPPED
+* **Findings:** Nenhum código foi produzido para auditoria.
 
-### Check 2.3: Inversion of Control (SDKs/Secrets)
-* **Status:** PASSED
-* **Findings:** Audit scope is `artifact-deletion`. No Python imports, cloud
-  SDK references, or `os.getenv` calls were introduced. Domain isolation
-  intact.
+### Check 2.3: Inversion of Control
+* **Status:** SKIPPED
+* **Findings:** Nenhum código foi produzido para auditoria.
 
 ### Check 2.4: Artifact Consistency & Scope Fidelity
-* **Status:** PASSED
+* **Status:** FAILED
 * **Findings:**
-
-  **Deletion verification (primary DoD):**
-  - `git status --short` confirms all 3 files staged as `D` (deleted):
-    - `D  .ai/agents/aequitas-mas-auditor.md`
-    - `D  .ai/agents/aequitas-mas-implementer.md`
-    - `D  .ai/agents/aequitas-mas-orchestrator.md`
-  - `git diff --cached --name-status` independently confirms same 3 `D`
-    entries — staging is clean and consistent.
-  - `ls .ai/agents/` returns `No such file or directory` — directory is
-    completely absent from the working tree.
-
-  **Dangling reference scan:**
-  - `grep` across `.context/`, `.ai/skills/`, `.ai/aidd-*.md`, `CLAUDE.md`,
-    `.gemini/` for `.ai/agents/` and all three agent name slugs returned
-    zero matches: `CLEAN`.
-
-  **SSOT integrity:**
-  - `.context/agents/skills-index.md`: 14 rows reference `SKILL.md` paths
-    (12 active skills). Zero rows point to `.ai/agents/`.
-  - SDD Quartet confirmed intact:
-    - `.ai/skills/sdd-auditor/SKILL.md` ✅
-    - `.ai/skills/sdd-implementer/SKILL.md` ✅
-    - `.ai/skills/sdd-reviewer/SKILL.md` ✅
-    - `.ai/skills/sdd-writing-plans/SKILL.md` ✅
-
-  **`eod_summary.md` fidelity:** The implementer report accurately describes
-  the `git rm --force` operation, explains why `--force` was necessary
-  (unstaged modifications from prior plans), and confirms the `rmdir` was
-  preempted by git's own cleanup. No scope drift detected.
+  - `current_plan.md` → `plan-sprint11-shift-left-cicd-001` (Sprint 11)
+  - `eod_summary.md` → `eod-plan-doc-integrity-fix-001` (plano anterior)
+  - Working tree: apenas `current_plan.md` modificado (não commitado) —
+    nenhum dos `target_files` do Sprint 11 foi alterado.
+  - Branch `feature/sprint11-shift-left-cicd` está no mesmo commit do
+    `development` (`0f3b4f9`) — zero trabalho entregue nesta branch ainda.
 
 ---
 
 ## 3. Definition of Done — Final Checklist
 
-| Criterion | Status |
+| Critério | Status |
 | :--- | :---: |
-| `git rm --force` staged for all 3 agent files | DONE |
-| `.ai/agents/` directory absent from working tree | DONE |
-| `ls .ai/agents/` returns "No such file or directory" | DONE |
-| `skills-index.md` — zero `.ai/agents/` references | DONE |
-| `coding-guidelines.md` — zero `.ai/agents/` references | DONE |
-| HARD CONSTRAINT: zero `.py`/`.tf`/`.yml`/`.sh` modified by this plan | DONE |
-| HARD CONSTRAINT: no changes to `src/`, `tests/`, `infra/`, `scripts/` | DONE |
+| `current-sprint.md` com Sprint 11 prepended | ❌ NÃO FEITO |
+| 4 novos testes DAIA em `test_fundamental_metrics.py` | ❌ NÃO FEITO |
+| 2 novos testes de optimizer em `test_portfolio_optimizer.py` | ❌ NÃO FEITO |
+| Suite completa passando (`poetry run pytest`) | ❌ NÃO VERIFICADO |
+| Nova regra Semgrep `dip-ban-os-getenv-in-agents` | ❌ NÃO FEITO |
+| Pipeline corrigido (`feature/*`) + Audit 3 adicionado | ❌ NÃO FEITO |
 
 ---
 
 ## 4. Recommended Actions
 
-- **AUTHORIZE:** `git commit` the staged changes. All plans executed in this
-  session form a coherent delivery set and may be committed together or in
-  logical groups (see note below).
-- **SUGGESTED COMMIT GROUPING:**
-  1. `feat(tools): extract P/E ratio calculation to deterministic tool` —
-     covers `plan-hotfix-zero-math-pe-ratio` files (`graham.py`,
-     `fundamental_metrics.py`, `test_fundamental_metrics.py`).
-  2. `docs(skills): migrate, standardize, and elevate SDD skill topology` —
-     covers all `plan-migrate-legacy-skills-001`, `plan-doc-standardization-001`,
-     `plan-elevate-sdd-reviewer-001`, and `plan-cleanup-legacy-agents-001`
-     artifacts.
-- **NEXT:** Invoke `sdd-reviewer` skill for final push gate authorization
-  before `git push origin feature/sprint10-serverless-presentation`.
+1. **Acionar `sdd-implementer`** para executar `plan-sprint11-shift-left-cicd-001`.
+2. Após implementação e geração do `eod_summary.md` correto, **acionar
+   `sdd-auditor` novamente** para validação completa.
