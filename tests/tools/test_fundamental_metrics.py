@@ -12,7 +12,37 @@ from src.tools.fundamental_metrics import (
     PiotroskiInputs,
     calculate_altman_z_score,
     calculate_piotroski_f_score,
+    calculate_price_to_earnings,
 )
+
+
+# ---------------------------------------------------------------------------
+# calculate_price_to_earnings
+# ---------------------------------------------------------------------------
+
+
+def test_price_to_earnings_returns_correct_ratio() -> None:
+    """Valid price and EPS must produce the exact P/E ratio."""
+    assert calculate_price_to_earnings(100.0, 5.0) == pytest.approx(20.0)
+
+
+def test_price_to_earnings_degrades_to_none_when_eps_is_zero() -> None:
+    """Zero EPS must degrade to None to prevent ZeroDivisionError."""
+    assert calculate_price_to_earnings(100.0, 0.0) is None
+
+
+def test_price_to_earnings_degrades_to_none_when_any_input_is_none() -> None:
+    """None price or None EPS must each individually degrade to None."""
+    assert calculate_price_to_earnings(None, 5.0) is None
+    assert calculate_price_to_earnings(100.0, None) is None
+    assert calculate_price_to_earnings(None, None) is None
+
+
+def test_price_to_earnings_degrades_to_none_for_non_finite_inputs() -> None:
+    """Non-finite floats (inf, nan) must degrade to None at the boundary."""
+    assert calculate_price_to_earnings(math.inf, 5.0) is None
+    assert calculate_price_to_earnings(100.0, math.nan) is None
+    assert calculate_price_to_earnings(math.nan, math.inf) is None
 
 
 def test_piotroski_f_score_returns_full_score_for_strong_fundamentals() -> None:

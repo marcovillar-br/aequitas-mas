@@ -71,6 +71,27 @@ class AltmanInputs(BaseModel):
         return _coerce_optional_finite_float(value)
 
 
+def calculate_price_to_earnings(price: Any, eps: Any) -> Optional[float]:
+    """Calculate the P/E ratio deterministically with controlled degradation.
+
+    Args:
+        price: The current market price of the asset.
+        eps: The earnings per share (LPA).
+
+    Returns:
+        The price-to-earnings ratio as a finite float, or ``None`` when any
+        input is missing, non-finite, or when ``eps`` is zero.
+    """
+    coerced_price = _coerce_optional_finite_float(price)
+    coerced_eps = _coerce_optional_finite_float(eps)
+    if coerced_price is None or coerced_eps is None or coerced_eps == 0.0:
+        return None
+    result = coerced_price / coerced_eps
+    if not math.isfinite(result):
+        return None
+    return result
+
+
 def calculate_piotroski_f_score(inputs: PiotroskiInputs) -> Optional[int]:
     """Calculate the 9-point Piotroski F-Score deterministically."""
     required_values = (
