@@ -1,3 +1,12 @@
+---
+id: adr-008
+title: "Strict Boundary Interface Typing"
+status: accepted
+sprint: "Sprint 6"
+date: "2026-03-15"
+tags: [adr, typing, boundaries, pydantic, interfaces]
+---
+
 # ADR 008: Strict Boundary Interface Typing
 
 ## Status

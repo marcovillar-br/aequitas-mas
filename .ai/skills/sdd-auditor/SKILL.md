@@ -101,3 +101,5 @@ audit_scope: "<code-bearing | artifact-only>"
 ```
 
 When finished, inform the user whether the audit passed or failed and direct them to read `.ai/handoffs/audit_report.md` for details.
+
+Terminal Output Obligation: After execution, you MUST output a terminal summary directly to the user detailing: 1. Status, 2. Modified Files, 3. Next Steps. This improves CLI observability without polluting the Blackboard.

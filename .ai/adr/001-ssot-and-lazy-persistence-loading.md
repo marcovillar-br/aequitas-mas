@@ -1,3 +1,18 @@
+---
+id: adr-001
+title: "Multi-AI SSOT and Lazy Loading for Graph Persistence"
+status: accepted
+sprint: "Sprint 3.1"
+date: "2026-03-10"
+tags: [adr, ssot, ci, lazy-loading, persistence]
+---
+
+> **⚠ SUPERSEDED REFERENCE:** This ADR was written when `.ai/context.md`
+> served as the SSOT for all architectural dogmas. That file has since been
+> archived to `.ai/archive/context.md`. The current canonical SSOT is
+> `.ai/aidd-001-unified-system-prompt.md`. The lazy-loading decision
+> documented in Section 2.2 remains valid and is unaffected by this change.
+
 # ADR 001: Multi-AI SSOT & Lazy Loading for Graph Persistence
 
 ## 1. Context

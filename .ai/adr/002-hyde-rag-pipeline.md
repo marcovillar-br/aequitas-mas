@@ -1,3 +1,12 @@
+---
+id: adr-002
+title: "HyDE RAG Pipeline for Macro Agent"
+status: accepted
+sprint: "Sprint 3.2"
+date: "2026-03-11"
+tags: [adr, rag, hyde, macro, opensearch]
+---
+
 # ADR 002: Hypothetical Document Embeddings (HyDE) RAG Pipeline for Macro Agent
 
 ## 1. Context

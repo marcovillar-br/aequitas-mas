@@ -1,3 +1,11 @@
+---
+id: context-plan
+title: "Plano de Execução de Engenharia — Aequitas-MAS"
+status: active
+last_updated: "2026-03-24"
+tags: [context, plan, roadmap, academic, sprints]
+---
+
 # 🗺️ PLAN: Execução de Engenharia — Aequitas-MAS
 
 ## 1. Arquitetura Baseline (Status: Sprints 1 a 8 Concluídas)

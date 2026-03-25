@@ -6,9 +6,10 @@ Before writing any code, plan, or analysis, you MUST read the following files in
 
 1. **`.ai/aidd-001-unified-system-prompt.md`** — Canonical SSOT: project identity, architecture, full dogma definitions, and key entry points. This is the single authoritative source for all architectural rules.
 2. **`.context/rules/coding-guidelines.md`** — Authoritative rules for stack, typing, naming, testing, and security. These rules override all default Claude behaviors.
-3. **`.context/agents/skills-index.md`** — Central routing map for specialized skills. Use it to decide when a task requires additional context from `.context/skills/` or `.ai/skills/`.
+3. **`.context/agents/skills-index.md`** — Central routing map for specialized skills. Use it to decide when a task requires additional context from `.ai/skills/`.
+4. **`.context/current-sprint.md`** — Active sprint status, delivered scope, and residual risks. Required to understand the current delivery target before proposing any change.
 
-Treat the YAML frontmatter in `.context/skills/*.md` and `.ai/skills/*/SKILL.md` as the canonical metadata source for skill routing. Keep the visible body sections aligned with that metadata.
+Treat the YAML frontmatter in `.ai/skills/*/SKILL.md` as the canonical metadata source for skill routing. Keep the visible body sections aligned with that metadata.
 
 Do not proceed with any task until these files have been read and their constraints are active in your working context.
 
@@ -42,6 +43,13 @@ Violation of any rule below is a hard architectural error. Stop and correct befo
 We no longer use legacy slash commands. All non-trivial tasks MUST follow the Artifact-Driven Blackboard topology using Superpowers skills:
 1. **Plan:** Trigger the `sdd-writing-plans` skill to generate `.ai/handoffs/current_plan.md`.
 2. **Implement:** Trigger the `sdd-implementer` skill to execute the plan via RED-GREEN-REFACTOR TDD.
-3. **Audit:** Trigger the `sdd-auditor` skill to verify dogma compliance before committing.
+3. **Audit:** Trigger the `sdd-auditor` skill to verify dogma compliance and write `.ai/handoffs/audit_report.md`.
+4. **Review:** Trigger the `sdd-reviewer` skill ("The Shield") to validate the full branch diff and authorize the remote push.
 
-No assistant may propose or execute architecture changes outside this workflow.
+No assistant may propose or execute architecture changes outside this workflow. No `git push` is authorized without an explicit PASSED verdict from `sdd-reviewer`.
+
+## Commit Convention
+
+All commit messages MUST follow `<type>(<scope>): <description in pt-BR>`.
+Valid types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
+Example: `feat(tools): extrai cálculo P/E para ferramenta determinística`

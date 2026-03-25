@@ -62,3 +62,5 @@ You MUST follow this exact sequence:
 7. **EOD Summary:** Once the DoD is met, you MUST write a final report to `.ai/handoffs/eod_summary.md` detailing the validation performed (tests or artifact checks) and the dogmas respected.
 
 If at any point you realize you need to make a structural architecture decision not present in `current_plan.md`, HALT. Do not guess. Ask the user to return to the Planner phase.
+
+Terminal Output Obligation: After execution, you MUST output a terminal summary directly to the user detailing: 1. Status, 2. Modified Files, 3. Next Steps. This improves CLI observability without polluting the Blackboard.

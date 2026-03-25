@@ -1,3 +1,12 @@
+---
+id: adr-006
+title: "Cloud-Agnostic Operational Flow and Blackboard Protocol"
+status: accepted
+sprint: "Sprint 5"
+date: "2026-03-13"
+tags: [adr, operational-flow, agnostic, blackboard]
+---
+
 > **DEPRECATION NOTICE (Sprint 7):** This ADR has been superseded by the migration to the **Artifact-Driven Blackboard Architecture** and the Superpowers SDLC framework. The legacy protocol directory and its associated files have been archived. The operational flow is now strictly governed by `.ai/aidd-001-unified-system-prompt.md` and the active skills in `.ai/skills/sdd-*/`. This document remains for historical purposes only.
 
 # ADR 006: Agnostic Operational Flow

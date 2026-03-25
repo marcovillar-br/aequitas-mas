@@ -84,3 +84,5 @@ validation_scale: "FACTS (Mean: 5.0)"
 ```
 
 When finished, inform the user that the plan is ready in the Blackboard and ask if they want to invoke the sdd-implementer skill.
+
+Terminal Output Obligation: After execution, you MUST output a terminal summary directly to the user detailing: 1. Status, 2. Modified Files, 3. Next Steps. This improves CLI observability without polluting the Blackboard.

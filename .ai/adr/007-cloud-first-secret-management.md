@@ -1,3 +1,12 @@
+---
+id: adr-007
+title: "Cloud-First Secret Management via SecretStorePort"
+status: accepted
+sprint: "Sprint 5"
+date: "2026-03-13"
+tags: [adr, secrets, zero-trust, secret-store-port]
+---
+
 # ADR 007: Cloud-First Secret Management via Port/Adapter
 
 ## Status
