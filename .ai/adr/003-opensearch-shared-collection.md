@@ -1,3 +1,12 @@
+---
+id: adr-003
+title: "OpenSearch Shared Collection Strategy"
+status: accepted
+sprint: "Sprint 3.2"
+date: "2026-03-11"
+tags: [adr, opensearch, vector-store, infra]
+---
+
 # ADR 003: OpenSearch Shared Collection Strategy (Option B)
 
 ## Status

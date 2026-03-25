@@ -1,3 +1,12 @@
+---
+id: adr-011
+title: "Point-in-Time Architecture and Temporal Invariance"
+status: accepted
+sprint: "Sprint 7"
+date: "2026-03-16"
+tags: [adr, temporal-invariance, as-of-date, point-in-time]
+---
+
 # ADR 011: Point-in-Time Architecture and Temporal Invariance
 
 ## Status

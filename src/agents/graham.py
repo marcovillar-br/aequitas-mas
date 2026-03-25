@@ -21,6 +21,7 @@ from src.tools.b3_fetcher import get_graham_data, get_risk_free_rate
 from src.tools.backtesting.data_loader import HistoricalDataLoader
 from src.tools.backtesting.graham_valuation import calculate_dynamic_graham
 from src.tools.backtesting.historical_ingestion import HistoricalMarketData
+from src.tools.fundamental_metrics import calculate_price_to_earnings
 
 logger = structlog.get_logger(__name__)
 
@@ -104,13 +105,9 @@ def _build_metrics_from_historical_data(
     margin_of_safety: float | None = None,
 ) -> GrahamMetrics:
     """Map deterministic valuation inputs and outputs into the graph schema."""
-    price_to_earnings: float | None = None
-    if (
-        historical_data.price is not None
-        and historical_data.earnings_per_share is not None
-        and historical_data.earnings_per_share != 0.0
-    ):
-        price_to_earnings = historical_data.price / historical_data.earnings_per_share
+    price_to_earnings = calculate_price_to_earnings(
+        historical_data.price, historical_data.earnings_per_share
+    )
 
     return GrahamMetrics(
         ticker=historical_data.ticker,

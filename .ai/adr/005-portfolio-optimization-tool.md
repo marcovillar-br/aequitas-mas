@@ -1,3 +1,12 @@
+---
+id: adr-005
+title: "Portfolio Optimization via Deterministic Math Tool"
+status: accepted
+sprint: "Sprint 4"
+date: "2026-03-11"
+tags: [adr, portfolio, optimization, tools]
+---
+
 # ADR 005: Portfolio Optimization via Deterministic Math Tool
 
 ## Status

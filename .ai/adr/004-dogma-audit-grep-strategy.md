@@ -1,3 +1,12 @@
+---
+id: adr-004
+title: "Dogma Audit Grep Strategy"
+status: accepted
+sprint: "Sprint 3.2"
+date: "2026-03-12"
+tags: [adr, audit, dogma, static-analysis]
+---
+
 # ADR 004: Dogma Audit Strategy (MVP) — Static Grep in CI/CD
 
 ## Status

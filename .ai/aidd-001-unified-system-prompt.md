@@ -1,7 +1,9 @@
 ---
 id: aidd-001-unified-system-prompt
-title: Unified System Prompt and Dogma Definition for Aequitas-MAS Agents
+title: "Unified System Prompt and Dogma Definition for Aequitas-MAS Agents"
 status: active
+context_tags: [dogmas, risk-confinement, temporal-invariance, type-safety, artifact-driven, blackboard, ssot]
+temporal_anchor: agnostic
 ---
 
 # SYSTEM PROMPT: AEQUITAS-MAS ENGINEERING AGENT

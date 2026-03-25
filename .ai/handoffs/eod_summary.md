@@ -1,46 +1,53 @@
 ---
-summary_id: eod-plan-cross-tool-alignment-001
+summary_id: eod-plan-doc-integrity-fix-001
 status: completed
 target_files:
-  - "README.md"
-  - ".vscode/settings.json"
-  - ".github/copilot-instructions.md"
   - "CLAUDE.md"
-  - ".gitignore"
-tests_run:
-  - "rg -n 'AlphaX|\\.context/protocol|Delivered Through Sprint 8' README.md .vscode/settings.json .github/copilot-instructions.md CLAUDE.md .gitignore"
-  - "rg -n 'current_plan\\.md|decimal\\.Decimal|Artifact-Driven Blackboard' .vscode/settings.json .github/copilot-instructions.md CLAUDE.md README.md"
-dogmas_respected:
-  - artifact-driven-communication
-  - topology-boundaries
-  - risk-confinement
-  - scope-discipline
+  - ".ai/adr/001-ssot-and-lazy-persistence-loading.md"
+  - ".context/rules/coding-guidelines.md"
+tests_run: ["N/A — artifact-only scope"]
+dogmas_respected: [artifact-driven-communication, strict-formatting, scope-discipline, ssot]
 ---
 
 ## 1. Implementation Summary
 
-Executed the approved cross-tool alignment plan from `.ai/handoffs/current_plan.md` and synchronized the peripheral toolchain with the mature Artifact-Driven Blackboard architecture.
+Executed the approved Blackboard plan `plan-doc-integrity-fix-001` on
+branch `feature/sprint10-serverless-presentation` in artifact-only mode,
+applying the exact 3 Recommended Actions from `DOC_AUDIT_REPORT.md`.
 
-- Updated `README.md` to reflect delivery through Sprint 10, moving Sprints 8, 9, and 10 into the delivered roadmap, and highlighting the AWS Serverless Deployment and PDF Presentation Adapter integrations.
-- Removed legacy `.context/protocol/*` slash-command dependencies from `.vscode/settings.json` and rewired the Codex custom instructions around `.ai/handoffs/current_plan.md` and the `decimal.Decimal` ban.
-- Hardened `.github/copilot-instructions.md` and `CLAUDE.md` with explicit blocking rules against architecture changes without a predefined `.ai/handoffs/current_plan.md`.
-- Added explicit `.ai/` ignore policy boundaries in `.gitignore`, keeping `.ai/archive/` ignored while preserving `.ai/handoffs/` and `.ai/skills/` as tracked Blackboard assets.
+### Step 2.1 — `CLAUDE.md` (Action 1 — HIGH)
+Applied two surgical text substitutions via Edit tool:
+- **Line 9:** Removed `.context/skills/` from the routing instruction.
+  Text now reads: "Use it to decide when a task requires additional context
+  from `.ai/skills/`."
+- **Line 11:** Removed `.context/skills/*.md` from the frontmatter
+  reference. Text now reads: "Treat the YAML frontmatter in
+  `.ai/skills/*/SKILL.md` as the canonical metadata source for skill routing."
+- Verification: `grep -n "context/skills" CLAUDE.md` → `CLEAN — zero matches`.
 
-## 2. Referential and Dogma Alignment
+### Step 2.2 — `.ai/adr/001-ssot-and-lazy-persistence-loading.md` (Action 2 — MEDIUM)
+Injected the `> ⚠ SUPERSEDED REFERENCE:` deprecation notice block between
+the closing `---` of the YAML frontmatter and the `# ADR 001:` heading.
+The ADR body (Sections 1, 2, 3) and frontmatter are preserved exactly.
+- Verification: `grep -n "SUPERSEDED REFERENCE" ...` → found at line 10. ✅
 
-- No remaining `AlphaX` references were found in the scoped files.
-- No remaining `.context/protocol/` references were found in the scoped files.
-- `current_plan.md` is now explicitly referenced as the required control artifact in the IDE and assistant instruction surfaces.
-- `decimal.Decimal` remains prominently and explicitly banned in the assistant instruction surfaces that guide implementation and review behavior.
+### Step 2.3 — `.context/rules/coding-guidelines.md` (Action 3 — ADVISORY)
+Injected the `> **Dogma Source:**` cross-reference blockquote immediately
+after the existing opening `[AI SYSTEM INSTRUCTION]` blockquote, before
+the `# Constraints` heading. All sections, rules, and the naming convention
+table are preserved exactly.
+- Verification: `grep -n "Dogma Source" ...` → found at line 6. ✅
 
-## 3. Validation
+## 2. Validation Performed
 
-- Confirmed `.vscode/settings.json` remains valid JSON.
-- Confirmed `README.md` no longer says `Delivered Through Sprint 8` and correctly points to Sprint 10.
-- Confirmed the scoped files contain the expected Blackboard and `decimal.Decimal` guardrail language.
-- Confirmed this execution did not modify Python source files or core `.context/` documentation.
+- `grep -n "context/skills" CLAUDE.md` confirms zero remaining references.
+- `grep -n "SUPERSEDED REFERENCE"` and `grep -n "Dogma Source"` confirm
+  both injections landed at the correct positions.
+- All three files read back cleanly with surrounding content intact.
 
-## 4. Scope Control
+## 3. Scope Control
 
-- This execution was documentation and configuration-only; no Python tests were created or run.
-- The change remained confined strictly to the files explicitly listed in the plan.
+Zero `.py`, `.tf`, `.yml`, or `.sh` files were touched. No files in `src/`,
+`tests/`, `infra/`, `scripts/`, or `.ai/archive/` were accessed. All three
+changes were minimal, surgical, and scoped exclusively to the findings in
+`DOC_AUDIT_REPORT.md`.

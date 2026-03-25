@@ -3,6 +3,12 @@
 > **[AI SYSTEM INSTRUCTION]**
 > Read this file unconditionally before generating any Python code, architecture plan, or technical document for this repository. Every code snippet provided MUST comply strictly with the rules defined below. Failure to adhere to these constraints violates the core system prompt.
 
+> **Dogma Source:** The canonical definitions of all non-negotiable dogmas
+> (Risk Confinement, Controlled Degradation, Temporal Invariance, Inversion
+> of Control) live in `.ai/aidd-001-unified-system-prompt.md`. This file
+> focuses on the practical implementation rules and coding patterns derived
+> from those dogmas.
+
 # Constraints
 - **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, and comments MUST be in **English**.
 - **User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
@@ -14,9 +20,11 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Implementer (The Muscle):** Executes the approved artifact and writes code/tests with no scope drift.
 - **Auditor (Unified QA):** Verifies dogmas, regressions, and artifact completeness before closure.
 - **NotebookLM (Researcher):** Source of truth for bibliography, Multi-Agent Systems theory, and business rules.
-- **GEM (Architect):** Responsible for designing specifications (`.context/SPEC.md`) and execution plans (`.context/PLAN.md`).
+- **GEM Mentor (Architect):** Responsible for designing specifications (`.context/SPEC.md`) and execution plans (`.context/PLAN.md`), and MUST ALWAYS generate agent-specific instructions/prompts inside segregated, copy-pasteable code blocks.
 - **Google AI Studio (Scientist):** Sandboxed environment for validating prompts, temperature, and LLM parameters prior to codebase integration.
-- **Gemini Code Assist / GCA (Developer):** Restricted executor within the IDE (VS Code / IDX). Does not make architectural decisions; exclusively implements code as dictated by the `current_plan.md` using the Artifact-Driven Blackboard (SDD) methodology via Superpowers skills.
+- **GPT Codex (Developer):** Restricted executor within the IDE or terminal. Does not make architectural decisions; exclusively implements code as dictated by the `current_plan.md` using the Artifact-Driven Blackboard (SDD) methodology via Superpowers skills.
+- **Claude Code (Developer):** Restricted executor within the IDE or terminal. Does not make architectural decisions; exclusively implements code as dictated by the `current_plan.md` using the Artifact-Driven Blackboard (SDD) methodology via Superpowers skills.
+- **Code Reviewer (The Shield):** Performs mandatory end-of-sprint diff validation against its BASE BRANCH before any remote push is authorized, proposing corrections that must be committed on the working branch.
 
 ## 1. Stack & Frameworks
 - **Core**: Python 3.12+.
@@ -28,7 +36,7 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Standard**: PEP 8.
 - **Typing**: Mandatory Type Hints in all function signatures (e.g., `def func(a: int) -> str:`).
 - **Documentation**: Google-style docstrings for public classes and methods.
-- **Logs (SOTA)**: Use `structlog` exclusively, generating structured JSON outputs for ingestion via Data Lake/CloudWatch. 
+- **Logs (SOTA)**: Use `structlog` exclusively, generating structured JSON outputs for ingestion via Data Lake/CloudWatch.
 - **Restriction**: The use of `print()` and the standard `logging` library is **strictly forbidden** in production code.
 
 ## 3. LLM Interaction & Prompt Engineering

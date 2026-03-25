@@ -1,3 +1,11 @@
+---
+id: context-spec
+title: "Especificações de Engenharia — Aequitas-MAS"
+status: active
+last_updated: "2026-03-24"
+tags: [context, spec, architecture, contracts, ssot]
+---
+
 # 📐 SPEC: Especificações de Engenharia — Aequitas-MAS
 
 Este documento é o **SSOT arquitetural** do projeto. Contratos de runtime,
@@ -386,3 +394,21 @@ Os próximos passos (Sprint 9: Mar/26 — ePrompt) focam em:
 - Refinamento cognitivo via Chain-of-Thought (CoT) estruturado para Graham, Fisher e Marks.
 - Implementação das ferramentas determinísticas para Piotroski e Altman em src/tools/.
 - Prototipagem do Presentation Adapter para o Thesis-CoT Reporting.
+
+## 8. SDLC & Git Flow
+
+Regras obrigatórias:
+
+1. Cada novo sprint exige uma nova working branch. Antes de iniciar o próximo
+   sprint, a branch do sprint anterior deve estar finalizada e com push
+   realizado para o repositório remoto.
+2. Ao final de todo sprint, e antes de qualquer remote push ser autorizado, o
+   agente Code Reviewer ("The Shield") deve inspecionar o diff da working
+   branch contra sua BASE BRANCH, isto é, a branch exata a partir da qual ela
+   foi criada, como a branch do sprint anterior ou `main`, dependendo da
+   origem. Toda correção resultante da revisão deve ser commitada na própria
+   working branch antes da autorização de push.
+3. O prefixo `fix/` é reservado estritamente para hotfixes de produção.
+   Correções de bugs identificadas durante o sprint ativo devem ser entregues
+   como commits normais na working branch corrente, sem criação de branch
+   `fix/`.

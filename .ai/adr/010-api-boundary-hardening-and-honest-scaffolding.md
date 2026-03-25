@@ -1,3 +1,12 @@
+---
+id: adr-010
+title: "API Boundary Hardening and Honest Scaffolding"
+status: accepted
+sprint: "Sprint 6"
+date: "2026-03-16"
+tags: [adr, api, hardening, honest-scaffolding]
+---
+
 # ADR 010: API Boundary Hardening and Honest Scaffolding
 
 ## Status

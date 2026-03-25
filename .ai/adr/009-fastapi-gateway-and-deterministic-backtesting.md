@@ -1,3 +1,12 @@
+---
+id: adr-009
+title: "FastAPI Gateway and Deterministic Backtesting Boundary"
+status: accepted
+sprint: "Sprint 6"
+date: "2026-03-16"
+tags: [adr, fastapi, backtesting, api-gateway]
+---
+
 # ADR 009: FastAPI Gateway and Deterministic Backtesting Boundary
 
 ## Status

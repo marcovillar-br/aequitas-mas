@@ -35,3 +35,4 @@ infra/terraform/tfplan*
 !.ai/handoffs/**
 !.ai/skills/
 !.ai/skills/**
+.claude/settings.local.json
