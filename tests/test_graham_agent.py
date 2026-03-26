@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from datetime import date
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
