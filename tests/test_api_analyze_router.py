@@ -123,3 +123,36 @@ async def test_analyze_stream_handles_graph_error_gracefully() -> None:
     error_event = json.loads(chunks[0].replace("data: ", ""))
     assert error_event["event_type"] == "error"
     assert "Falha interna" in error_event["data"]["message"]
+
+
+# ---------------------------------------------------------------------------
+# Sprint 12 — graham_interpretation in /analyze response
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_response_includes_graham_interpretation() -> None:
+    """The /analyze response must expose graham_interpretation when available."""
+    from src.api.routers.analyze import _build_analyze_response
+
+    terminal_state = {
+        "target_ticker": "PETR4",
+        "graham_interpretation": {
+            "thesis": "Ação subvalorizada.",
+            "fair_value_assessment": "Acima do preço.",
+            "margin_of_safety_assessment": "Margem adequada.",
+            "recommendation": "buy",
+            "confidence": 0.85,
+        },
+        "executed_nodes": ["graham"],
+    }
+
+    response = _build_analyze_response(
+        terminal_state,
+        thread_id="test-thread",
+        success=True,
+        ticker="PETR4",
+    )
+
+    assert response.graham_interpretation is not None
+    assert response.graham_interpretation.recommendation == "buy"
+    assert response.graham_interpretation.confidence == 0.85

@@ -1,6 +1,6 @@
 ---
-audit_id: "audit-plan-sprint12-graham-structured-streaming-001-20260325"
-plan_validated: "plan-sprint12-graham-structured-streaming-001"
+audit_id: "audit-plan-sprint12-consensus-thesis-wiring-002-20260326"
+plan_validated: "plan-sprint12-consensus-thesis-wiring-002"
 status: "PASSED"
 failed_checks: []
 tdd_verified: true
@@ -9,13 +9,12 @@ audit_scope: "code-bearing"
 
 ## 1. Executive Summary
 
-**PASSED — Todos os 10 critérios DoD satisfeitos.**
+**PASSED — Todos os 8 critérios DoD satisfeitos.**
 
-O `sdd-implementer` executou os 4 steps do plano com ciclo RED-GREEN-REFACTOR
-completo. A suite cresceu de 192 para 197 testes (+5 novos), com 0 regressões.
-Graham é agora o 4º agente com `with_structured_output`, eliminando a última
-assimetria de tipagem no comitê. O endpoint SSE `/analyze/stream` foi
-implementado sem dependências externas (via `StreamingResponse` nativo).
+O `sdd-implementer` executou os 3 steps do plano com ciclo RED-GREEN-REFACTOR
+completo. A suite cresceu de 197 para 200 testes (+3 novos), com 0 regressões.
+A cadeia typed end-to-end está agora completa: Graham → Consensus → API.
+`ruff check` passou sem violações (lint gate shift-left ativo).
 Push gate desbloqueado.
 
 ---
@@ -25,15 +24,13 @@ Push gate desbloqueado.
 ### Check 2.1: Risk Confinement (Math/Decimals)
 * **Status:** PASSED
 * **Findings:** Zero ocorrências de `decimal.Decimal` em `src/agents/` ou
-  `src/core/state.py`. `GrahamInterpretation.confidence` usa `math.isfinite()`
-  com degradação para `None` — padrão consistente com `PiotroskiInputs` e
-  `AltmanInputs`.
+  `src/core/state.py`. Nenhuma lógica matemática adicionada ao prompt do
+  consensus — apenas a variável `{graham_interpretation}` (semântica).
 
 ### Check 2.2: Temporal Invariance
 * **Status:** PASSED
-* **Findings:** `_resolve_as_of_date()` em `graham.py` preservado intacto.
-  Nenhuma lógica temporal adicionada ou modificada. O prompt continua a
-  receber `as_of_date` explicitamente.
+* **Findings:** `fetch_benchmarks_as_of(state.as_of_date)` preservado intacto
+  em `core.py` linha 191. Nenhuma lógica temporal adicionada ou modificada.
 
 ### Check 2.3: Inversion of Control
 * **Status:** PASSED
@@ -44,33 +41,31 @@ Push gate desbloqueado.
 * **Status:** PASSED
 * **Findings:**
 
-  **Scope guard validation — 11 arquivos modificados (todos permitidos):**
-  - `src/core/state.py` — `GrahamInterpretation` + campo no `AgentState` ✅
-  - `src/agents/graham.py` — `with_structured_output` wired ✅
-  - `src/api/routers/analyze.py` — `/analyze/stream` SSE endpoint ✅
-  - `src/api/schemas.py` — `StreamEvent` schema ✅
-  - `tests/test_graham_agent.py` — +3 tests (A–C) ✅
-  - `tests/test_api_analyze_router.py` — +2 tests (D–E) ✅
-  - `.context/SPEC.md` — Section 7 updated ✅
-  - `.context/current-sprint.md` — 3 steps marked `[x]` ✅
-  - `.ai/skills/sdd-implementer/SKILL.md` — checkpoint rule added ✅
-  - `.ai/skills/sdd-auditor/SKILL.md` — checkpoint check added ✅
-  - `.ai/handoffs/current_plan.md` — Sprint 12 plan ✅
+  **Scope guard validation — 6 arquivos modificados (todos permitidos):**
+  - `src/agents/core.py` — prompt template + invoke kwargs ✅
+  - `src/api/schemas.py` — `graham_interpretation` field em `AnalyzeResponse` ✅
+  - `src/api/routers/analyze.py` — mapping em `_build_analyze_response` ✅
+  - `tests/test_core_consensus_node.py` — +2 tests (A–B) ✅
+  - `tests/test_api_analyze_router.py` — +1 test (C) ✅
+  - `.context/current-sprint.md` — Steps 4–5 marcados `[x]` ✅
 
   **HARD CONSTRAINT verified:**
-  - Único agent modificado: `src/agents/graham.py` ✅
+  - Único agent modificado: `src/agents/core.py` ✅
+  - `src/agents/graham.py` NOT touched ✅
   - Zero `src/tools/` modificados ✅
   - Zero `.tf` ou `.sh` modificados ✅
 
   **Sprint Checkpoint Integrity:**
-  - Steps 1–3 da Sprint 12 marcados como `[x]` ✅
-  - Steps 1–4 da Sprint 11 marcados como `[x]` ✅
+  - Steps 1–5 da Sprint 12 todos marcados como `[x]` ✅
+  - Steps 1–4 da Sprint 11 todos marcados como `[x]` ✅
 
   **TDD cycle verified:**
-  - Tests A–B falharam (ImportError) antes do schema ✅
-  - Test C falhou (with_structured_output not called) antes do wire ✅
-  - Tests D–E passaram na primeira execução (SSE endpoint) ✅
-  - 197 testes passando após GREEN ✅
+  - Tests A–B falharam (AssertionError: `graham_interpretation` not in kwargs) ✅
+  - Test C falhou (AttributeError: no attribute `graham_interpretation`) ✅
+  - 200 testes passando após GREEN ✅
+
+  **Lint Gate (Shift-Left):**
+  - `poetry run ruff check src/ tests/` → All checks passed ✅
 
 ---
 
@@ -78,20 +73,18 @@ Push gate desbloqueado.
 
 | Critério | Status |
 | :--- | :---: |
-| `GrahamInterpretation` schema com `frozen=True` e `confidence` validado | ✅ DONE |
-| `graham.py` usa `with_structured_output(GrahamInterpretation)` | ✅ DONE |
-| Anti-math guardrails preservados no prompt | ✅ DONE |
-| Tests A–C em `test_graham_agent.py` passando | ✅ DONE |
-| `/analyze/stream` SSE endpoint implementado | ✅ DONE |
-| `StreamEvent` schema em `schemas.py` | ✅ DONE |
-| Tests D–E em `test_api_analyze_router.py` passando | ✅ DONE |
-| SPEC.md Section 7 atualizada | ✅ DONE |
-| Suite completa: 197 passed, 0 failed | ✅ DONE |
-| HARD CONSTRAINT: só `graham.py` entre agents | ✅ DONE |
+| `core.py`: prompt inclui `{graham_interpretation}` | ✅ DONE |
+| `core.py`: fallback para degradação quando `None` | ✅ DONE |
+| `tests/test_core_consensus_node.py`: Tests A–B passando | ✅ DONE |
+| `schemas.py`: `AnalyzeResponse` inclui `graham_interpretation` | ✅ DONE |
+| `analyze.py`: maps `graham_interpretation` do terminal state | ✅ DONE |
+| `tests/test_api_analyze_router.py`: Test C passando | ✅ DONE |
+| Suite completa: 200 passed, 0 failed | ✅ DONE |
+| HARD CONSTRAINT: só `core.py` entre agents | ✅ DONE |
 
 ---
 
 ## 4. Recommended Actions
 
-1. **AUTHORIZE:** Commit e push dos 11 arquivos modificados.
+1. **AUTHORIZE:** Commit e push dos 6 arquivos modificados.
 2. **Próximo:** Acionar `sdd-reviewer` para autorização final de push.

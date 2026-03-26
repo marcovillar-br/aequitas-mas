@@ -25,9 +25,9 @@ observation.
       and wire `with_structured_output` in `src/agents/graham.py`.
 - [x] Step 2: Add SSE streaming endpoint `/analyze/stream` in `src/api/routers/analyze.py`.
 - [x] Step 3: Update SPEC.md Section 7 to reflect Sprint 12 scope.
-- [ ] Step 4: Wire `graham_interpretation` into `core_consensus_node` prompt
+- [x] Step 4: Wire `graham_interpretation` into `core_consensus_node` prompt
       for typed downstream consumption by the supervisor.
-- [ ] Step 5: Expose `graham_interpretation` in `/analyze` API response
+- [x] Step 5: Expose `graham_interpretation` in `/analyze` API response
       for Thesis-CoT Presentation Adapter consumption.
 
 ### Residual Risks

@@ -36,6 +36,7 @@ def _build_analyze_response(
         ticker=terminal_state.get("target_ticker", ticker),
         thread_id=thread_id,
         metrics=terminal_state.get("metrics"),
+        graham_interpretation=terminal_state.get("graham_interpretation"),
         qual_analysis=terminal_state.get("qual_analysis"),
         macro_analysis=terminal_state.get("macro_analysis"),
         fisher_rag_score=terminal_state.get("fisher_rag_score"),
