@@ -8,7 +8,7 @@ from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from src.core.state import CoreAnalysis, FisherAnalysis, GrahamMetrics, MacroAnalysis
+from src.core.state import CoreAnalysis, FisherAnalysis, GrahamInterpretation, GrahamMetrics, MacroAnalysis
 
 
 class StreamEvent(BaseModel):
@@ -150,6 +150,10 @@ class AnalyzeResponse(BaseModel):
     metrics: GrahamMetrics | None = Field(
         default=None,
         description="Structured Graham output when the quantitative path succeeds.",
+    )
+    graham_interpretation: GrahamInterpretation | None = Field(
+        default=None,
+        description="Structured Graham interpretation when the qualitative path succeeds.",
     )
     qual_analysis: FisherAnalysis | None = Field(
         default=None,

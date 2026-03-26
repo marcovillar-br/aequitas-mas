@@ -62,6 +62,7 @@ _CONSENSUS_PROMPT = ChatPromptTemplate.from_messages(
             "human",
             "Target ticker: {ticker}\n\n"
             "Graham metrics: {graham_metrics}\n\n"
+            "Graham interpretation: {graham_interpretation}\n\n"
             "Fisher analysis: {fisher_analysis}\n\n"
             "Macro analysis: {macro_analysis}\n\n"
             "Marks verdict: {marks_verdict}\n\n"
@@ -138,6 +139,11 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
                 "ticker": ticker,
                 "graham_metrics": (
                     state.metrics.model_dump() if state.metrics is not None else None
+                ),
+                "graham_interpretation": (
+                    state.graham_interpretation.model_dump()
+                    if state.graham_interpretation is not None
+                    else "Não disponível (degradação controlada)"
                 ),
                 "fisher_analysis": (
                     state.qual_analysis.model_dump()

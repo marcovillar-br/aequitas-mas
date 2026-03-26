@@ -1,7 +1,7 @@
 # Project Status: Aequitas-MAS
 
 ## Sprint 12 — Graham Structured Output & Streaming API
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ### Objective
 Elevate the Graham agent to architectural parity with Fisher/Marks/Macro by
@@ -25,16 +25,42 @@ observation.
       and wire `with_structured_output` in `src/agents/graham.py`.
 - [x] Step 2: Add SSE streaming endpoint `/analyze/stream` in `src/api/routers/analyze.py`.
 - [x] Step 3: Update SPEC.md Section 7 to reflect Sprint 12 scope.
-- [ ] Step 4: Wire `graham_interpretation` into `core_consensus_node` prompt
+- [x] Step 4: Wire `graham_interpretation` into `core_consensus_node` prompt
       for typed downstream consumption by the supervisor.
-- [ ] Step 5: Expose `graham_interpretation` in `/analyze` API response
+- [x] Step 5: Expose `graham_interpretation` in `/analyze` API response
       for Thesis-CoT Presentation Adapter consumption.
+
+### Delivered Scope
+1. `GrahamInterpretation` Pydantic V2 schema (`frozen=True`, confidence
+   degradation via `math.isfinite()`).
+2. Graham agent wired to `with_structured_output(GrahamInterpretation)` —
+   all 5 committee agents now return typed structured output.
+3. SSE `/analyze/stream` endpoint via native `StreamingResponse` (zero extra
+   deps — `sse-starlette` incompatible with `fastapi 0.115`).
+4. `core_consensus_node` prompt now receives `graham_interpretation` for
+   typed downstream synthesis.
+5. `AnalyzeResponse` exposes `graham_interpretation` for Thesis-CoT
+   Presentation Adapter consumption.
+6. SPEC.md Section 7 updated to reflect Sprint 12 scope.
+7. `sdd-implementer` lint gate (shift-left) and `sdd-auditor` checkpoint
+   integrity check added to prevent CI regressions.
+
+### Definition of Done
+- [x] `GrahamInterpretation` schema with `frozen=True` and `confidence` validated
+- [x] `graham.py` uses `with_structured_output(GrahamInterpretation)`
+- [x] SSE `/analyze/stream` endpoint implemented
+- [x] `core_consensus_node` prompt includes `{graham_interpretation}`
+- [x] `AnalyzeResponse` includes `graham_interpretation`
+- [x] 200 tests passing, 0 regressions
 
 ### Residual Risks
 - Gemini `with_structured_output` may require prompt adjustments if the model
   fails to populate all fields consistently. Temperature 0.0 mitigates this.
-- SSE streaming requires `sse-starlette` or equivalent dependency; must
-  validate Lambda compatibility with Mangum.
+- SSE streaming via native `StreamingResponse` works but lacks automatic
+  reconnection; `sse-starlette` can be revisited when fastapi upgrades starlette.
+
+### Next Planning Target
+- Sprint 13 — Telemetry & Observability Hardening (Abr/26).
 
 ---
 

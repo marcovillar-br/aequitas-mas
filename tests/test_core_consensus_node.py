@@ -7,6 +7,7 @@ from src.agents.core import ConsensusDecision, core_consensus_node
 from src.core.state import (
     AgentState,
     FisherAnalysis,
+    GrahamInterpretation,
     GrahamMetrics,
     MacroAnalysis,
     PortfolioOptimizationResult,
@@ -260,3 +261,67 @@ def test_core_consensus_node_flags_blocked_when_optimizer_raises(
     assert "covariance exploded" not in result["core_analysis"].rational
     assert "covariance exploded" not in result["messages"][0].content
     assert "covariance exploded" in result["audit_log"][0]
+
+
+# ---------------------------------------------------------------------------
+# Sprint 12 — graham_interpretation wiring into consensus prompt
+# ---------------------------------------------------------------------------
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_passes_graham_interpretation_to_prompt(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """The supervisor prompt must receive the Graham structured interpretation."""
+    interpretation = GrahamInterpretation(
+        thesis="Ação subvalorizada com margem adequada.",
+        fair_value_assessment="Valor intrínseco acima do preço.",
+        margin_of_safety_assessment="Margem de 38%.",
+        recommendation="buy",
+        confidence=0.85,
+    )
+    state = _build_state().model_copy(update={"graham_interpretation": interpretation})
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar kwargs.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "graham_interpretation" in invoke_kwargs
+    assert invoke_kwargs["graham_interpretation"] == interpretation.model_dump()
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_degrades_when_graham_interpretation_is_none(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """Missing graham_interpretation must not crash the consensus node."""
+    state = _build_state()  # graham_interpretation defaults to None
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar degradação.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "graham_interpretation" in invoke_kwargs
+    assert invoke_kwargs["graham_interpretation"] == "Não disponível (degradação controlada)"
