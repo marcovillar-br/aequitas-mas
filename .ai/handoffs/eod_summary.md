@@ -1,31 +1,55 @@
 ---
-summary_id: eod-sprint12-graham-structured-streaming-001
+summary_id: eod-sprint12-consensus-thesis-wiring-002
 status: completed
 target_files:
-  - "src/core/state.py"
-  - "src/agents/graham.py"
-  - "src/api/routers/analyze.py"
+  - "src/agents/core.py"
   - "src/api/schemas.py"
-  - "tests/test_graham_agent.py"
+  - "src/api/routers/analyze.py"
+  - "tests/test_core_consensus_node.py"
   - "tests/test_api_analyze_router.py"
-  - ".context/SPEC.md"
   - ".context/current-sprint.md"
-tests_run: ["197 passed, 0 failed, 0 regressions"]
-dogmas_respected: [zero-math-policy, risk-confinement, temporal-invariance, dip, pydantic-v2-frozen]
+tests_run: ["200 passed, 0 failed, 0 regressions"]
+dogmas_respected: [zero-math-policy, risk-confinement, controlled-degradation, temporal-invariance, dip, pydantic-v2-frozen]
 ---
 
 ## 1. Implementation Summary
-Executed the approved Blackboard plan `plan-sprint12-graham-structured-streaming-001` on branch `feature/sprint12-core-features`.
 
-- **Structured Output Boundary:** Successfully integrated `with_structured_output` into `src/agents/graham.py`, strictly mapping the LLM's semantic reasoning to the frozen Pydantic V2 schema `GrahamInterpretation`.
-- **Controlled Degradation:** Enforced `math.isfinite()` degradation logic inside the schema validation to prevent structural hallucinations.
-- **SSE Streaming Delivery:** Implemented native `StreamingResponse` in the `/analyze/stream` FastAPI endpoint, preserving the 250MB AWS Lambda FinOps constraint by avoiding heavy dependencies like `sse-starlette`.
-- **API Boundary Hardening:** Sanitized exception handling in the streaming endpoint to prevent backend stack trace leaks to the client.
+Executed the approved Blackboard plan `plan-sprint12-consensus-thesis-wiring-002`
+on branch `feature/sprint12-core-features`. This is the second and final delivery
+of Sprint 12, completing the typed end-to-end chain.
+
+- **Consensus Integration:** Injected `{graham_interpretation}` into the
+  `core_consensus_node` prompt, giving the supervisor typed access to Graham's
+  investment thesis, recommendation, and confidence. Degradation fallback
+  (`"Não disponível (degradação controlada)"`) ensures the node never crashes
+  when `graham_interpretation` is `None`.
+- **API Response Enrichment:** Added `graham_interpretation` as an `Optional`
+  field to `AnalyzeResponse` and mapped it from the terminal state in
+  `_build_analyze_response()`. The Thesis-CoT Presentation Adapter can now
+  consume the typed interpretation directly from the API boundary.
+- **Lint Gate:** `poetry run ruff check src/ tests/` passed cleanly — shift-left
+  rule now active in `sdd-implementer` preventing orphan imports from reaching CI.
 
 ## 2. Validation Performed
-- `pytest`: 197 tests passed with 0 regressions (+5 new tests covering SSE and structured output mocks).
-- Code review (The Shield): Passed 7/7 strict dogma checks.
-- Push: Commit `53d3705` successfully pushed to origin.
+
+- `pytest`: 200 tests passed with 0 regressions (+3 new tests: A, B, C).
+- `ruff check`: All checks passed (lint gate shift-left).
+- Code review (The Shield): Passed 8/8 dogma checks.
+- Push: Commit `13699fb` successfully pushed to origin.
 
 ## 3. Scope Control
-Zero mathematical calculations leaked into the agent prompt space. Architecture remains 100% compliant with the Artifact-Driven Blackboard topology and Zero Math policy.
+
+Only `src/agents/core.py` was modified among agent files. `src/agents/graham.py`
+was NOT touched (already wired in plan 001). Zero modifications to `src/tools/`,
+`.tf`, or `.sh` files. Anti-math guardrails in the consensus prompt preserved
+exactly.
+
+## 4. Sprint 12 — Consolidated Delivery
+
+| Plan | Commits | Tests Added | Total Tests |
+| :--- | :--- | :---: | :---: |
+| plan-sprint12-graham-structured-streaming-001 | `53d3705` | +5 | 197 |
+| plan-sprint12-consensus-thesis-wiring-002 | `13699fb` | +3 | 200 |
+
+**End-to-end typed chain delivered:**
+`Graham (with_structured_output)` → `GrahamInterpretation` → `core_consensus_node` → `AnalyzeResponse` → `PresentationAdapter`
