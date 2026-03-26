@@ -10,13 +10,13 @@ API-level request/response logging — enabling FinOps cost attribution, SLA
 monitoring, and CloudWatch Logs Insights queries.
 
 ### Planned Steps
-- [ ] Step 1: Bind `thread_id` and `target_ticker` to structlog contextvars
+- [x] Step 1: Bind `thread_id` and `target_ticker` to structlog contextvars
       at the graph execution boundary for cross-cutting log correlation.
-- [ ] Step 2: Emit a summary `DecisionPathEvent` after each graph execution
+- [x] Step 2: Emit a summary `DecisionPathEvent` after each graph execution
       with total `latency_ms` and final execution phase.
-- [ ] Step 3: Add structured request/response logging with `latency_ms` to
+- [x] Step 3: Add structured request/response logging with `latency_ms` to
       `/analyze` and `/analyze/stream` API endpoints.
-- [ ] Step 4: Update SPEC.md Section 7 to reflect Sprint 13 scope.
+- [x] Step 4: Update SPEC.md Section 7 to reflect Sprint 13 scope.
 
 ### Residual Risks
 - structlog contextvars binding depends on async context propagation in

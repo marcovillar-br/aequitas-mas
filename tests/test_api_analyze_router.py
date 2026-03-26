@@ -156,3 +156,45 @@ def test_analyze_response_includes_graham_interpretation() -> None:
     assert response.graham_interpretation is not None
     assert response.graham_interpretation.recommendation == "buy"
     assert response.graham_interpretation.confidence == 0.85
+
+
+# ---------------------------------------------------------------------------
+# Sprint 13 — API-level request/response logging
+# ---------------------------------------------------------------------------
+
+
+class SuccessGraphApp:
+    """Minimal graph stub that returns a valid terminal state."""
+
+    def __init__(self) -> None:
+        self.checkpointer = object()
+
+    def invoke(self, payload: dict[str, str], *, config: dict) -> dict:
+        return {
+            "target_ticker": payload.get("target_ticker", "PETR4"),
+            "executed_nodes": ["graham", "fisher"],
+        }
+
+
+@pytest.mark.asyncio
+async def test_analyze_logs_request_and_response() -> None:
+    """The /analyze endpoint must emit structured request/response logs."""
+    graph_app = SuccessGraphApp()
+
+    with patch("src.api.routers.analyze.logger") as mock_logger:
+        response = await analyze(
+            AnalyzeRequest(ticker="PETR4"),
+            graph_app=graph_app,
+            checkpointer=graph_app.checkpointer,
+        )
+
+    assert response.success is True
+
+    info_calls = [call for call in mock_logger.info.call_args_list]
+    event_names = [call.args[0] if call.args else call.kwargs.get("event") for call in info_calls]
+
+    assert "api_analyze_request" in event_names
+    assert "api_analyze_response" in event_names
+
+    response_call = next(c for c in info_calls if c.args and c.args[0] == "api_analyze_response")
+    assert "latency_ms" in response_call.kwargs

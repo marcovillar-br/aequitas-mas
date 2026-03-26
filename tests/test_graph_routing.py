@@ -304,11 +304,13 @@ def test_graph_emits_decision_path_events_in_execution_order(
         pass
 
     calls = mock_audit_sink.record_decision_event.call_args_list
-    assert len(calls) == 5
+    # 5 node events + 1 __graph_summary__ = 6
+    assert len(calls) == 6
 
     events = [call.args[0] for call in calls]
     assert all(isinstance(event, DecisionPathEvent) for event in events)
-    assert [event.node_name for event in events] == [
+    node_events = [e for e in events if e.node_name != "__graph_summary__"]
+    assert [event.node_name for event in node_events] == [
         "graham",
         "fisher",
         "macro",
@@ -316,11 +318,15 @@ def test_graph_emits_decision_path_events_in_execution_order(
         "core_consensus",
     ]
     assert all(event.thread_id == "test_audit_sequence" for event in events)
-    assert events[0].executed_nodes_snapshot == ["graham"]
-    assert events[1].source_urls == ["http://mock.com"]
-    assert events[2].source_urls == []
-    assert events[4].source_urls == ["http://mock.com/consensus"]
-    assert events[4].optimizer_invoked is True
+    assert node_events[0].executed_nodes_snapshot == ["graham"]
+    assert node_events[1].source_urls == ["http://mock.com"]
+    assert node_events[2].source_urls == []
+    assert node_events[4].source_urls == ["http://mock.com/consensus"]
+    assert node_events[4].optimizer_invoked is True
+    # Summary event
+    summary = events[-1]
+    assert summary.node_name == "__graph_summary__"
+    assert summary.latency_ms is not None and summary.latency_ms > 0
 
 
 def test_graph_emits_blocked_phase_for_consensus_veto() -> None:
@@ -379,7 +385,9 @@ def test_graph_emits_blocked_phase_for_consensus_veto() -> None:
         for _ in app.stream(initial_state, config=config):
             pass
 
-    consensus_event = mock_audit_sink.record_decision_event.call_args_list[-1].args[0]
+    all_events = [c.args[0] for c in mock_audit_sink.record_decision_event.call_args_list]
+    node_events = [e for e in all_events if e.node_name != "__graph_summary__"]
+    consensus_event = node_events[-1]
     assert consensus_event.node_name == "core_consensus"
     assert consensus_event.phase == "blocked"
 
@@ -405,7 +413,8 @@ def test_graph_continues_when_audit_sink_fails(mock_agents: dict[str, Any]) -> N
         path.extend(state_update.keys())
 
     assert path == ["graham", "fisher", "macro", "marks", "core_consensus"]
-    assert mock_audit_sink.record_decision_event.call_count == 5
+    # 5 node events + 1 __graph_summary__ = 6
+    assert mock_audit_sink.record_decision_event.call_count == 6
 
 
 def test_graph_creates_root_and_child_spans(mock_agents: dict[str, Any]) -> None:
@@ -606,3 +615,49 @@ def test_macro_agent_receives_correct_state_shape(mock_agents: dict[str, Any]) -
     assert state_received.target_ticker == "VALE3"
     assert state_received.metrics is not None
     assert state_received.qual_analysis is not None
+
+
+# ---------------------------------------------------------------------------
+# Sprint 13 — Telemetry & Observability
+# ---------------------------------------------------------------------------
+
+
+def test_graph_execution_binds_structlog_contextvars(mock_agents: dict[str, Any]) -> None:
+    """The graph runner must bind thread_id and target_ticker to structlog contextvars."""
+    from src.core.graph import create_graph
+
+    app = create_graph()
+    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    config = {"configurable": {"thread_id": "ctx-test-123"}}
+
+    with patch("src.core.graph.structlog.contextvars.bind_contextvars") as mock_bind:
+        app.invoke(initial_state, config=config)
+
+    mock_bind.assert_called_once_with(
+        thread_id="ctx-test-123",
+        target_ticker="PETR4",
+    )
+
+
+def test_graph_emits_summary_event_after_execution(mock_agents: dict[str, Any]) -> None:
+    """A summary DecisionPathEvent must be emitted after graph completion."""
+    from src.core.graph import create_graph
+
+    mock_sink = MagicMock(spec=AuditSinkPort)
+    app = create_graph(audit_sink=mock_sink)
+    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    config = {"configurable": {"thread_id": "summary-test-456"}}
+
+    app.invoke(initial_state, config=config)
+
+    summary_calls = [
+        call for call in mock_sink.record_decision_event.call_args_list
+        if call.args[0].node_name == "__graph_summary__"
+    ]
+    assert len(summary_calls) == 1
+    summary_event = summary_calls[0].args[0]
+    assert summary_event.thread_id == "summary-test-456"
+    assert summary_event.target_ticker == "PETR4"
+    assert summary_event.latency_ms is not None
+    assert summary_event.latency_ms > 0
+    assert len(summary_event.executed_nodes_snapshot) > 0

@@ -12,6 +12,7 @@ This prevents infinite LLM loops and controls API billing costs.
 
 from datetime import UTC, datetime
 import os
+import time
 
 import structlog
 from typing import Any, Callable, Iterator, Literal
@@ -341,9 +342,11 @@ class InstrumentedGraphApp:
         self,
         compiled_graph: CompiledGraph,
         telemetry_runtime: TelemetryRuntime,
+        audit_sink: AuditSinkPort | None = None,
     ) -> None:
         self._compiled_graph = compiled_graph
         self._telemetry_runtime = telemetry_runtime
+        self._audit_sink: AuditSinkPort = audit_sink or NullAuditSink()
 
     @property
     def checkpointer(self) -> Any:
@@ -372,6 +375,40 @@ class InstrumentedGraphApp:
         )
         return span_cm, span
 
+    def _bind_structlog_context(
+        self, input_data: Any, config: dict[str, Any] | None
+    ) -> None:
+        """Bind request-scoped identifiers to structlog contextvars."""
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(
+            thread_id=_extract_thread_id(config),
+            target_ticker=_extract_target_ticker(input_data) or "unknown",
+        )
+
+    def _emit_summary_event(
+        self,
+        input_data: Any,
+        config: dict[str, Any] | None,
+        *,
+        start_time: float,
+        phase: str,
+        executed_nodes: list[str],
+    ) -> None:
+        """Emit a graph-level summary DecisionPathEvent via the audit sink."""
+        latency_ms = (time.monotonic() - start_time) * 1000.0
+        ticker = _extract_target_ticker(input_data) or "unknown"
+        thread_id = _extract_thread_id(config)
+        event = DecisionPathEvent(
+            timestamp=datetime.now(UTC).isoformat(),
+            thread_id=thread_id,
+            target_ticker=ticker,
+            node_name="__graph_summary__",
+            phase=phase,
+            executed_nodes_snapshot=_ordered_unique(executed_nodes),
+            latency_ms=latency_ms,
+        )
+        _emit_decision_event(self._audit_sink, event)
+
     def invoke(
         self,
         input_data: Any,
@@ -379,14 +416,28 @@ class InstrumentedGraphApp:
         **kwargs: Any,
     ) -> Any:
         """Invoke the compiled graph inside a root telemetry span."""
+        self._bind_structlog_context(input_data, config)
+        start_time = time.monotonic()
         span_cm, span = self._start_request_span(input_data, config)
+        phase = "failure"
+        executed_nodes: list[str] = []
         try:
-            return self._compiled_graph.invoke(input_data, config=config, **kwargs)
+            result = self._compiled_graph.invoke(input_data, config=config, **kwargs)
+            executed_nodes = result.get("executed_nodes", []) if isinstance(result, dict) else []
+            phase = "success"
+            return result
         except Exception as exc:
             mark_span_error(span, exc)
             raise
         finally:
+            self._emit_summary_event(
+                input_data, config,
+                start_time=start_time,
+                phase=phase,
+                executed_nodes=executed_nodes,
+            )
             span_cm.__exit__(None, None, None)
+            structlog.contextvars.clear_contextvars()
 
     def stream(
         self,
@@ -395,15 +446,30 @@ class InstrumentedGraphApp:
         **kwargs: Any,
     ) -> Iterator[dict[str, Any]]:
         """Stream graph updates inside a root telemetry span."""
+        self._bind_structlog_context(input_data, config)
+        start_time = time.monotonic()
         span_cm, span = self._start_request_span(input_data, config)
+        phase = "failure"
+        executed_nodes: list[str] = []
         try:
             for item in self._compiled_graph.stream(input_data, config=config, **kwargs):
+                for node_output in item.values():
+                    if isinstance(node_output, dict):
+                        executed_nodes.extend(node_output.get("executed_nodes", []))
                 yield item
+            phase = "success"
         except Exception as exc:
             mark_span_error(span, exc)
             raise
         finally:
+            self._emit_summary_event(
+                input_data, config,
+                start_time=start_time,
+                phase=phase,
+                executed_nodes=executed_nodes,
+            )
             span_cm.__exit__(None, None, None)
+            structlog.contextvars.clear_contextvars()
 
 
 def _has_specialist_checkpoint(state: AgentState, node_name: str) -> bool:
@@ -577,6 +643,7 @@ def create_graph(
     return InstrumentedGraphApp(
         compiled_graph=workflow.compile(checkpointer=memory),
         telemetry_runtime=resolved_telemetry,
+        audit_sink=resolved_audit_sink,
     )
 
 # Global Graph Instance
