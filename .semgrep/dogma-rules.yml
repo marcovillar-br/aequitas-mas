@@ -56,3 +56,21 @@ rules:
         - /src/agents/*.py
         - /src/agents/**/*.py
     pattern: round(...)
+
+  - id: dip-ban-os-getenv-in-agents
+    message: >
+      os.getenv() is forbidden in src/agents/. Domain code must not resolve
+      environment variables directly. Use SecretStorePort or inject
+      configuration through factory closures in src/core/graph.py.
+    severity: ERROR
+    languages:
+      - python
+    paths:
+      include:
+        - /src/agents/*.py
+        - /src/agents/**/*.py
+    patterns:
+      - pattern-either:
+          - pattern: os.getenv(...)
+          - pattern: os.environ[...]
+          - pattern: os.environ.get(...)

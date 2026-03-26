@@ -84,7 +84,7 @@ def calculate_price_to_earnings(price: Any, eps: Any) -> Optional[float]:
     """
     coerced_price = _coerce_optional_finite_float(price)
     coerced_eps = _coerce_optional_finite_float(eps)
-    if coerced_price is None or coerced_eps is None or coerced_eps == 0.0:
+    if coerced_price is None or coerced_eps is None or coerced_eps <= 0.0:
         return None
     result = coerced_price / coerced_eps
     if not math.isfinite(result):

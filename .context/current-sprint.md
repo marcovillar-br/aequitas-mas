@@ -1,5 +1,28 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 11 — Shift-Left CI/CD & DAIA Statistical Testing
+**Status:** IN PROGRESS
+
+### Objective
+Harden the quality pipeline with automated dogma enforcement, fix the CI
+branch trigger gap, and extend the deterministic test suite with statistical
+edge-case coverage for the financial tools layer.
+
+### Planned Steps
+- [ ] Step 1: Add DAIA statistical edge-case tests for `fundamental_metrics.py`
+      (Altman Z-Score distress/safe zones, Piotroski all-None degradation).
+- [ ] Step 2: Add DAIA edge-case tests for `portfolio_optimizer.py`
+      (near-singular covariance matrix, zero-return vector).
+- [ ] Step 3: Add Semgrep rule for `os.getenv` in `src/agents/`.
+- [ ] Step 4: Fix CI branch trigger (`feat/*` → `feature/*`) and add
+      Dogma Audit 3 (`os.getenv` grep) to `pipeline.yml`.
+
+### Residual Risks
+- Near-singular covariance matrix edge cases depend on scipy behavior;
+  tests must mock the optimizer boundary to remain deterministic.
+
+---
+
 ## Sprint 10 — AWS Serverless Deployment & Deterministic Presentation
 **Status:** DONE
 

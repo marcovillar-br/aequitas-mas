@@ -50,7 +50,7 @@ You MUST follow these directives:
 
 1. **Integration Strategy:** Default integration flow is feature or fix branches into `development`. Open PRs to `main` only for controlled release promotion approved by the Tech Lead. For CI-only fixes, prefer short-lived branches such as `fix/ci-<brief-description>` and PR into `development`.
 2. **Branch Management Protocol:** Never write implementation code directly on `main` or `development`. Always create a new branch using semantic prefixes and use the format `<prefix>/sprint<X>-<feature-name>`. A new branch must be checked out immediately after `PLAN.md` approval and before any code is written in the Implement phase.
-3. **Branch Naming Convention:** Enforce `<type>/<scope>-<brief-description>`. Valid types are `feat`, `fix`, `docs`, `refactor`, `test`, and `chore`. Never suggest committing directly to `main` or `master`. If a user opens a PR with the wrong base branch, instruct them to edit the PR base to `development` during implementation stage before merge.
+3. **Branch Naming Convention:** Enforce `<type>/<scope>-<brief-description>`. Valid types are `feature`, `fix`, `docs`, `refactor`, `test`, and `chore`. Never suggest committing directly to `main` or `master`. If a user opens a PR with the wrong base branch, instruct them to edit the PR base to `development` during implementation stage before merge.
 4. **Conventional Commits:** All commit messages MUST follow `<type>(<scope>): <description>`. Use English for `<type>` and `<scope>`, but the description and extended body MUST be in Brazilian Portuguese. Examples include:
    - `feat(b3_fetcher): implementa extração determinística de tickers`
    - `test(graham_agent): adiciona cobertura de mocks para cálculo de P/L`

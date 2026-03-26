@@ -15,7 +15,10 @@
           "token.actions.githubusercontent.com:sub": [
             "repo:marcovillar-br/aequitas-mas:ref:refs/heads/main",
             "repo:marcovillar-br/aequitas-mas:ref:refs/heads/development",
-            "repo:marcovillar-br/aequitas-mas:ref:refs/heads/feat/*"
+            "repo:marcovillar-br/aequitas-mas:ref:refs/heads/feature/*",
+            "repo:marcovillar-br/aequitas-mas:ref:refs/heads/fix/*",
+            "repo:marcovillar-br/aequitas-mas:ref:refs/heads/release/*",
+            "repo:marcovillar-br/aequitas-mas:pull_request"
           ]
         }
       }

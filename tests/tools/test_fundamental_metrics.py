@@ -236,3 +236,55 @@ def test_altman_input_boundary_degrades_non_finite_values_to_none() -> None:
 
     assert inputs.market_value_equity is None
     assert calculate_altman_z_score(inputs) is None
+
+
+# ---------------------------------------------------------------------------
+# DAIA Sprint 11 — Statistical edge-case coverage
+# ---------------------------------------------------------------------------
+
+
+def test_piotroski_f_score_degrades_to_none_when_all_inputs_are_none() -> None:
+    """Complete absence of evidence must degrade cleanly without exception."""
+    inputs = PiotroskiInputs()  # all fields default to None via validator
+    assert calculate_piotroski_f_score(inputs) is None
+
+
+def test_altman_z_score_identifies_distress_zone() -> None:
+    """Z-Score below 1.81 signals financial distress per Altman (1968)."""
+    # Weak fundamentals: negative EBIT, low market cap, high debt
+    inputs = AltmanInputs(
+        working_capital=-50.0,
+        retained_earnings=-30.0,
+        ebit=-20.0,
+        market_value_equity=10.0,
+        total_liabilities=500.0,
+        sales=80.0,
+        total_assets=200.0,
+    )
+    result = calculate_altman_z_score(inputs)
+    assert result is not None
+    assert result < 1.81  # distress zone threshold
+
+
+def test_altman_z_score_identifies_safe_zone() -> None:
+    """Z-Score above 2.99 indicates a financially healthy company."""
+    # Strong fundamentals: positive EBIT, high equity, low debt
+    inputs = AltmanInputs(
+        working_capital=200.0,
+        retained_earnings=300.0,
+        ebit=150.0,
+        market_value_equity=800.0,
+        total_liabilities=100.0,
+        sales=600.0,
+        total_assets=500.0,
+    )
+    result = calculate_altman_z_score(inputs)
+    assert result is not None
+    assert result > 2.99  # safe zone threshold
+
+
+def test_price_to_earnings_with_negative_eps_degrades_to_none() -> None:
+    """Negative EPS (loss-making company) must degrade to None.
+    A negative P/E ratio is economically meaningless for Graham valuation.
+    """
+    assert calculate_price_to_earnings(100.0, -5.0) is None
