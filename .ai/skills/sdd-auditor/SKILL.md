@@ -59,6 +59,7 @@ You MUST follow this exact sequence:
     - **Controlled Degradation & Type Safety:** Fail audit if LLM-facing or state-facing numeric fields that may be missing are not degraded to `Optional[float] = None`, or if immutable Pydantic boundaries required by the plan were not preserved.
     - **Temporal Invariance:** Fail audit if an `as_of_date` parameter is bypassed or missing in backtesting, ingestion, or retrieval logic where the plan requires point-in-time behavior.
     - **Inversion of Control:** Fail audit if domain layer code directly imports cloud SDKs (for example `boto3`, `opensearch-py`) or calls `os.getenv` bypassing ports and adapters.
+    - **Sprint Checkpoint Integrity:** Fail audit if completed steps in `current_plan.md` are not marked as `[x]` in `.context/current-sprint.md`. Every delivered step must have its checkbox updated.
 6. **Blackboard Output:** You MUST write the final output to `.ai/handoffs/audit_report.md` using the exact section layout below, replacing placeholders with concrete values.
 
 ### Output Format Contract

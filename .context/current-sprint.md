@@ -1,7 +1,41 @@
 # Project Status: Aequitas-MAS
 
-## Sprint 11 — Shift-Left CI/CD & DAIA Statistical Testing
+## Sprint 12 — Graham Structured Output & Streaming API
 **Status:** IN PROGRESS
+
+### Objective
+Elevate the Graham agent to architectural parity with Fisher/Marks/Macro by
+implementing `with_structured_output` extraction, and expose the LangGraph
+streaming interface through a new SSE endpoint for real-time committee
+observation.
+
+### Macro-Objectives
+1. **Graham `with_structured_output`:** Replace plain-text AIMessage with a
+   typed `GrahamInterpretation` Pydantic schema, enabling deterministic
+   downstream consumption by `core_consensus_node` and the Presentation
+   Adapter. This is the last agent without structured extraction.
+2. **Streaming API (`/analyze/stream`):** Expose `graph_app.stream()` as
+   a Server-Sent Events (SSE) endpoint so the frontend/XAI dashboard can
+   observe committee deliberation in real time.
+3. **SPEC.md Section 7 Update:** Align the "Próxima Extensão Planejada"
+   section with Sprint 12 deliverables.
+
+### Planned Steps
+- [x] Step 1: Define `GrahamInterpretation` Pydantic schema in `src/core/state.py`
+      and wire `with_structured_output` in `src/agents/graham.py`.
+- [x] Step 2: Add SSE streaming endpoint `/analyze/stream` in `src/api/routers/analyze.py`.
+- [x] Step 3: Update SPEC.md Section 7 to reflect Sprint 12 scope.
+
+### Residual Risks
+- Gemini `with_structured_output` may require prompt adjustments if the model
+  fails to populate all fields consistently. Temperature 0.0 mitigates this.
+- SSE streaming requires `sse-starlette` or equivalent dependency; must
+  validate Lambda compatibility with Mangum.
+
+---
+
+## Sprint 11 — Shift-Left CI/CD & DAIA Statistical Testing
+**Status:** DONE
 
 ### Objective
 Harden the quality pipeline with automated dogma enforcement, fix the CI
@@ -9,12 +43,12 @@ branch trigger gap, and extend the deterministic test suite with statistical
 edge-case coverage for the financial tools layer.
 
 ### Planned Steps
-- [ ] Step 1: Add DAIA statistical edge-case tests for `fundamental_metrics.py`
+- [x] Step 1: Add DAIA statistical edge-case tests for `fundamental_metrics.py`
       (Altman Z-Score distress/safe zones, Piotroski all-None degradation).
-- [ ] Step 2: Add DAIA edge-case tests for `portfolio_optimizer.py`
+- [x] Step 2: Add DAIA edge-case tests for `portfolio_optimizer.py`
       (near-singular covariance matrix, zero-return vector).
-- [ ] Step 3: Add Semgrep rule for `os.getenv` in `src/agents/`.
-- [ ] Step 4: Fix CI branch trigger (`feat/*` → `feature/*`) and add
+- [x] Step 3: Add Semgrep rule for `os.getenv` in `src/agents/`.
+- [x] Step 4: Fix CI branch trigger (`feat/*` → `feature/*`) and add
       Dogma Audit 3 (`os.getenv` grep) to `pipeline.yml`.
 
 ### Residual Risks

@@ -59,7 +59,8 @@ You MUST follow this exact sequence:
    - Did you bypass the `as_of_date` requirement in any backtesting, ingestion, or retrieval path? If yes, fix it.
    - Did you import `boto3`, `opensearch-py`, or call `os.getenv` directly from domain code? If yes, refactor through dependency-injected ports and adapters.
    - Did any missing numeric field avoid controlled degradation to `Optional[float] = None` where required? If yes, fix it.
-7. **EOD Summary:** Once the DoD is met, you MUST write a final report to `.ai/handoffs/eod_summary.md` detailing the validation performed (tests or artifact checks) and the dogmas respected.
+7. **Sprint Checkpoint Update:** As each step from `current_plan.md` is completed, you MUST immediately mark the corresponding checkbox in `.context/current-sprint.md` from `- [ ]` to `- [x]`. Do not defer this to the end — update after each step.
+8. **EOD Summary:** Once the DoD is met, you MUST write a final report to `.ai/handoffs/eod_summary.md` detailing the validation performed (tests or artifact checks) and the dogmas respected.
 
 If at any point you realize you need to make a structural architecture decision not present in `current_plan.md`, HALT. Do not guess. Ask the user to return to the Planner phase.
 

@@ -389,11 +389,15 @@ contratos baseados em coleções ou payloads não tipados.
 
 ## 7. Próxima Extensão Planejada
 
-O baseline consolidado (Sprint 8) já entrega a API de Portfólio e a integração resiliente.
-Os próximos passos (Sprint 9: Mar/26 — ePrompt) focam em:
-- Refinamento cognitivo via Chain-of-Thought (CoT) estruturado para Graham, Fisher e Marks.
-- Implementação das ferramentas determinísticas para Piotroski e Altman em src/tools/.
-- Prototipagem do Presentation Adapter para o Thesis-CoT Reporting.
+O baseline consolidado (Sprint 11) entrega CI/CD shift-left com dogma
+enforcement automatizado e cobertura DAIA estatística.
+
+Os próximos passos (Sprint 12: Abr/26 — Framework & API) focam em:
+- Elevação do Graham agent para `with_structured_output` (`GrahamInterpretation`),
+  eliminando a última assimetria de tipagem no comitê.
+- Exposição de streaming SSE via `/analyze/stream` para observação em tempo
+  real da deliberação do comitê iterativo.
+- Preparação da superfície de API para o XAI Dashboard opcional.
 
 ## 8. SDLC & Git Flow
 
