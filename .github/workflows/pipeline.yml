@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - development
-      - "feat/*"
+      - "feature/*"
       - "fix/*"
   pull_request:
     branches:
@@ -64,6 +64,17 @@ jobs:
             exit 1
           fi
           echo "Audit 2 passed: no boto3 imports found in agents/core."
+
+      - name: "Dogma Audit 3: Inversion of Control (os.getenv in agents)"
+        run: |
+          # Catches direct os.getenv, os.environ[], and os.environ.get() in agents.
+          # Secrets and environment config must flow through SecretStorePort adapters.
+          if grep -rn -E "(os\.getenv|os\.environ\[|os\.environ\.get)" src/agents/; then
+            echo "DOGMA VIOLATION: os.getenv and os.environ are FORBIDDEN in src/agents/."
+            echo "Resolve environment variables exclusively through SecretStorePort adapters."
+            exit 1
+          fi
+          echo "Audit 3 passed: no os.getenv/os.environ found in src/agents/."
 
       # 4. Test suite
       - name: Run Test Suite (pytest)
