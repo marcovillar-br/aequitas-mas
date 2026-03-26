@@ -1,5 +1,54 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 13 — Telemetry & Observability Hardening
+**Status:** DONE
+
+### Objective
+Complete the telemetry axis of the "Framework & API" roadmap track by adding
+request-scoped log correlation, graph execution summaries, and structured
+API-level request/response logging — enabling FinOps cost attribution, SLA
+monitoring, and CloudWatch Logs Insights queries.
+
+### Planned Steps
+- [x] Step 1: Bind `thread_id` and `target_ticker` to structlog contextvars
+      at the graph execution boundary for cross-cutting log correlation.
+- [x] Step 2: Emit a summary `DecisionPathEvent` after each graph execution
+      with total `latency_ms` and final execution phase.
+- [x] Step 3: Add structured request/response logging with `latency_ms` to
+      `/analyze` and `/analyze/stream` API endpoints.
+- [x] Step 4: Update SPEC.md Section 7 to reflect Sprint 13 scope.
+
+### Delivered Scope
+1. `structlog.contextvars.bind_contextvars(thread_id, target_ticker)` at the
+   start of every graph `invoke()` and `stream()` call — all downstream logs
+   automatically enriched.
+2. `clear_contextvars()` in `finally` blocks for request isolation.
+3. `DecisionPathEvent` with `node_name="__graph_summary__"` emitted after
+   each execution with total `latency_ms` and final phase.
+4. `InstrumentedGraphApp` now accepts `audit_sink` via constructor (DIP).
+5. Structured API logging: `api_analyze_request`, `api_analyze_response`
+   (with `latency_ms`), and `api_analyze_stream_request`.
+6. SPEC.md Section 7 updated to reflect Sprint 13 scope.
+
+### Definition of Done
+- [x] `graph.py`: contextvars bind + clear in invoke/stream
+- [x] `graph.py`: `__graph_summary__` DecisionPathEvent with latency_ms
+- [x] `analyze.py`: structured request/response logging
+- [x] SPEC.md Section 7 updated
+- [x] 203 tests passing, 0 regressions
+- [x] `ruff check`: All checks passed
+
+### Residual Risks
+- structlog contextvars binding depends on async context propagation in
+  FastAPI/Starlette. Must verify that contextvars are properly isolated
+  between concurrent requests under production load.
+
+### Next Planning Target
+- Sprint 14 — Econometric Validation & Fisher/Macro Signal Significance
+  (Ago-Set/26, aligned with EGI & AM academic track).
+
+---
+
 ## Sprint 12 — Graham Structured Output & Streaming API
 **Status:** DONE
 

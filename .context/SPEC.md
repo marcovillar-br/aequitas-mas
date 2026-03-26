@@ -389,15 +389,16 @@ contratos baseados em coleções ou payloads não tipados.
 
 ## 7. Próxima Extensão Planejada
 
-O baseline consolidado (Sprint 11) entrega CI/CD shift-left com dogma
-enforcement automatizado e cobertura DAIA estatística.
+O baseline consolidado (Sprint 12) entrega structured output tipado em todos
+os 5 agentes do comitê, SSE streaming, e a cadeia typed end-to-end
+Graham → Consensus → API → Presentation Adapter.
 
-Os próximos passos (Sprint 12: Abr/26 — Framework & API) focam em:
-- Elevação do Graham agent para `with_structured_output` (`GrahamInterpretation`),
-  eliminando a última assimetria de tipagem no comitê.
-- Exposição de streaming SSE via `/analyze/stream` para observação em tempo
-  real da deliberação do comitê iterativo.
-- Preparação da superfície de API para o XAI Dashboard opcional.
+Os próximos passos (Sprint 13: Abr/26 — Telemetry & Observability) focam em:
+- Request-scoped structlog contextvars (`thread_id`, `target_ticker`) para
+  correlação cross-cutting de logs em CloudWatch e OpenSearch.
+- Graph execution summary `DecisionPathEvent` com `latency_ms` para FinOps
+  cost attribution e SLA monitoring.
+- Structured API-level request/response logging com `latency_ms` sanitizado.
 
 ## 8. SDLC & Git Flow
 

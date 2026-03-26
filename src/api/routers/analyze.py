@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterator
 from typing import Any
 from uuid import uuid4
@@ -70,13 +71,18 @@ async def analyze(
         "configurable": {"thread_id": thread_id},
     }
 
+    logger.info("api_analyze_request", ticker=request.ticker, thread_id=thread_id)
+    start_time = time.monotonic()
+
     try:
         terminal_state = graph_app.invoke({"target_ticker": request.ticker}, config=config)
     except Exception as exc:
+        latency_ms = (time.monotonic() - start_time) * 1000.0
         logger.error(
             "api_analyze_invoke_failed",
             ticker=request.ticker,
             thread_id=thread_id,
+            latency_ms=latency_ms,
             error=str(exc),
         )
         return _build_analyze_response(
@@ -87,12 +93,22 @@ async def analyze(
             error=_GENERIC_ANALYZE_ERROR,
         )
 
-    return _build_analyze_response(
+    latency_ms = (time.monotonic() - start_time) * 1000.0
+    response = _build_analyze_response(
         terminal_state,
         thread_id=thread_id,
         success=True,
         ticker=request.ticker,
     )
+    logger.info(
+        "api_analyze_response",
+        ticker=request.ticker,
+        thread_id=thread_id,
+        success=True,
+        latency_ms=latency_ms,
+        executed_nodes=response.executed_nodes,
+    )
+    return response
 
 
 def _serialize_node_output(node_output: Any) -> dict[str, Any]:
@@ -155,6 +171,8 @@ async def analyze_stream(
         "recursion_limit": RECURSION_LIMIT,
         "configurable": {"thread_id": thread_id},
     }
+
+    logger.info("api_analyze_stream_request", ticker=request.ticker, thread_id=thread_id)
 
     return StreamingResponse(
         _stream_events(graph_app, {"target_ticker": request.ticker}, config),
