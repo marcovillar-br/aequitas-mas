@@ -16,7 +16,7 @@ from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.core.llm import require_gemini_api_key
-from src.core.state import AgentState, GrahamMetrics
+from src.core.state import AgentState, GrahamInterpretation, GrahamMetrics
 from src.tools.b3_fetcher import get_graham_data, get_risk_free_rate
 from src.tools.backtesting.data_loader import HistoricalDataLoader
 from src.tools.backtesting.graham_valuation import calculate_dynamic_graham
@@ -77,7 +77,10 @@ def _build_interpreter_prompt(
         "Margin of Safety and Intrinsic Value according to Benjamin Graham's philosophy.\n"
         "Do not recalculate, recompute, estimate, or transform any numeric input.\n"
         "Use only the provided deterministic values.\n"
-        "Generate the final explanation strictly in Portuguese (pt-BR).\n\n"
+        "Generate the final explanation strictly in Portuguese (pt-BR).\n"
+        "Populate all fields of the output schema.\n"
+        "For `recommendation`, use exactly one of: buy, hold, avoid.\n"
+        "For `confidence`, provide a value between 0.0 and 1.0.\n\n"
         f"Ticker: {historical_data.ticker}\n"
         f"As-of Date: {historical_data.as_of_date.isoformat()}\n"
         f"Observed Price: {historical_data.price}\n"
@@ -170,9 +173,10 @@ def graham_agent(state: AgentState) -> dict:
             margin_of_safety=valuation.margin_of_safety,
             dynamic_multiplier=valuation.dynamic_multiplier,
         )
-        llm_response = llm.invoke(prompt)
+        structured_llm = llm.with_structured_output(GrahamInterpretation)
+        interpretation: GrahamInterpretation = structured_llm.invoke(prompt)
         message = AIMessage(
-            content=_extract_llm_content(llm_response),
+            content=interpretation.thesis,
             name="graham",
         )
         metrics = _build_metrics_from_historical_data(
@@ -187,10 +191,12 @@ def graham_agent(state: AgentState) -> dict:
             intrinsic_value=valuation.intrinsic_value,
             margin_of_safety=valuation.margin_of_safety,
             dynamic_multiplier=valuation.dynamic_multiplier,
+            recommendation=interpretation.recommendation,
         )
 
         return {
             "metrics": metrics,
+            "graham_interpretation": interpretation,
             "messages": [message],
             "executed_nodes": ["graham"],
         }

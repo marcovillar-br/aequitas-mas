@@ -90,6 +90,55 @@ class GrahamMetrics(BaseModel):
         return value
 
 
+class GrahamInterpretation(BaseModel):
+    """Structured output boundary for the Graham interpreter agent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    thesis: str = Field(
+        ...,
+        description="Investment thesis summarizing the Graham valuation outcome.",
+    )
+    fair_value_assessment: str = Field(
+        ...,
+        description="Assessment of the intrinsic value relative to market price.",
+    )
+    margin_of_safety_assessment: str = Field(
+        ...,
+        description="Assessment of the margin of safety adequacy.",
+    )
+    piotroski_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the Piotroski F-Score quality gate.",
+    )
+    altman_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the Altman Z-Score solvency gate.",
+    )
+    recommendation: str = Field(
+        ...,
+        description="Investment recommendation: buy, hold, or avoid.",
+    )
+    confidence: Optional[float] = Field(
+        default=None,
+        description="Confidence level between 0.0 and 1.0.",
+    )
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def validate_finite_confidence(cls, v: Any) -> Optional[float]:
+        """Degrade non-finite confidence to None."""
+        if v is None:
+            return None
+        try:
+            value = float(v)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(value):
+            return None
+        return value
+
+
 class FisherAnalysis(BaseModel):
     """Context and sentiment analysis (Fisher Agent)."""
 
@@ -311,6 +360,7 @@ class AgentState(BaseModel):
     # Optional because they are filled progressively.
     # None can indicate 'controlled failure' or 'not yet executed'.
     metrics: Optional[GrahamMetrics] = None
+    graham_interpretation: Optional[GrahamInterpretation] = None
     qual_analysis: Optional[FisherAnalysis] = None
     macro_analysis: Optional[MacroAnalysis] = None
     fisher_rag_score: Optional[float] = None

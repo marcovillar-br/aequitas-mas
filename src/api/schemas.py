@@ -10,6 +10,23 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from src.core.state import CoreAnalysis, FisherAnalysis, GrahamMetrics, MacroAnalysis
 
+
+class StreamEvent(BaseModel):
+    """SSE event payload for real-time committee observation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    node_name: str = Field(
+        ..., description="Name of the graph node that produced this event."
+    )
+    event_type: str = Field(
+        ..., description="Event type: node_start, node_end, error, or final."
+    )
+    data: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Serializable payload from the node output.",
+    )
+
 _B3_TICKER_PATTERN = r"^[A-Z0-9]{5,6}$"
 
 
