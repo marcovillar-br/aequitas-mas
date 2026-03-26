@@ -1,5 +1,30 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 13 — Telemetry & Observability Hardening
+**Status:** IN PROGRESS
+
+### Objective
+Complete the telemetry axis of the "Framework & API" roadmap track by adding
+request-scoped log correlation, graph execution summaries, and structured
+API-level request/response logging — enabling FinOps cost attribution, SLA
+monitoring, and CloudWatch Logs Insights queries.
+
+### Planned Steps
+- [ ] Step 1: Bind `thread_id` and `target_ticker` to structlog contextvars
+      at the graph execution boundary for cross-cutting log correlation.
+- [ ] Step 2: Emit a summary `DecisionPathEvent` after each graph execution
+      with total `latency_ms` and final execution phase.
+- [ ] Step 3: Add structured request/response logging with `latency_ms` to
+      `/analyze` and `/analyze/stream` API endpoints.
+- [ ] Step 4: Update SPEC.md Section 7 to reflect Sprint 13 scope.
+
+### Residual Risks
+- structlog contextvars binding depends on async context propagation in
+  FastAPI/Starlette. Must verify that contextvars are properly isolated
+  between concurrent requests.
+
+---
+
 ## Sprint 12 — Graham Structured Output & Streaming API
 **Status:** DONE
 
