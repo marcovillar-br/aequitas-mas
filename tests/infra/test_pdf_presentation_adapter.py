@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from src.core.interfaces.presentation import ThesisReportPayload
-from src.infra.adapters.pdf_presentation_adapter import PdfPresentationAdapter
+from src.infra.adapters.pdf_presentation_adapter import (
+    PdfPresentationAdapter,
+    format_brl_number,
+    format_date_pt_br,
+    localize_recommendation,
+)
 
 
 def test_pdf_adapter_generates_valid_bytes_from_payload() -> None:
@@ -68,7 +75,7 @@ def test_pdf_adapter_exposes_html_rendering_for_lightweight_runtime() -> None:
 
 
 def test_pdf_adapter_renders_as_of_date_and_price() -> None:
-    """The report must display as_of_date and current_market_price."""
+    """The report must display as_of_date (DD/MM/YYYY) and current_market_price."""
     adapter = PdfPresentationAdapter()
     payload = ThesisReportPayload(
         thesis="PETR4 remains undervalued.",
@@ -78,8 +85,8 @@ def test_pdf_adapter_renders_as_of_date_and_price() -> None:
 
     html = adapter.render_html(payload)
 
-    assert "2024-01-15" in html
-    assert "35.5" in html
+    assert "15/01/2024" in html
+    assert "35,50" in html
 
 
 def test_pdf_adapter_renders_approval_status_badge() -> None:
@@ -106,3 +113,103 @@ def test_pdf_adapter_degrades_when_enrichment_fields_are_none() -> None:
 
     assert "N/A" in html
     assert "PENDING" in html
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 — Recommendation localization (pt-BR)
+# ---------------------------------------------------------------------------
+
+
+def test_localize_recommendation_translates_known_values() -> None:
+    """Known English recommendations must be translated to pt-BR."""
+    assert localize_recommendation("buy") == "COMPRAR"
+    assert localize_recommendation("hold") == "MANTER"
+    assert localize_recommendation("avoid") == "EVITAR"
+    assert localize_recommendation("BUY") == "COMPRAR"
+
+
+def test_localize_recommendation_passes_through_unknown_values() -> None:
+    """Unknown values must be uppercased and returned as-is."""
+    assert localize_recommendation("sell") == "SELL"
+
+
+def test_localize_recommendation_degrades_none_to_na() -> None:
+    """None must degrade to N/A."""
+    assert localize_recommendation(None) == "N/A"
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 — Date localization (DD/MM/YYYY)
+# ---------------------------------------------------------------------------
+
+
+def test_format_date_pt_br_from_iso_string() -> None:
+    """ISO date string must be formatted as DD/MM/YYYY."""
+    assert format_date_pt_br("2024-01-15") == "15/01/2024"
+
+
+def test_format_date_pt_br_from_date_object() -> None:
+    """Python date object must be formatted as DD/MM/YYYY."""
+    assert format_date_pt_br(date(2026, 3, 27)) == "27/03/2026"
+
+
+def test_format_date_pt_br_degrades_none_to_na() -> None:
+    """None must degrade to N/A."""
+    assert format_date_pt_br(None) == "N/A"
+
+
+def test_pdf_adapter_renders_date_in_brazilian_format() -> None:
+    """The HTML report must render dates in DD/MM/YYYY format."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="Test date format.",
+        as_of_date="2024-01-15",
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "15/01/2024" in html
+    assert "2024-01-15" not in html
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 — Brazilian numerical formatting
+# ---------------------------------------------------------------------------
+
+
+def test_format_brl_number_with_thousands() -> None:
+    """Thousands must use dot separator, decimals must use comma."""
+    assert format_brl_number(1250.50) == "1.250,50"
+
+
+def test_format_brl_number_small_value() -> None:
+    """Values under 1000 must not have thousand separator."""
+    assert format_brl_number(0.18) == "0,18"
+
+
+def test_format_brl_number_large_value() -> None:
+    """Large values must have proper thousand grouping."""
+    assert format_brl_number(1234567.89) == "1.234.567,89"
+
+
+def test_format_brl_number_degrades_none_to_na() -> None:
+    """None must degrade to N/A."""
+    assert format_brl_number(None) == "N/A"
+
+
+def test_format_brl_number_custom_decimals() -> None:
+    """Custom decimal precision must be respected."""
+    assert format_brl_number(3.14159, decimals=4) == "3,1416"
+
+
+def test_pdf_adapter_renders_price_in_brazilian_format() -> None:
+    """The HTML report must render prices in Brazilian numerical format."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="Test BRL format.",
+        current_market_price=1250.50,
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "1.250,50" in html

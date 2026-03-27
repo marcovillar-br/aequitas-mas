@@ -484,6 +484,25 @@ def _has_specialist_checkpoint(state: AgentState, node_name: str) -> bool:
     return checkpoint_map[node_name] or node_name in state.executed_nodes
 
 
+def _graham_fully_degraded(state: AgentState) -> bool:
+    """Detect total Graham degradation indicating an invalid or delisted ticker.
+
+    When ALL quantitative fields are None, there is no evidence to feed
+    downstream qualitative agents. Skipping them saves LLM tokens and
+    produces a faster REJECTED verdict.
+    """
+    if state.metrics is None:
+        return False
+    m = state.metrics
+    return (
+        m.vpa is None
+        and m.lpa is None
+        and m.fair_value is None
+        and m.margin_of_safety is None
+        and m.price_to_earnings is None
+    )
+
+
 # 1. ROUTER DEFINITION (CONDITIONAL EDGES)
 def router(
     state: AgentState,
@@ -495,9 +514,23 @@ def router(
     Uses explicit state checkpoints plus an execution ledger to prevent
     infinite loops (Death Loops) and to allow controlled degradation paths
     to advance through the full consensus pipeline.
+
+    Fail-fast: when Graham produces all-None metrics (invalid/delisted
+    ticker), qualitative agents are skipped to save LLM tokens.
     """
     if not _has_specialist_checkpoint(state, "graham"):
         return "graham"
+
+    # Fail-fast: skip qualitative agents when quantitative data is absent
+    if _graham_fully_degraded(state):
+        logger.info(
+            "router_fail_fast_activated",
+            ticker=state.target_ticker,
+            reason="Graham fully degraded — skipping Fisher/Macro/Marks",
+        )
+        if not _has_specialist_checkpoint(state, "core_consensus"):
+            return "core_consensus"
+        return "__end__"
 
     if not _has_specialist_checkpoint(state, "fisher"):
         return "fisher"

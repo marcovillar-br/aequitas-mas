@@ -2,9 +2,48 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from html import escape
 
 from src.core.interfaces.presentation import PresentationAdapter, ThesisReportPayload
+
+
+_RECOMMENDATION_PT_BR: dict[str, str] = {
+    "BUY": "COMPRAR",
+    "HOLD": "MANTER",
+    "AVOID": "EVITAR",
+}
+
+
+def localize_recommendation(value: str | None) -> str:
+    """Translate an internal English recommendation to pt-BR for presentation."""
+    if value is None:
+        return "N/A"
+    return _RECOMMENDATION_PT_BR.get(value.upper(), value.upper())
+
+
+def format_brl_number(value: float | None, decimals: int = 2) -> str:
+    """Format a float using Brazilian convention (dot=thousand, comma=decimal).
+
+    Examples: 1250.5 → '1.250,50', 0.18 → '0,18', None → 'N/A'.
+    """
+    if value is None:
+        return "N/A"
+    formatted = f"{value:,.{decimals}f}"
+    # Swap separators: comma→@, dot→comma(decimal), @→dot(thousand)
+    return formatted.replace(",", "@").replace(".", ",").replace("@", ".")
+
+
+def format_date_pt_br(value: str | date | None) -> str:
+    """Format a date to DD/MM/YYYY for Brazilian presentation output."""
+    if value is None:
+        return "N/A"
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
+    try:
+        return datetime.fromisoformat(value).strftime("%d/%m/%Y")
+    except (ValueError, TypeError):
+        return str(value)
 
 
 class PdfPresentationAdapter(PresentationAdapter):
@@ -25,8 +64,8 @@ class PdfPresentationAdapter(PresentationAdapter):
 
     def render_html(self, payload: ThesisReportPayload) -> str:
         """Render a deterministic HTML report without heavy native dependencies."""
-        as_of = escape(payload.as_of_date or "N/A")
-        price = escape(str(payload.current_market_price)) if payload.current_market_price is not None else "N/A"
+        as_of = escape(format_date_pt_br(payload.as_of_date))
+        price = escape(format_brl_number(payload.current_market_price))
         status_badge = self._render_status_badge(payload.approval_status)
 
         evidence_items = "".join(
