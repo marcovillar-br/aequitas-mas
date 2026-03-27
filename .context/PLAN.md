@@ -37,7 +37,7 @@ Capacidades entregues e validadas no baseline:
 - DAIA edge cases: Piotroski all-None, Altman distress/safe, P/E negativo,
   covariância near-singular, retornos zero.
 - Trust policy OIDC corrigida na AWS.
-- **210 testes passando** (marco mais recente).
+- **223 testes passando** (marco mais recente — Sprint 14).
 
 ### Sprint 12: Structured Output & Streaming
 - `GrahamInterpretation` schema (`frozen=True`, confidence degradation).
