@@ -1,5 +1,25 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 14 — CLI Observability & Presentation Enrichment
+**Status:** IN PROGRESS
+
+### Objective
+Improve the local developer experience with human-readable structlog output
+and enrich the Presentation Adapter with essential analysis metadata for
+the Tech Lead's CLI review and PA defense report.
+
+### Planned Steps
+- [ ] Step 1: Configure `structlog.dev.ConsoleRenderer` for local environment,
+      keeping `JSONRenderer` for cloud (dev/hom/prod/ci).
+- [ ] Step 2: Enrich `ThesisReportPayload` with `as_of_date`,
+      `current_market_price`, and `approval_status`. Update HTML renderer.
+
+### Residual Risks
+- `ConsoleRenderer` may behave differently with certain terminal emulators;
+  acceptable for local-only use.
+
+---
+
 ## Sprint 13 — Telemetry & Observability Hardening
 **Status:** DONE
 
