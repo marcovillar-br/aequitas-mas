@@ -52,7 +52,8 @@ You MUST follow this exact sequence:
     - Ensure external I/O and secrets flow through dependency-injected ports when the plan touches integrations or runtime configuration.
     - Ensure Temporal Invariance (`as_of_date`) is respected in any data retrieval task.
 4. **FACTS Validation:** Before outputting, verify that your proposed plan aligns with the FACTS scale (Factual, Actionable, Clear, Testable, Small).
-5. **Blackboard Output:** You MUST write the final output EXACTLY to `.ai/handoffs/current_plan.md` using the strict YAML/Markdown format below.
+5. **Baseline Sync:** Before writing the new plan, verify that `.context/PLAN.md` Section 1 (Baseline) includes all sprints marked DONE in `.context/current-sprint.md`. If a completed sprint is missing from the baseline, add it before proceeding. This prevents documentation drift between the roadmap and the actual delivery state.
+6. **Blackboard Output:** You MUST write the final output EXACTLY to `.ai/handoffs/current_plan.md` using the strict YAML/Markdown format below.
 
 ### Output Format Contract
 

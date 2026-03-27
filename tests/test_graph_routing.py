@@ -622,6 +622,52 @@ def test_macro_agent_receives_correct_state_shape(mock_agents: dict[str, Any]) -
 # ---------------------------------------------------------------------------
 
 
+def test_router_skips_qualitative_agents_when_graham_fully_degrades() -> None:
+    """When Graham produces all-None metrics (invalid ticker), the router must
+    skip Fisher/Macro/Marks and jump to core_consensus to save LLM tokens.
+    """
+    from src.core.graph import router
+
+    state = AgentState(
+        messages=[],
+        target_ticker="ITAU3",
+        metrics=GrahamMetrics(
+            ticker="ITAU3",
+            vpa=None,
+            lpa=None,
+            price_to_earnings=None,
+            fair_value=None,
+            margin_of_safety=None,
+        ),
+        executed_nodes=["graham"],
+    )
+
+    assert router(state) == "core_consensus"
+
+
+def test_router_continues_normally_when_graham_has_partial_data() -> None:
+    """If Graham produces at least one non-None metric, the full committee
+    must still run — fail-fast only applies to total degradation.
+    """
+    from src.core.graph import router
+
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=GrahamMetrics(
+            ticker="PETR4",
+            vpa=35.0,
+            lpa=None,
+            price_to_earnings=None,
+            fair_value=None,
+            margin_of_safety=None,
+        ),
+        executed_nodes=["graham"],
+    )
+
+    assert router(state) == "fisher"
+
+
 def test_graph_execution_binds_structlog_contextvars(mock_agents: dict[str, Any]) -> None:
     """The graph runner must bind thread_id and target_ticker to structlog contextvars."""
     from src.core.graph import create_graph

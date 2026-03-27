@@ -1,23 +1,16 @@
 import os
 import sys
-import structlog
+
+# Ensure structlog is configured by telemetry module (ConsoleRenderer for local,
+# JSONRenderer for cloud) BEFORE any logger is created.
+from src.core.telemetry import configure_telemetry
+
+configure_telemetry(force=True)
+
+import structlog  # noqa: E402
 
 # SOTA: In-memory cache for LLM calls to reduce costs and speed up development
-from langchain.globals import set_llm_cache
-
-# 1. SOTA Configuration for Structured JSON Logging
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,  # Injects thread-local context variables
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),  # ISO 8601 Timestamp (Mandatory)
-        structlog.processors.format_exc_info,  # Formats exceptions into a string
-        structlog.processors.JSONRenderer(),  # Enforces JSON output for CloudWatch/Data Lake
-    ],
-    wrapper_class=structlog.make_filtering_bound_logger(20),
-    logger_factory=structlog.PrintLoggerFactory(),
-    cache_logger_on_first_use=True,
-)
+from langchain.globals import set_llm_cache  # noqa: E402
 
 logger = structlog.get_logger()
 _DEFAULT_TICKER = "BBAS3"
@@ -50,20 +43,50 @@ def print_report(final_state: dict) -> None:
     print("📊 RELATÓRIO FINAL DE INVESTIMENTO - AEQUITAS-MAS")
     print("=" * 80 + "\n")
     
-    # Header: Target Asset
+    # Header: Target Asset + Enrichment Fields
     ticker = final_state.get("target_ticker", "DESCONHECIDO")
+    metrics = final_state.get("metrics")
+    graham_interp = final_state.get("graham_interpretation")
+    optimization_blocked = final_state.get("optimization_blocked", False)
+
+    # as_of_date: LangGraph may not include unchanged fields in the result dict.
+    # Fallback to today's date (which is the default in AgentState).
+    from datetime import date as _date
+    raw_date = final_state.get("as_of_date") or _date.today()
+    as_of_date_str = raw_date.strftime("%d/%m/%Y") if hasattr(raw_date, "strftime") else str(raw_date)
+
+    # current_market_price: reconstruct from P/E × LPA if both available
+    # (both are deterministic outputs already computed by src/tools/)
+    current_market_price = None
+    if metrics and metrics.price_to_earnings is not None and metrics.lpa is not None and metrics.lpa > 0:
+        current_market_price = metrics.price_to_earnings * metrics.lpa
+
+    # Determine approval status from consensus
+    if optimization_blocked:
+        approval_status = "REJECTED"
+    elif final_state.get("core_analysis") is not None:
+        approval_status = "APPROVED"
+    else:
+        approval_status = "PENDING"
+
     print(f"🎯 ATIVO ANALISADO: {ticker}")
+    print(f"📅 Data de Referência: {as_of_date_str}")
+    from src.infra.adapters.pdf_presentation_adapter import format_brl_number, localize_recommendation
+    print(f"💰 Preço de Mercado: R$ {format_brl_number(current_market_price)}")
+    if graham_interp and hasattr(graham_interp, "recommendation"):
+        print(f"🤖 Recomendação Graham: {localize_recommendation(graham_interp.recommendation)}")
+    status_icon = "✅" if approval_status == "APPROVED" else "❌" if approval_status == "REJECTED" else "⏳"
+    print(f"{status_icon} Status do Comitê: {approval_status}")
     print("-" * 80)
     
     # Section 1: Quantitative Analysis (Graham)
-    metrics = final_state.get("metrics")
     if metrics:
         print("\n📈 ANÁLISE QUANTITATIVA (Graham Agent):")
-        print(f"   • Valor Justo (Fair Value): R$ {metrics.fair_value:.2f}" if metrics.fair_value else "   • Valor Justo: Não disponível")
-        print(f"   • Margem de Segurança: {metrics.margin_of_safety:.2f}%" if metrics.margin_of_safety else "   • Margem de Segurança: Não disponível")
-        print(f"   • P/L (Price-to-Earnings): {metrics.price_to_earnings:.2f}" if metrics.price_to_earnings else "   • P/L: Não disponível")
-        print(f"   • VPA (Valor Patrimonial/Ação): R$ {metrics.vpa:.2f}" if metrics.vpa else "   • VPA: Não disponível")
-        print(f"   • LPA (Lucro por Ação): R$ {metrics.lpa:.2f}" if metrics.lpa else "   • LPA: Não disponível")
+        print(f"   • Valor Justo (Fair Value): R$ {format_brl_number(metrics.fair_value)}" if metrics.fair_value else "   • Valor Justo: Não disponível")
+        print(f"   • Margem de Segurança: {format_brl_number(metrics.margin_of_safety)}%" if metrics.margin_of_safety else "   • Margem de Segurança: Não disponível")
+        print(f"   • P/L (Price-to-Earnings): {format_brl_number(metrics.price_to_earnings)}" if metrics.price_to_earnings else "   • P/L: Não disponível")
+        print(f"   • VPA (Valor Patrimonial/Ação): R$ {format_brl_number(metrics.vpa)}" if metrics.vpa else "   • VPA: Não disponível")
+        print(f"   • LPA (Lucro por Ação): R$ {format_brl_number(metrics.lpa)}" if metrics.lpa else "   • LPA: Não disponível")
     else:
         print("\n📈 ANÁLISE QUANTITATIVA (Graham Agent):")
         print("   ⚠️  Dados insuficientes. A análise quantitativa não foi concluída.")

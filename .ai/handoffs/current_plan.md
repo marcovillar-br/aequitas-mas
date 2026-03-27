@@ -1,190 +1,166 @@
 ---
-plan_id: plan-sprint13-telemetry-observability-001
+plan_id: plan-sprint14-cli-observability-001
 target_files:
   - "src/core/telemetry.py"
   - "tests/test_telemetry.py"
-  - "src/core/graph.py"
-  - "tests/test_graph_routing.py"
-  - "src/api/routers/analyze.py"
-  - "tests/test_api_analyze_router.py"
-  - ".context/SPEC.md"
+  - "src/infra/adapters/pdf_presentation_adapter.py"
+  - "tests/infra/test_pdf_presentation_adapter.py"
   - ".context/current-sprint.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, temporal-invariance]
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Sprint 13 delivers the Telemetry & Observability hardening track described in
-`.context/PLAN.md` under "Abr-Mai/26 (Framework & API): Telemetry & Streaming".
-Sprint 12 delivered the streaming axis. Sprint 13 completes the telemetry axis.
+Quick observability improvements for the local CLI developer experience.
+Two axes of work:
 
-Three axes of work:
+1. **structlog ConsoleRenderer for local:** The current `_configure_structlog`
+   always uses `JSONRenderer`, which produces single-line JSON blobs in the
+   terminal — unreadable for local development. When `ENVIRONMENT` is `local`
+   (or unset), switch to `structlog.dev.ConsoleRenderer()` for colored,
+   human-readable output. Keep `JSONRenderer` for cloud environments
+   (`dev`, `hom`, `prod`, `ci`) where CloudWatch/OpenSearch ingestion
+   requires structured JSON.
 
-1. **Request-scoped structlog context:** Inject `thread_id` and `target_ticker`
-   into every structlog event emitted during a graph execution via
-   `structlog.contextvars`. Currently, each agent independently logs its own
-   ticker — but there is no cross-cutting correlation identifier. Adding
-   `thread_id` binding at the API/graph boundary enables CloudWatch Logs
-   Insights and OpenSearch queries to filter a complete analysis session by
-   a single identifier.
-
-2. **Graph execution timing:** Emit a summary `DecisionPathEvent` at the end
-   of each graph execution with total `latency_ms`, `executed_nodes_snapshot`,
-   and final `phase` (success/degraded/failure). The existing per-node events
-   are emitted inside `_run_committee_safely`, but there is no top-level
-   execution summary. This closes the observability gap for FinOps cost
-   attribution and SLA monitoring.
-
-3. **API-level request logging:** Add structured request/response logging to
-   `/analyze` and `/analyze/stream` — log `ticker`, `thread_id`, `latency_ms`,
-   `success`, and `executed_nodes` at the API boundary, sanitized to exclude
-   PII/secrets per `coding-guidelines.md` §2.
+2. **Presentation Adapter enrichment:** The current `PdfPresentationAdapter`
+   renders `thesis`, `evidence`, and `quantitative_data` — but lacks
+   `as_of_date`, `current_market_price`, and a clear `APPROVED`/`REJECTED`
+   status block. These fields are essential for the Tech Lead's CLI review
+   and the PA defense report. Enrich `ThesisReportPayload` with 3 new
+   `Optional` fields and update the HTML renderer to display them.
 
 **SCOPE GUARD:**
-- No agent files (`src/agents/`) are modified.
-- No tools (`src/tools/`) are modified.
-- No infrastructure adapters (`src/infra/`) are modified.
-- No `.tf` or `.sh` files are modified.
-- `graph.py` changes are limited to structlog context binding and a summary
-  event emission at the end of `_run_committee_safely`.
+- No agent files (`src/agents/`) modified.
+- No graph file (`src/core/graph.py`) modified.
+- No `.tf`, `.sh`, or `.yml` files modified.
+- `ThesisReportPayload` enrichment is additive — existing fields untouched,
+  new fields are `Optional` with defaults.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Request-scoped structlog context binding (RED-GREEN-REFACTOR)
+### Step 2.1 — structlog ConsoleRenderer for local environment (RED-GREEN-REFACTOR)
 
-* **Target:** `src/core/graph.py`
+* **Target:** `src/core/telemetry.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
 * **Action:**
-  At the beginning of `_run_committee_safely()`, bind `thread_id` and
-  `target_ticker` to structlog contextvars so every downstream log event
-  (including agent logs) is automatically enriched:
+  In `_configure_structlog()`, read `os.getenv("ENVIRONMENT", "local")` and
+  select the renderer:
+  - `local` or empty → `structlog.dev.ConsoleRenderer()`
+  - anything else → `structlog.processors.JSONRenderer()`
 
+  Add `import os` at the top (already used in `graph.py` but not in
+  `telemetry.py`).
+
+* **Test to add in `tests/test_telemetry.py`:**
+
+**Test A — ConsoleRenderer selected for local environment**
+```python
+def test_configure_structlog_uses_console_renderer_for_local() -> None:
+    """Local environment must use ConsoleRenderer for human-readable output."""
+    # Patch ENVIRONMENT=local
+    # Force reconfiguration
+    # Assert structlog.configure was called with ConsoleRenderer as last processor
+```
+
+**Test B — JSONRenderer selected for cloud environment**
+```python
+def test_configure_structlog_uses_json_renderer_for_cloud() -> None:
+    """Cloud environments must use JSONRenderer for structured ingestion."""
+    # Patch ENVIRONMENT=dev
+    # Force reconfiguration
+    # Assert structlog.configure was called with JSONRenderer as last processor
+```
+
+* **Constraints:** The processor chain must preserve `merge_contextvars`,
+  `add_log_level`, `TimeStamper`, and `_inject_trace_context` — only the
+  final renderer changes.
+
+---
+
+### Step 2.2 — Enrich ThesisReportPayload and HTML renderer (RED-GREEN-REFACTOR)
+
+* **Target:** `src/core/interfaces/presentation.py` and
+  `src/infra/adapters/pdf_presentation_adapter.py`
+* **Execution mode:** code-bearing — write failing tests first.
+
+* **Action in `src/core/interfaces/presentation.py`:**
+  Add 3 new Optional fields to `ThesisReportPayload`:
   ```python
-  structlog.contextvars.clear_contextvars()
-  structlog.contextvars.bind_contextvars(
-      thread_id=config.get("configurable", {}).get("thread_id", "unknown"),
-      target_ticker=state.target_ticker,
+  as_of_date: Optional[str] = Field(
+      default=None,
+      description="Point-in-time reference date (ISO-8601) for the analysis.",
+  )
+  current_market_price: Optional[float] = Field(
+      default=None,
+      description="Observed market price at the time of analysis.",
+  )
+  approval_status: Optional[str] = Field(
+      default=None,
+      description="Final committee verdict: APPROVED or REJECTED.",
   )
   ```
 
-  At the end of `_run_committee_safely()` (in a `finally` block), clear
-  the contextvars to prevent leaking between requests.
+* **Action in `src/infra/adapters/pdf_presentation_adapter.py`:**
+  In `render_html()`, add a header block before the thesis `<h1>` showing:
+  - `as_of_date` (or "N/A" if None)
+  - `current_market_price` (or "N/A" if None)
+  - `approval_status` rendered as a colored badge
+    (`APPROVED` = green, `REJECTED` = red, None = grey "PENDING")
 
-* **Test to add in `tests/test_graph_routing.py`:**
+* **Tests to add in `tests/infra/test_pdf_presentation_adapter.py`:**
 
-**Test A — structlog contextvars are bound during graph execution**
+**Test C — Report includes as_of_date and market price**
 ```python
-def test_graph_execution_binds_structlog_contextvars() -> None:
-    """The graph runner must bind thread_id and target_ticker to structlog."""
-    # Mock the graph execution
-    # Assert structlog.contextvars.bind_contextvars was called with
-    # thread_id and target_ticker
+def test_pdf_adapter_renders_as_of_date_and_price() -> None:
+    """The report must display as_of_date and current_market_price."""
+    # Build payload with as_of_date="2024-01-15" and price=35.50
+    # Assert both values appear in rendered HTML
 ```
 
-* **Constraints:** The existing `_run_committee_safely` flow must not change
-  behavior. The binding is additive — no existing log calls are modified.
-
----
-
-### Step 2.2 — Graph execution summary event (RED-GREEN-REFACTOR)
-
-* **Target:** `src/core/graph.py`
-* **Execution mode:** code-bearing — write failing tests first.
-
-* **Action:**
-  After the committee loop completes (success or degraded), emit a final
-  summary `DecisionPathEvent` with:
-  - `node_name="__graph_summary__"`
-  - `phase="success"` or `"degraded"` or `"failure"`
-  - `latency_ms` = total execution time (use `time.monotonic()`)
-  - `executed_nodes_snapshot` = final list of executed nodes
-  - `optimizer_invoked` = whether optimization was attempted
-
-  This event goes through the existing `_emit_decision_event(audit_sink, event)`
-  path — no new infrastructure needed.
-
-* **Test to add in `tests/test_graph_routing.py`:**
-
-**Test B — Graph emits summary DecisionPathEvent after execution**
+**Test D — Report shows approval status badge**
 ```python
-def test_graph_emits_summary_event_after_execution() -> None:
-    """A summary DecisionPathEvent must be emitted after graph completion."""
-    # Mock audit_sink
-    # Run _run_committee_safely
-    # Assert audit_sink.record_decision_event was called with
-    # node_name="__graph_summary__" and latency_ms > 0
+def test_pdf_adapter_renders_approval_status_badge() -> None:
+    """The report must display the committee approval status."""
+    # Build payload with approval_status="APPROVED"
+    # Assert "APPROVED" appears in rendered HTML
 ```
 
-* **Constraints:** The summary event must use the existing
-  `DecisionPathEvent` schema — no schema changes required. The `latency_ms`
-  field already exists in the schema as `Optional[float]`.
-
----
-
-### Step 2.3 — API-level request/response logging (RED-GREEN-REFACTOR)
-
-* **Target:** `src/api/routers/analyze.py`
-* **Execution mode:** code-bearing — write failing tests first.
-
-* **Action:**
-  Add structured logging at the API boundary:
-  - At request entry: `logger.info("api_analyze_request", ticker=..., thread_id=...)`
-  - At response exit: `logger.info("api_analyze_response", ticker=..., thread_id=..., success=..., latency_ms=..., executed_nodes=...)`
-  - Use `time.monotonic()` for latency measurement.
-  - Same pattern for `/analyze/stream`.
-
-* **Test to add in `tests/test_api_analyze_router.py`:**
-
-**Test C — API logs request and response with latency**
+**Test E — Report degrades gracefully when new fields are None**
 ```python
-def test_analyze_logs_request_and_response() -> None:
-    """The /analyze endpoint must emit structured request/response logs."""
-    # Mock graph_app and logger
-    # Call analyze()
-    # Assert logger.info was called with "api_analyze_request" and
-    # "api_analyze_response" including latency_ms
+def test_pdf_adapter_degrades_when_enrichment_fields_are_none() -> None:
+    """Missing enrichment fields must degrade to N/A, not crash."""
+    # Build payload with only thesis (no as_of_date, price, or status)
+    # Assert HTML renders without error and shows "N/A"
 ```
 
-* **Constraints:** No PII or secrets in logs. No raw exception details in
-  response logs (already sanitized in Sprint 12).
+* **Constraints:** Existing tests must not break — the 3 new fields are
+  `Optional` with defaults, so existing `ThesisReportPayload()` calls
+  remain valid.
 
 ---
 
-### Step 2.4 — Update SPEC.md Section 7 (artifact-only)
-
-* **Target:** `.context/SPEC.md`
-* **Action:** Replace Section 7 content to reflect Sprint 13 deliverables
-  and point the "Próxima Extensão" toward Sprint 14.
-
----
-
-### Step 2.5 — Update `current-sprint.md` (artifact-only)
+### Step 2.3 — Update `current-sprint.md` (artifact-only)
 
 * **Target:** `.context/current-sprint.md`
-* **Action:** Prepend Sprint 13 section with status `IN PROGRESS` and
-  4 planned steps matching Steps 2.1–2.4.
+* **Action:** Prepend Sprint 14 section with status `IN PROGRESS` and
+  planned steps matching Steps 2.1–2.2.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/core/graph.py`: `structlog.contextvars.bind_contextvars()` called
-  at the start of `_run_committee_safely()` with `thread_id` and
-  `target_ticker`. Cleared in `finally`.
-- [ ] `src/core/graph.py`: Summary `DecisionPathEvent` emitted after
-  execution with `node_name="__graph_summary__"` and `latency_ms`.
-- [ ] `tests/test_graph_routing.py`: Tests A–B passing.
-- [ ] `src/api/routers/analyze.py`: Structured request/response logging
-  with `latency_ms` for both `/analyze` and `/analyze/stream`.
-- [ ] `tests/test_api_analyze_router.py`: Test C passing.
-- [ ] `.context/SPEC.md` Section 7 updated.
-- [ ] `.context/current-sprint.md` Sprint 13 section prepended.
+- [ ] `src/core/telemetry.py`: `ConsoleRenderer` for local, `JSONRenderer`
+  for cloud.
+- [ ] `tests/test_telemetry.py`: Tests A–B passing.
+- [ ] `src/core/interfaces/presentation.py`: 3 new Optional fields on
+  `ThesisReportPayload`.
+- [ ] `src/infra/adapters/pdf_presentation_adapter.py`: Header block with
+  `as_of_date`, `current_market_price`, and `approval_status`.
+- [ ] `tests/infra/test_pdf_presentation_adapter.py`: Tests C–E passing.
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** No agent files (`src/agents/`) modified.
-- [ ] **HARD CONSTRAINT:** No tools (`src/tools/`) modified.
-- [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or infra adapter files modified.
+- [ ] **HARD CONSTRAINT:** No agent, graph, `.tf`, `.sh`, or `.yml` files modified.

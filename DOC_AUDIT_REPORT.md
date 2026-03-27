@@ -1,6 +1,6 @@
 # Documentation Integrity Audit Report
 
-> **Audit Date:** 2026-03-25 (Revision 2)
+> **Audit Date:** 2026-03-27 (Revision 3)
 > **Protocol:** `.ai/aidd-004-documentation-integrity-audit.md`
 > **Exclusion:** `.ai/archive/` — not scanned.
 > **Scope:** `.ai/` (excl. archive), `.context/`, repository root `.md` files.
@@ -143,7 +143,14 @@ repository documentation achieves:
 4. **Zero stale references** — correct model versions, search libraries, and dogma enforcement.
 5. **Clean separation of concerns** — operational, normative, architectural, and roadmap documents occupy appropriate scopes.
 
-No corrective actions required.
+No corrective actions required for structural or referential integrity.
+
+### Finding 7.1 — `PLAN.md` stale test count (MEDIUM — corrected)
+* **[File Scanned]**: `.context/PLAN.md`
+  * **Previous:** "210 testes passando (marco mais recente)"
+  * **Current:** ✅ **CORRECTED** — Updated to "223 testes passando (marco mais recente — Sprint 14)"
+  * **Note:** Historical DoD counts in `current-sprint.md` (144, 200, 203) are
+    intentionally preserved as accurate point-in-time records of each sprint closure.
 
 ---
 
@@ -153,3 +160,4 @@ No corrective actions required.
 | :--- | :--- | :--- | :--- |
 | 2026-03-24 | ⚠️ ISSUES | CLAUDE.md + ADR 001 referenced archived/deleted files (2 issues) | Fixes identified |
 | 2026-03-25 | ✅ GREEN | All issues resolved. Zero new findings. | Audit COMPLETE |
+| 2026-03-27 | ✅ GREEN | PLAN.md stale test count (210→223). Historical DoD preserved. | Corrected |

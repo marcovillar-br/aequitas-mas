@@ -1,6 +1,6 @@
 ---
-audit_id: "audit-plan-sprint13-telemetry-observability-001-20260326"
-plan_validated: "plan-sprint13-telemetry-observability-001"
+audit_id: "audit-plan-sprint14-cli-observability-001-20260326"
+plan_validated: "plan-sprint14-cli-observability-001"
 status: "PASSED"
 failed_checks: []
 tdd_verified: true
@@ -9,13 +9,11 @@ audit_scope: "code-bearing"
 
 ## 1. Executive Summary
 
-**PASSED — Todos os 12 critérios DoD satisfeitos.**
+**PASSED — Todos os 8 critérios DoD satisfeitos.**
 
-O `sdd-implementer` executou os 4 steps do plano com ciclo RED-GREEN-REFACTOR
-completo. A suite cresceu de 200 para 203 testes (+3 novos), com 0 regressões.
-3 testes pré-existentes foram ajustados para contabilizar o novo
-`__graph_summary__` event (N+1 audit events por execução). `ruff check`
-passou limpo. Push gate desbloqueado.
+O `sdd-implementer` executou os 2 steps do plano com ciclo RED-GREEN-REFACTOR
+completo. A suite cresceu de 203 para 208 testes (+5 novos), com 0 regressões.
+`ruff check` passou limpo. Push gate desbloqueado.
 
 ---
 
@@ -24,47 +22,50 @@ passou limpo. Push gate desbloqueado.
 ### Check 2.1: Risk Confinement (Math/Decimals)
 * **Status:** PASSED
 * **Findings:** Zero ocorrências de `decimal.Decimal` nos arquivos modificados.
-  `time.monotonic()` é usado para latência (não-financeiro) — não viola Risk
-  Confinement.
+  `current_market_price` usa `Optional[float]` com default `None` —
+  conforme dogma de Controlled Degradation.
 
 ### Check 2.2: Temporal Invariance
 * **Status:** PASSED (N/A)
-* **Findings:** Nenhuma lógica de backtesting, ingestão ou retrieval foi
-  adicionada ou modificada. `as_of_date` não é relevante para telemetria.
+* **Findings:** Nenhuma lógica de backtesting, ingestão ou retrieval adicionada.
+  `as_of_date` no `ThesisReportPayload` é uma string de exibição (`Optional[str]`),
+  não uma fronteira temporal computacional.
 
 ### Check 2.3: Inversion of Control
 * **Status:** PASSED
-* **Findings:** Zero ocorrências de `os.getenv` ou `os.environ` em
-  `src/agents/`. `src/core/graph.py` usa `os.getenv("ENVIRONMENT", "local")`
-  — pré-existente e confinado à resolução de checkpointer, não ao domínio.
+* **Findings:** Zero `os.getenv` em `src/agents/`. O `os.getenv("ENVIRONMENT")`
+  em `telemetry.py` é infraestrutura de observabilidade, não código de domínio —
+  mesmo padrão já existente em `graph.py`.
 
 ### Check 2.4: Artifact Consistency & Scope Fidelity
 * **Status:** PASSED
 * **Findings:**
 
   **Scope guard validation — 6 arquivos modificados (todos permitidos):**
-  - `src/core/graph.py` — contextvars binding + summary event ✅
-  - `src/api/routers/analyze.py` — request/response logging ✅
-  - `.context/SPEC.md` — Section 7 updated ✅
-  - `.context/current-sprint.md` — Steps 1–4 marcados `[x]` ✅
-  - `tests/test_graph_routing.py` — +2 tests (A–B), 3 adjusted ✅
-  - `tests/test_api_analyze_router.py` — +1 test (C) ✅
+  - `src/core/telemetry.py` — ConsoleRenderer/JSONRenderer switch ✅
+  - `src/core/interfaces/presentation.py` — 3 Optional fields ✅
+  - `src/infra/adapters/pdf_presentation_adapter.py` — HTML header block ✅
+  - `tests/test_telemetry.py` — +2 tests (A–B) ✅
+  - `tests/infra/test_pdf_presentation_adapter.py` — +3 tests (C–E) ✅
+  - `.context/current-sprint.md` — Steps 1–2 marcados `[x]` ✅
 
   **HARD CONSTRAINT verified:**
   - Zero `src/agents/` modificados ✅
-  - Zero `src/tools/` modificados ✅
-  - Zero `src/infra/` modificados ✅
-  - Zero `.tf` ou `.sh` modificados ✅
+  - Zero `src/core/graph.py` modificado ✅
+  - Zero `.tf`, `.sh`, ou `.yml` modificados ✅
 
   **Sprint Checkpoint Integrity:**
-  - Steps 1–4 da Sprint 13 todos marcados como `[x]` ✅
+  - Steps 1–2 da Sprint 14 todos marcados como `[x]` ✅
+
+  **Schema backward compatibility:**
+  - `ThesisReportPayload` — 3 novos campos são `Optional` com defaults ✅
+  - Testes pré-existentes (3) continuam passando sem alteração ✅
+  - `frozen=True` preservado ✅
 
   **TDD cycle verified:**
-  - Test A falhou (bind_contextvars not called) antes do wire ✅
-  - Test B falhou (summary events count == 0) antes do wire ✅
-  - Test C falhou (api_analyze_request not in event_names) antes do wire ✅
-  - 3 testes pré-existentes ajustados (5 → 6 events por __graph_summary__) ✅
-  - 203 testes passando após GREEN ✅
+  - Tests A–B falharam (JSONRenderer vs ConsoleRenderer) antes do switch ✅
+  - Tests C–E falharam (as_of_date/price/status missing in HTML) antes do enrich ✅
+  - 208 testes passando após GREEN ✅
 
   **Lint Gate (Shift-Left):**
   - `poetry run ruff check src/ tests/` → All checks passed ✅
@@ -75,18 +76,14 @@ passou limpo. Push gate desbloqueado.
 
 | Critério | Status |
 | :--- | :---: |
-| `graph.py`: `bind_contextvars(thread_id, target_ticker)` no início | ✅ DONE |
-| `graph.py`: `clear_contextvars()` no `finally` | ✅ DONE |
-| `graph.py`: Summary `DecisionPathEvent` com `__graph_summary__` e `latency_ms` | ✅ DONE |
-| `tests/test_graph_routing.py`: Tests A–B passando | ✅ DONE |
-| `analyze.py`: Structured logging com `api_analyze_request` e `api_analyze_response` | ✅ DONE |
-| `analyze.py`: `latency_ms` em ambos `/analyze` e `/analyze/stream` | ✅ DONE |
-| `tests/test_api_analyze_router.py`: Test C passando | ✅ DONE |
-| `SPEC.md` Section 7 atualizada | ✅ DONE |
-| `current-sprint.md` Steps 1–4 marcados `[x]` | ✅ DONE |
-| Suite completa: 203 passed, 0 failed | ✅ DONE |
+| `telemetry.py`: ConsoleRenderer para local, JSONRenderer para cloud | ✅ DONE |
+| `tests/test_telemetry.py`: Tests A–B passando | ✅ DONE |
+| `presentation.py`: 3 novos Optional fields | ✅ DONE |
+| `pdf_presentation_adapter.py`: Header block com as_of_date/price/status | ✅ DONE |
+| `tests/infra/test_pdf_presentation_adapter.py`: Tests C–E passando | ✅ DONE |
+| Suite completa: 208 passed, 0 failed | ✅ DONE |
 | `ruff check`: All checks passed | ✅ DONE |
-| HARD CONSTRAINT: zero agents/tools/infra/.tf/.sh | ✅ DONE |
+| HARD CONSTRAINT: zero agents/graph/.tf/.sh/.yml | ✅ DONE |
 
 ---
 

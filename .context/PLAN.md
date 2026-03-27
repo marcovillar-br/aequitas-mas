@@ -2,16 +2,17 @@
 id: context-plan
 title: "Plano de Execução de Engenharia — Aequitas-MAS"
 status: active
-last_updated: "2026-03-24"
-tags: [context, plan, roadmap, academic, sprints]
+last_updated: "2026-03-27"
+tags: [context, plan, roadmap, academic, sprints, milestones]
 ---
 
-# 🗺️ PLAN: Execução de Engenharia — Aequitas-MAS
+# PLAN: Execução de Engenharia — Aequitas-MAS
 
-## 1. Arquitetura Baseline (Status: Sprints 1 a 8 Concluídas)
+## 1. Baseline Consolidado (Sprints 1–14)
 
-Capacidades entregues no baseline:
+Capacidades entregues e validadas no baseline:
 
+### Sprints 1–8: Fundação Arquitetural
 - **Orquestração:** LangGraph em modo Iterative Committee (`graham -> fisher -> macro -> marks -> core_consensus -> __end__`).
 - **Estado:** `AgentState` imutável, tipado defensivamente e ancorado por `as_of_date`.
 - **RAG macro:** Retrieval time-aware via `VectorStorePort`.
@@ -20,31 +21,109 @@ Capacidades entregues no baseline:
 - **API:** FastAPI com fronteiras tipadas para `/analyze`, `/backtest/run` e `/portfolio`.
 - **Segurança e infraestrutura:** credenciais via `SecretStorePort`, adapters desacoplados e disciplina Blackboard.
 
-## 2. Academic & SOTA Roadmap 2026-2027 (Integrated V2)
+### Sprint 9: CoT Prompts & Quantitative Tools
+- Piotroski F-Score e Altman Z-Score em `src/tools/fundamental_metrics.py`.
+- Chain-of-Thought prompts para Graham, Fisher e Marks (`.ai/prompts/`).
+- Intraday fallback com anti-look-ahead em `b3_fetcher.py`.
+- `AuditStorePort` e `PresentationAdapter` boundaries.
 
-O Aequitas-MAS atingiu maturidade técnica à frente do calendário acadêmico. O planejamento de longo prazo agora se alinha à grade de Pós-Graduação (UFG) e ao estado da arte (SOTA):
+### Sprint 10: AWS Serverless & Presentation
+- `src/api/serverless.py` — Mangum handler para AWS Lambda.
+- `PdfPresentationAdapter` determinístico (HTML-to-PDF mock).
 
-- **Mar/26 (ePrompt): Engenharia do Blackboard.** Refinamento dos System Prompts para a "Tríade de Agentes" (Graham, Fisher, Marks) usando Chain-of-Thought (CoT) para emular o paper FinRobot, mantendo a tipagem estrita.
-- **Abr-Mai/26 (Framework & API): Telemetry & Streaming.** Expandir o FastAPI atual com telemetria avançada, auditoria de logs no OpenSearch e streaming assíncrono das respostas do LangGraph.
-  - **Deterministic Thesis-CoT Reporting:** Criação de um gerador de PDF em Python (utilizando Matplotlib e WeasyPrint) que consome o JSON final do LLM (Pydantic) para renderizar um relatório profissional, abolindo alucinações visuais do modelo.
-- **Jun-Jul/26 (DAIA): Shift-Left Testing Avançado.** Expandir a base de testes atual (144 testes) para cobrir Edge Cases estatísticos e comprovar o Risk Confinement.
-- **Ago-Set/26 (EGI & AM): Validação Econométrica.** Aplicar a metodologia de Damodar Gujarati para provar que os sinais do Agente Macro (HyDE RAG) e Agente Fisher possuem significância estatística.
-- **Out-Nov/26 (LLM & Agent): Refinamento do Grafo Cíclico.** Aplicar padrões de Reasoning and Acting (ReAct) e Tree-of-Thought (ToT) no `core_consensus_node`, focando no Agente Marks (Risco).
-- **Dez/26-Jan/27 (EAD): Expansão de Fatores SOTA.** Integrar fatores quantitativos institucionais via Selenium/Pandas para municiar o motor determinístico do Agente Graham. Expansão da boundary `HistoricalMarketData` para suportar o cálculo de Piotroski F-Score (Quality/Value Trap filter) e Altman Z-Score (Bankruptcy Risk) via ferramentas em Python puro.
-- **Jan-Fev/27 (AMLDO): Aprimoramento do RAG (MarketSenseAI).** Focar em Semantic Chunking para transcrições de Earnings Calls, refinando o Agente Fisher.
-- **Fev-Mar/27 (PA): Defesa e TCC Final.** Simulação de Backtesting em larga escala, formatação ABNT/USP-ESALQ e redação do paper final demonstrando a geração de Alpha frente à Fórmula Mágica e ao Ibovespa.
+### Sprint 11: Shift-Left CI/CD & DAIA
+- Pipeline `feat/*` → `feature/*` fix + Dogma Audit 3 (`os.getenv` ban).
+- Semgrep `dip-ban-os-getenv-in-agents` rule.
+- DAIA edge cases: Piotroski all-None, Altman distress/safe, P/E negativo,
+  covariância near-singular, retornos zero.
+- Trust policy OIDC corrigida na AWS.
+- **223 testes passando** (marco mais recente — Sprint 14).
+
+### Sprint 12: Structured Output & Streaming
+- `GrahamInterpretation` schema (`frozen=True`, confidence degradation).
+- Todos os 5 agentes com `with_structured_output`.
+- SSE `/analyze/stream` via `StreamingResponse` nativo.
+- `core_consensus_node` recebe `graham_interpretation` tipado.
+- `AnalyzeResponse` expõe `graham_interpretation` para Presentation Adapter.
+
+### Sprint 13: Telemetry & Observability
+- Request-scoped `structlog.contextvars` (thread_id + target_ticker).
+- `__graph_summary__` DecisionPathEvent com `latency_ms`.
+- `InstrumentedGraphApp` com `audit_sink` DI.
+- Structured API logging (request/response com latency_ms).
+
+### Sprint 14 (em andamento): CLI Observability & Presentation
+- `structlog.dev.ConsoleRenderer` para ambiente local.
+- `ThesisReportPayload` enriquecido (as_of_date, market_price, approval_status).
+- Fail-fast router: ticker inválido pula Fisher/Macro/Marks.
+- `main.py` reconfigurado para usar telemetry module.
+
+---
+
+## 2. Maturity Milestones Roadmap
+
+O planejamento de longo prazo é agora organizado por marcos de maturidade
+alinhados à grade de Pós-Graduação (UFG/USP ESALQ), sem hard-coupling a
+meses específicos. A velocidade de entrega determina a progressão.
+
+### v1.0 — Fundação Quantitativa ✅ DELIVERED
+- Iterative Committee com tipagem estrita.
+- Backtesting determinístico com anti-look-ahead.
+- API Gateway com fronteiras tipadas.
+- Risk Confinement end-to-end.
+
+### v1.5 — Observability & Streaming ✅ DELIVERED
+- Telemetria estruturada com correlação cross-cutting.
+- SSE streaming para observação em tempo real.
+- CI/CD shift-left com dogma enforcement automatizado.
+- Structured output tipado em todos os agentes.
+- Fail-fast router para tickets inválidos.
+
+### v2.0 — Econometric Validation (NEXT)
+*Alinhado com: EGI & AM (Econometria e Análise Multivariada)*
+- Aplicar metodologia de Damodar Gujarati para provar significância
+  estatística dos sinais HyDE RAG (Macro) e Fisher (Qualitativo).
+- Implementar testes de hipótese (t-test, p-value) como ferramentas
+  determinísticas em `src/tools/`.
+- Validar que os sinais do comitê geram alpha sobre o benchmark (CDI/IBOV).
+
+### v2.5 — Cyclic Graph Refinement
+*Alinhado com: LLM & Agent*
+- Aplicar ReAct e Tree-of-Thought (ToT) no `core_consensus_node`.
+- Refinar o Agente Marks com reasoning estruturado.
+- Regime-Aware Consensus (pesos dinâmicos por Selic).
+
+### v3.0 — SOTA Factor Expansion
+*Alinhado com: EAD (Educação a Distância / Expansão)*
+- Integrar fatores quantitativos institucionais via Selenium/Pandas.
+- Expandir `HistoricalMarketData` com novos indicadores.
+- Semantic Chunking para Earnings Calls (MarketSenseAI).
+
+### v4.0 — PA Defense & Final Thesis
+*Alinhado com: PA (Projeto Aplicado)*
+- Backtesting em larga escala na infra AWS.
+- Formatação ABNT/USP-ESALQ.
+- Paper final: Alpha vs Fórmula Mágica vs Ibovespa.
+
+---
 
 ## 3. Cross-Cutting Engineering Track (AWS Serverless & FinOps)
 
-Em paralelo ao roadmap acadêmico, o Aequitas-MAS executa uma trilha de infraestrutura focada em implantação em nuvem e otimização de custos:
+Trilha paralela de infraestrutura. Progride conforme necessidade:
 
-- **API Deployment (Abr-Mai/26):** Empacotamento do gateway FastAPI para AWS Lambda (Serverless) para alcançar a capacidade *Scale-to-Zero*, conectando os adaptadores de persistência do DynamoDB e OpenSearch Serverless.
-- **CI/CD & IAC Pipeline (Jun-Jul/26):** Ativação da esteira de CI/CD via GitHub Actions para aplicar o estado do Terraform e executar os testes automatizados *shift-left* (DAIA) na nuvem.
-- **Cloud Backtesting Engine (Fev-Mar/27):** Execução do backtesting quantitativo final do TCC na infraestrutura AWS para provar a viabilidade arquitetural e de FinOps (custos *Scale-to-Zero* versus Performance).
+- **Lambda Deployment:** ✅ Mangum handler entregue (Sprint 10). Próximo:
+  conectar DynamoDB e OpenSearch Serverless como persistência durável.
+- **CI/CD Pipeline:** ✅ GitHub Actions com Terraform Plan/Apply e
+  dogma audits automatizados (Sprint 11). Próximo: gates por ambiente
+  (hom/prod) quando rollout iniciar.
+- **Cloud Backtesting:** Pendente v4.0. Execução do backtest final na AWS.
 
-## 4. 🚀 Optional SOTA Backlog (If Time Permits)
+---
 
-- **Explainable AI (XAI) Dashboard:** Um frontend em Streamlit ou Gradio consumindo nosso FastAPI para visualizar a execução do LangGraph, a evolução do `AgentState` e o raciocínio CoT (Chain-of-Thought) em tempo real durante a defesa da tese.
-- **Historical Stress Testing:** Expansão do `BacktestEngine` determinístico para executar cenários isolados de "Cisne Negro" (ex: crash da COVID-19, Joesley Day), provando a resiliência do nosso *Risk Confinement* e o valor do Agente Marks.
-- **Regime-Aware Consensus (Dynamic Weights):** Aprimoramento do `core_consensus_node` para que o Supervisor altere dinamicamente os pesos de votação com base na taxa Selic (ex: priorizando Graham/Marks sobre Fisher em ambientes de juros altos).
-- **Graph-of-Thought (GoT) / GraphRAG:** Experimentação com prompting estruturado em grafos e Knowledge Graphs para o Agente Macro mapear causalidades econômicas complexas, referenciando metodologias avançadas (Shao, 2024).
+## 4. Optional SOTA Backlog (If Time Permits)
+
+- **XAI Dashboard:** Streamlit/Gradio consumindo FastAPI para visualizar
+  LangGraph e CoT em tempo real na defesa.
+- **Stress Testing:** Cenários de Cisne Negro (COVID-19, Joesley Day).
+- **Graph-of-Thought / GraphRAG:** Prompting estruturado em grafos para
+  causalidades econômicas complexas (Shao, 2024).
