@@ -10,6 +10,7 @@ through trace and span identifiers whenever a real tracer is present.
 
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Iterator, Protocol
@@ -128,13 +129,20 @@ def _configure_structlog(force: bool = False) -> None:
         _DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = True
         return
 
+    env = os.getenv("ENVIRONMENT", "local").lower()
+    renderer: Any = (
+        structlog.dev.ConsoleRenderer()
+        if env == "local"
+        else structlog.processors.JSONRenderer()
+    )
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             _inject_trace_context,
-            structlog.processors.JSONRenderer(),
+            renderer,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(0),
         cache_logger_on_first_use=True,

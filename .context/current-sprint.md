@@ -9,9 +9,9 @@ and enrich the Presentation Adapter with essential analysis metadata for
 the Tech Lead's CLI review and PA defense report.
 
 ### Planned Steps
-- [ ] Step 1: Configure `structlog.dev.ConsoleRenderer` for local environment,
+- [x] Step 1: Configure `structlog.dev.ConsoleRenderer` for local environment,
       keeping `JSONRenderer` for cloud (dev/hom/prod/ci).
-- [ ] Step 2: Enrich `ThesisReportPayload` with `as_of_date`,
+- [x] Step 2: Enrich `ThesisReportPayload` with `as_of_date`,
       `current_market_price`, and `approval_status`. Update HTML renderer.
 
 ### Residual Risks

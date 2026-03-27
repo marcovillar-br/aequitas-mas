@@ -4,6 +4,8 @@ import sys
 import types
 from unittest.mock import patch
 
+import structlog
+
 from src.core import telemetry
 
 
@@ -64,3 +66,38 @@ def test_configure_telemetry_degrades_when_provider_initialization_fails() -> No
     assert runtime.enabled is False
     assert runtime.tracer_provider is None
     mock_warning.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 — ConsoleRenderer for local environment
+# ---------------------------------------------------------------------------
+
+
+def test_configure_structlog_uses_console_renderer_for_local() -> None:
+    """Local environment must use ConsoleRenderer for human-readable output."""
+    telemetry._DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = False
+
+    with (
+        patch.dict("os.environ", {"ENVIRONMENT": "local"}),
+        patch("src.core.telemetry.structlog.configure") as mock_configure,
+    ):
+        telemetry._configure_structlog(force=True)
+
+    mock_configure.assert_called_once()
+    processors = mock_configure.call_args.kwargs.get("processors", [])
+    assert isinstance(processors[-1], structlog.dev.ConsoleRenderer)
+
+
+def test_configure_structlog_uses_json_renderer_for_cloud() -> None:
+    """Cloud environments must use JSONRenderer for structured ingestion."""
+    telemetry._DEFAULT_STRUCTLOG_PROCESSORS_CONFIGURED = False
+
+    with (
+        patch.dict("os.environ", {"ENVIRONMENT": "dev"}),
+        patch("src.core.telemetry.structlog.configure") as mock_configure,
+    ):
+        telemetry._configure_structlog(force=True)
+
+    mock_configure.assert_called_once()
+    processors = mock_configure.call_args.kwargs.get("processors", [])
+    assert isinstance(processors[-1], structlog.processors.JSONRenderer)

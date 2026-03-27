@@ -15,8 +15,20 @@ class PdfPresentationAdapter(PresentationAdapter):
         html = self.render_html(payload)
         return b"%PDF-MOCK\n" + html.encode("utf-8")
 
+    def _render_status_badge(self, status: str | None) -> str:
+        """Render an approval status badge with inline styling."""
+        if status is None:
+            return '<span style="color:grey;font-weight:bold">PENDING</span>'
+        safe = escape(status.upper())
+        color = "green" if safe == "APPROVED" else "red"
+        return f'<span style="color:{color};font-weight:bold">{safe}</span>'
+
     def render_html(self, payload: ThesisReportPayload) -> str:
         """Render a deterministic HTML report without heavy native dependencies."""
+        as_of = escape(payload.as_of_date or "N/A")
+        price = escape(str(payload.current_market_price)) if payload.current_market_price is not None else "N/A"
+        status_badge = self._render_status_badge(payload.approval_status)
+
         evidence_items = "".join(
             f"<li>{escape(item)}</li>" for item in payload.evidence
         ) or "<li>No evidence provided.</li>"
@@ -33,6 +45,11 @@ class PdfPresentationAdapter(PresentationAdapter):
             "<head><title>Aequitas Thesis Report</title></head>"
             "<body>"
             "<main>"
+            f'<section class="header">'
+            f"<p><strong>As-of Date:</strong> {as_of}</p>"
+            f"<p><strong>Market Price:</strong> {price}</p>"
+            f"<p><strong>Status:</strong> {status_badge}</p>"
+            "</section>"
             f"<h1>{escape(payload.thesis)}</h1>"
             "<section><h2>Evidence</h2><ul>"
             f"{evidence_items}"

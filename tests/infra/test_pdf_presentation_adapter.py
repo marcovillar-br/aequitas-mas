@@ -60,3 +60,49 @@ def test_pdf_adapter_exposes_html_rendering_for_lightweight_runtime() -> None:
     assert isinstance(html, str)
     assert "<html" in html
     assert "Deterministic thesis" in html
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 — Presentation enrichment (as_of_date, price, status)
+# ---------------------------------------------------------------------------
+
+
+def test_pdf_adapter_renders_as_of_date_and_price() -> None:
+    """The report must display as_of_date and current_market_price."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="PETR4 remains undervalued.",
+        as_of_date="2024-01-15",
+        current_market_price=35.50,
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "2024-01-15" in html
+    assert "35.5" in html
+
+
+def test_pdf_adapter_renders_approval_status_badge() -> None:
+    """The report must display the committee approval status."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="VALE3 consensus positive.",
+        approval_status="APPROVED",
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "APPROVED" in html
+
+
+def test_pdf_adapter_degrades_when_enrichment_fields_are_none() -> None:
+    """Missing enrichment fields must degrade to N/A, not crash."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="Minimal payload test.",
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "N/A" in html
+    assert "PENDING" in html
