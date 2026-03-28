@@ -29,14 +29,14 @@ read -p "OpenSearch Region (default: us-east-1): " opensearch_region
 read -p "Gemini API Key: " gemini_api_key
 read -p "Terraform AWS Region (default: same as OpenSearch Region): " tf_var_aqm_region
 read -p "Developer SSO ARN for Terraform (optional, for dev OpenSearch policy): " tf_var_developer_sso_arn
-read -p "Enable Free Tier API throttling? (true/false, default: false): " free_tier_throttle
+read -p "Enable Free Tier API throttling? (true/false, default: true): " free_tier_throttle
 
 # Apply defaults
 opensearch_macro_index=${opensearch_macro_index:-macro-index}
 opensearch_audit_index=${opensearch_audit_index:-aequitas-decision-path}
 opensearch_region=${opensearch_region:-us-east-1}
 tf_var_aqm_region=${tf_var_aqm_region:-$opensearch_region}
-free_tier_throttle=${free_tier_throttle:-false}
+free_tier_throttle=${free_tier_throttle:-true}
 
 echo ""
 echo "Generating $ENV_FILE..."
