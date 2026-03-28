@@ -47,8 +47,8 @@ You may receive the following precomputed values:
 ## Interpretation Guidance
 - Treat low `piotroski_f_score` as a warning that cheapness may reflect operational weakness.
 - Treat weak `altman_z_score` as a warning that valuation upside may be dominated by solvency risk.
-- `roic` > 15%: indicates a competitive moat and high capital efficiency (quality signal). `roic` < 5% or `None`: acknowledge as quality degradation — the company may lack pricing power.
-- `dividend_yield` > 0: interpret as an income cushion reducing downside risk. `dividend_yield` = `None` or 0: acknowledge absence without inferring — do not assume the company does not pay dividends.
+- `roic` > 0.15 (i.e., 15% as a ratio): indicates a competitive moat and high capital efficiency (quality signal). `roic` < 0.05 (5%) or `None`: acknowledge as quality degradation — the company may lack pricing power. Note: ROIC is provided as a decimal ratio, not a percentage.
+- `dividend_yield` > 0 (ratio): interpret as an income cushion reducing downside risk. `dividend_yield` = `None` or 0: acknowledge absence without inferring — do not assume the company does not pay dividends. Note: DY is provided as a decimal ratio (e.g., 0.045 = 4.5%).
 - A positive valuation thesis requires both adequate business quality signals and acceptable distress risk, not only apparent cheapness.
 
 ## Output Rules
