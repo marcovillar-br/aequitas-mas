@@ -1,7 +1,7 @@
 ### 🇧🇷 Versão Oficial em Português do Brasil (pt-BR)
 
 **Aequitas-MAS: Documento Mestre de Arquitetura e Especificação**
-**Versão:** 2.0 (Consolidada - AI-Assisted Workspace, Risk Confinement & RAG HyDE)
+**Versão:** 3.0 (Consolidada - SOTA 2026, Triple Barrier, Horizonte 5 Anos)
 **Status:** Documento Normativo Único para Orquestração de LLMs
 
 **1. FILOSOFIA DE OPERAÇÃO E IDENTIDADE**
@@ -33,14 +33,71 @@ Para evitar o viés de "funciona na minha máquina" e alinhar o projeto a ambien
 O sistema utiliza a técnica de *Tree-of-Thought* (ToT) delegada a especialistas com capacidade de **Self-Reflection** via loop cíclico, respeitando o Princípio da Responsabilidade Única (SRP):
 
 * **Aequitas Core (Supervisor):** Roteamento e orquestração via *LangGraph Conditional Edges*. Possui a responsabilidade exclusiva de invocar a *Tool* determinística de otimização de portfólio (Álgebra Linear / Fronteira Eficiente de Markowitz) após o consenso das avaliações dos subagentes. Após o consenso, `route_after_consensus` avalia se o loop de reflexão deve ser disparado com base na significância da cross-validação econométrica.
-* **Agente Graham (Quantitativo):** Análise determinística; consome apenas as *Tools* tipadas (`yfinance` ou APIs da B3) para extração de múltiplos teóricos.
+* **Agente Graham (Quantitativo):** Análise determinística com horizonte de **5 anos** (adaptação B3 per Testa & Lima 2012); consome *Tools* tipadas para extração de múltiplos teóricos, ROIC (qualidade) e Dividend Yield (renda). Interpreta sinais via `GrahamInterpretation` com `roic_assessment` e `dividend_yield_assessment`.
 * **Agente Fisher (Micro-Qualitativo):** Avaliação exclusiva de governança corporativa e microeconomia através da leitura de *filings* corporativos e *Scuttlebutt* via RAG.
 * **Agente Macro (Holístico):** Processamento RAG de relatórios macroeconômicos (FED, Banco Central) utilizando Geração Aumentada por Recuperação baseada em *HyDE* para definição do contexto temporal.
 * **Agente Marks (Auditor):** Crítico focado em atuar de forma contracíclica e mitigar viés de sobrevivência. Em iterações de reflexão (`iteration_count > 0`), recebe o feedback do supervisor via bloco `[REFLECTION — Iteration N]` no prompt.
 * **Capacidade de Reflexão:** Fisher, Macro e Marks recebem o bloco `[REFLECTION]` condicionalmente quando `iteration_count > 0` e `reflection_feedback` está presente. Na primeira passagem (`iteration_count == 0`), o bloco é vazio — zero impacto no comportamento original.
 * **Infraestrutura de Estado:** A persistência em ambiente de desenvolvimento opera com `MemorySaver` em memória para anular custos. Em homologação/produção, utiliza-se Amazon DynamoDB (via interfaces e *Adapters* como `BaseCheckpointSaver`) e Amazon OpenSearch Serverless para o motor vetorial RAG.
 
-**5. CRITÉRIOS DE ACEITE E DEGRADAÇÃO (DEFINITION OF DONE)**
+**5. ARQUITETURAS PREDITIVAS SOTA 2026 (Camada de Tools)**
+
+O dogma de Confinamento de Risco estipula que LLMs operam exclusivamente como
+orquestradores semânticos — sendo sumariamente proibidos de atuar como
+calculadoras financeiras ou geradores de previsões estocásticas. As arquiteturas
+preditivas avançadas residem exclusivamente em `src/tools/`, encapsuladas por
+contratos Pydantic. As projeções são expostas aos agentes como variáveis de
+contexto observáveis e estruturadas.
+
+* **Temporal Fusion Transformer (TFT):** Rede de Seleção de Variáveis com
+  Atenção Multi-Cabeça Interpretável e previsão quantílica. Gera intervalos de
+  confiança e projeções de probabilidade de risco de cauda para consumo do
+  Agente Marks. Horizonte: janela de 5 anos.
+* **Amazon Chronos-2:** *Foundation Model* baseado em T5 com tokenização por
+  quantização. Projeção direcional rápida de tendências de preço (*zero-shot*)
+  sem necessidade de retreinamento por ativo.
+* **PatchTST / iTransformer:** Agrupamento em *patches* para expansão da janela
+  histórica e atenção inter-variáveis. Captura sazonalidades de longo prazo e
+  correlação entre indicadores macroeconômicos e preço da ação.
+* **CatBoost / LightGBM:** Motor de extração de características (*Feature
+  Selection*) e classificação probabilística para detecção de *Value Traps* via
+  dados tabulares fundamentalistas. Codificação nativa de variáveis categóricas
+  (setor B3, governança, rating) sem *One-Hot Encoding*.
+
+**⛔ BACKLOG — SUSPENSO: Redes Neurais em Grafos (GNN/GAT/STGAT)**
+
+A integração de Graph Attention Networks para modelagem topológica de correlações
+de portfólio (`NetworkRiskMetrics`) está **explicitamente suspensa**. Requer
+infraestrutura de GPU dedicada (Amazon SageMaker endpoints) não provisionada na
+conta AWS atual. Zero código GNN será produzido até que a infra de inferência
+esteja disponível. O schema `NetworkRiskMetrics` (node_centrality,
+sector_contagion_risk) permanece como especificação arquitetural para
+implementação futura.
+
+**6. GOVERNANÇA DE RISCO: TRIPLE BARRIER (AlphaX 2025)**
+
+O framework de Triple Barrier, inspirado no sistema AlphaX (2025), governa o
+ciclo de vida das teses de investimento no comitê iterativo:
+
+* **Barreira Superior (Take Profit Analítico):** Ativada quando a projeção de
+  preços (TFT/Chronos-2) converge consistentemente acima do Valor Justo de
+  Graham. O comitê, liderado pelo Agente Marks, formaliza exigência de
+  desinvestimento, capturando o prêmio de assimetria.
+* **Barreira Inferior (Stop Loss de Fundamentos):** Ativada pela deterioração
+  dinâmica do Altman Z-Score e/ou queda do Piotroski F-Score — não apenas por
+  declínio percentual de preço. Força preservação de capital antes da
+  materialização de insolvência.
+* **Barreira Vertical (Janela Temporal):** Horizonte absoluto de retenção da
+  tese — forçando reavaliação ao término do trimestre contábil ou na divulgação
+  de novo Formulário de Referência pela CVM. Garante que o sistema opere com
+  fundamentos atualizados na janela de 5 anos.
+
+Implementação: ferramenta determinística em `src/tools/` consumida pelo
+`core_consensus_node`. Os sinais de barreira são campos `Optional` no
+`AgentState`, degradando para `None` quando a infraestrutura preditiva não está
+disponível.
+
+**7. CRITÉRIOS DE ACEITE E DEGRADAÇÃO (DEFINITION OF DONE)**
 
 Para que qualquer etapa seja considerada válida e auditável nos rigores do TCC:
 
