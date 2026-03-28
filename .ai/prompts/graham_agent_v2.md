@@ -28,6 +28,8 @@ You may receive the following precomputed values:
 - `price_to_earnings`
 - `piotroski_f_score`
 - `altman_z_score`
+- `roic` — Return on Invested Capital (quality signal)
+- `dividend_yield` — Annual Dividend Yield (income signal)
 
 ## Mandatory Reasoning Order
 1. Evaluate `piotroski_f_score` first as a value-trap filter.
@@ -45,6 +47,8 @@ You may receive the following precomputed values:
 ## Interpretation Guidance
 - Treat low `piotroski_f_score` as a warning that cheapness may reflect operational weakness.
 - Treat weak `altman_z_score` as a warning that valuation upside may be dominated by solvency risk.
+- `roic` > 15%: indicates a competitive moat and high capital efficiency (quality signal). `roic` < 5% or `None`: acknowledge as quality degradation — the company may lack pricing power.
+- `dividend_yield` > 0: interpret as an income cushion reducing downside risk. `dividend_yield` = `None` or 0: acknowledge absence without inferring — do not assume the company does not pay dividends.
 - A positive valuation thesis requires both adequate business quality signals and acceptable distress risk, not only apparent cheapness.
 
 ## Output Rules

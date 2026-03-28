@@ -125,6 +125,14 @@ class GrahamInterpretation(BaseModel):
         default=None,
         description="Optional assessment of the Altman Z-Score solvency gate.",
     )
+    roic_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the ROIC quality signal.",
+    )
+    dividend_yield_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the Dividend Yield income signal.",
+    )
     recommendation: str = Field(
         ...,
         description="Investment recommendation: buy, hold, or avoid.",
