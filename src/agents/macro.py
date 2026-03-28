@@ -25,7 +25,6 @@ DIP Enforcement:
     No infrastructure SDK (boto3, opensearch-py) is imported here.
 """
 
-import os
 import time
 from collections.abc import Callable
 from datetime import date
@@ -54,7 +53,8 @@ from src.core.state import AgentState, MacroAnalysis
 
 logger = structlog.get_logger(__name__)
 
-_FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
+# Throttle flag injected by src/core/graph.py at import time.
+FREE_TIER_THROTTLE: bool = True
 
 
 def _resolve_as_of_date(state: AgentState) -> date:
@@ -288,7 +288,7 @@ def create_macro_agent(
             pipeline="HyDE+RAG",
         )
 
-        if _FREE_TIER_THROTTLE:
+        if FREE_TIER_THROTTLE:
             logger.debug("free_tier_throttle_applied", sleep_seconds=15)
             time.sleep(15)
 
@@ -340,7 +340,7 @@ def create_macro_agent(
             # ------------------------------------------------------------------
             context_block = _format_retrieved_context(retrieved_docs)
 
-            if _FREE_TIER_THROTTLE:
+            if FREE_TIER_THROTTLE:
                 logger.debug("free_tier_throttle_applied", sleep_seconds=10)
                 time.sleep(10)
 

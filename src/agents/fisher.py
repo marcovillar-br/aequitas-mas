@@ -6,7 +6,6 @@ This module defines the agent responsible for performing qualitative analysis
 based on the Philip Fisher methodology. It analyzes financial news to gauge
 market sentiment and identify potential risks.
 """
-import os
 from datetime import date
 from typing import List
 import time
@@ -22,7 +21,9 @@ from src.tools.news_fetcher import NewsItem, get_ticker_news
 # Initialize structured logger for observability
 logger = structlog.get_logger(__name__)
 
-_FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
+# Throttle flag injected by src/core/graph.py at import time.
+# Default True (safe for Free Tier). Set to False for paid API keys.
+FREE_TIER_THROTTLE: bool = True
 
 
 def _resolve_as_of_date(state: AgentState) -> date:
@@ -59,7 +60,7 @@ def fisher_agent(state: AgentState) -> dict:
     as_of_date = _resolve_as_of_date(state)
     logger.info("agente_fisher_invocado", ticker=ticker, as_of_date=as_of_date.isoformat())
 
-    if _FREE_TIER_THROTTLE:
+    if FREE_TIER_THROTTLE:
         logger.debug("free_tier_throttle_applied", sleep_seconds=15)
         time.sleep(15)
 

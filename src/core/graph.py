@@ -92,6 +92,16 @@ def _resolve_audit_sink() -> AuditSinkPort:
 # patch("src.core.graph.macro_agent") continues to work in tests.
 macro_agent = create_macro_agent(_resolve_vector_store())
 
+# Throttle toggle: resolved at infra boundary, injected into agents.
+# Agents read FREE_TIER_THROTTLE but never call os.getenv themselves (DIP).
+_FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
+import src.agents.fisher as _fisher_mod  # noqa: E402
+import src.agents.marks as _marks_mod  # noqa: E402
+import src.agents.macro as _macro_mod  # noqa: E402
+_fisher_mod.FREE_TIER_THROTTLE = _FREE_TIER_THROTTLE
+_marks_mod.FREE_TIER_THROTTLE = _FREE_TIER_THROTTLE
+_macro_mod.FREE_TIER_THROTTLE = _FREE_TIER_THROTTLE
+
 
 def _extract_thread_id(config: dict[str, Any] | None) -> str:
     """Extract the LangGraph thread identifier from RunnableConfig."""
