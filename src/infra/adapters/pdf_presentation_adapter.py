@@ -79,6 +79,12 @@ class PdfPresentationAdapter(PresentationAdapter):
             for key, value in sorted(payload.quantitative_data.items(), key=lambda item: str(item[0]))
         ) or "<tr><th>No quantitative data</th><td>None</td></tr>"
 
+        # Quantitative Health panel
+        piotroski = str(payload.piotroski_f_score) if payload.piotroski_f_score is not None else "N/A"
+        altman = format_brl_number(payload.altman_z_score) if payload.altman_z_score is not None else "N/A"
+        roic_pct = f"{format_brl_number(payload.roic * 100.0)}%" if payload.roic is not None else "N/A"
+        dy_pct = f"{format_brl_number(payload.dividend_yield * 100.0)}%" if payload.dividend_yield is not None else "N/A"
+
         return (
             "<html>"
             "<head><title>Aequitas Thesis Report</title></head>"
@@ -88,6 +94,15 @@ class PdfPresentationAdapter(PresentationAdapter):
             f"<p><strong>As-of Date:</strong> {as_of}</p>"
             f"<p><strong>Market Price:</strong> {price}</p>"
             f"<p><strong>Status:</strong> {status_badge}</p>"
+            "</section>"
+            '<section class="quant-health">'
+            "<h2>Saúde Quantitativa</h2>"
+            "<table>"
+            f"<tr><th>Piotroski F-Score</th><td>{escape(piotroski)}</td></tr>"
+            f"<tr><th>Altman Z-Score</th><td>{escape(altman)}</td></tr>"
+            f"<tr><th>ROIC (Retorno sobre Capital Investido)</th><td>{escape(roic_pct)}</td></tr>"
+            f"<tr><th>Dividend Yield (Rendimento de Dividendos)</th><td>{escape(dy_pct)}</td></tr>"
+            "</table>"
             "</section>"
             f"<h1>{escape(payload.thesis)}</h1>"
             "<section><h2>Evidence</h2><ul>"

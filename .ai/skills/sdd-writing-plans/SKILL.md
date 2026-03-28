@@ -60,6 +60,7 @@ You MUST follow this exact sequence:
 5. **FACTS Validation:** Before outputting, verify that your proposed plan aligns with the FACTS scale (Factual, Actionable, Clear, Testable, Small).
 6. **Baseline Sync:** Before writing the new plan, verify that `.context/PLAN.md` Section 1 (Baseline) includes all sprints marked DONE in `.context/current-sprint.md`. If a completed sprint is missing from the baseline, add it before proceeding. This prevents documentation drift between the roadmap and the actual delivery state.
 7. **Blackboard Output:** You MUST write the final output EXACTLY to `.ai/handoffs/current_plan.md` using the strict YAML/Markdown format below.
+   - **7b. Plan Freshness:** When a sprint has multiple phases, the `current_plan.md` must be updated to reflect the consolidated scope before the PR is created. A plan that claims "no tools modified" when tools were modified in a prior phase is a scope guard violation. Before closing a sprint, verify that `target_files` and scope guard statements match the actual cumulative diff.
 
 ### Output Format Contract
 

@@ -1,5 +1,61 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 16 — SOTA Factor Expansion (Quality/Momentum/Growth)
+**Status:** DONE
+**Target Branch:** `feature/sprint16-sota-factors`
+
+### Objective
+Expand the quantitative boundary with institutional-grade SOTA factors
+(ROIC, Dividend Yield) and wire them into the consensus pipeline for
+risk-adjusted decision gating. Maintain Sprint 15 iteration_count logic.
+
+### Planned Steps
+- [x] Step 1: Implement `calculate_roic` and `calculate_dividend_yield`
+      deterministic tools in `src/tools/fundamental_metrics.py`.
+- [x] Step 2: Add ROIC and Dividend Yield fields to `GrahamMetrics` and
+      `HistoricalMarketData` schemas (v3.0 boundary expansion).
+- [x] Step 3: Enrich `core_consensus_node` prompt with SOTA factor data
+      for risk-adjusted consensus gating (auto via model_dump).
+- [x] Step 4: Integrated committee test with expanded factor suite.
+- [x] Step 5: Wire `calculate_roic` and `calculate_dividend_yield` into
+      `graham_agent` via `_build_metrics_from_historical_data`.
+- [x] Step 6: Enrich Graham interpreter prompt with ROIC and DY inputs.
+- [x] Step 7: Update CoT prompt `.ai/prompts/graham_agent_v2.md` with
+      ROIC/DY interpretation guidance.
+- [x] Step 8: Parameterize Free Tier throttling via `AEQUITAS_FREE_TIER_THROTTLE`
+      env var in Fisher, Macro, and Marks agents.
+- [x] Step 9: Enrich `ThesisReportPayload` with 4 SOTA metrics and render
+      Quantitative Health panel in HTML adapter and CLI.
+- [x] Step 10: Integrated tearsheet test with expanded SOTA factors.
+
+### Delivered Scope
+1. `calculate_roic` and `calculate_dividend_yield` in `fundamental_metrics.py`.
+2. `GrahamMetrics` + `HistoricalMarketData` expanded with `roic` and `dividend_yield`.
+3. `GrahamInterpretation` expanded with `roic_assessment` and `dividend_yield_assessment`.
+4. Graham agent wired: `_build_metrics` + `_build_interpreter_prompt` + CoT prompt.
+5. Consensus auto-enrichment via `model_dump()` — zero prompt template changes.
+6. `AEQUITAS_FREE_TIER_THROTTLE` toggle in Fisher/Macro/Marks (default "true").
+7. `ThesisReportPayload` + 4 SOTA metrics (piotroski, altman, roic, DY).
+8. Quantitative Health panel: HTML adapter + CLI tearsheet.
+9. `setup_env.sh` updated with throttle parameter.
+
+### Definition of Done
+- [x] ROIC + DY deterministic tools with controlled degradation
+- [x] Schema v3.0 expansion (GrahamMetrics + HistoricalMarketData)
+- [x] Graham wiring + CoT interpretation guidance
+- [x] Throttle parameterization (3 agents, 4 sleep calls)
+- [x] Tearsheet schema + rendering (HTML + CLI)
+- [x] 265 tests passing, 0 regressions
+
+### Residual Risks
+- ROIC/DY in GrahamMetrics are plumbing-only until data pipeline populates
+  `HistoricalMarketData.roic` and `.dividend_yield` from B3 fetcher.
+
+### Next Planning Target
+- Sprint 17 — Semantic Chunking for Earnings Calls (milestone v3.0 cont.).
+
+---
+
 ## Sprint 15 — Cyclic Graph Refinement
 **Status:** DONE
 **Target Branch:** `feature/sprint15-cyclic-graph`

@@ -1,74 +1,78 @@
 ---
-audit_id: "audit-plan-pre-sprint16-doc-sync-001-20260328"
-plan_validated: "plan-pre-sprint16-doc-sync-001"
+audit_id: "audit-sprint16-consolidated-20260328"
+plan_validated: "plan-sprint16-sota-factors-consolidated"
 status: "PASSED"
 failed_checks: []
-tdd_verified: false
-audit_scope: "artifact-only"
+tdd_verified: true
+audit_scope: "code-bearing"
 ---
 
 ## 1. Executive Summary
 
-**PASSED — All 6 DoD criteria satisfied.**
+**PASSED — Sprint 16 milestone v3.0 delivered across 3 phases.**
 
-Documentation-only update. Zero `.py`, `.tf`, `.sh`, or `.yml` files modified.
-SPEC.md now reflects the Cyclic Graph topology with ASCII diagram, 4 new
-AgentState fields, and updated Section 7 pointing to v3.0. The official
-architecture document accurately describes the reflection capability and
-circuit breaker. PLAN.md verified: v2.5 ✅ DELIVERED, v3.0 NEXT. Push gate
-unblocked.
+265 tests passing, 0 regressions. All dogmas respected. Push gate unblocked.
 
 ---
 
 ## 2. Dogma Compliance Analysis
 
-### Check 2.1: Hard Constraints
+### Check 2.1: Risk Confinement
 * **Status:** PASSED
-* **Findings:**
-  - `.py` files modified: 0 ✅
-  - `.tf`/`.sh`/`.yml` files modified: 0 ✅
-  - Only `.md` files in scope: SPEC.md + official doc ✅
+* **Findings:** `calculate_roic` and `calculate_dividend_yield` are pure
+  Python math in `src/tools/fundamental_metrics.py`. Zero LLM dependency.
+  Graham agent reads pre-computed values — does not calculate.
 
-### Check 2.2: Diagram Integrity
+### Check 2.2: Controlled Degradation
 * **Status:** PASSED
-* **Findings:** ASCII diagram in SPEC.md §1 accurately depicts:
-  - `route_after_consensus` as the decision point after consensus ✅
-  - `fisher (loop)` branch when `cv.p_value > 0.05 && iter < 2` ✅
-  - `__end__` branch when `iter >= 2 || cv absent || cv significant` ✅
-  - Reflection mode annotation showing `_nodes_since_last_consensus` ✅
+* **Findings:** All new `Optional` fields degrade to `None`. Presentation
+  renders "N/A" (not "None" or "N/A%"). Prompt shows "N/A" for absent
+  ROIC/DY.
 
-### Check 2.3: SSOT Consistency
+### Check 2.3: Inversion of Control (DIP)
 * **Status:** PASSED
-* **Findings:**
-  - `iteration_count: int = 0` documented with circuit breaker note ✅
-  - `reflection_feedback: Optional[str] = None` documented with consumer note ✅
-  - `signal_significance: Optional[EconometricResult] = None` documented ✅
-  - `cross_validation: Optional[EconometricResult] = None` documented with
-    p_value semantics (None = unknown, not trigger) ✅
-  - `_MAX_ITERATIONS=2` documented in 3 locations (invariant, AgentState, §7) ✅
+* **Findings:** `os.getenv("AEQUITAS_FREE_TIER_THROTTLE")` resolved in
+  `src/core/graph.py` (infra boundary). Agents read injected module-level
+  `FREE_TIER_THROTTLE` var — zero `os.getenv` in `src/agents/`.
 
-### Check 2.4: Risk Confinement
+### Check 2.4: Scope Guard
 * **Status:** PASSED
-* **Findings:** Invariant "O grafo não usa matemática em prompts" preserved
-  in §1. Official doc §1 explicitly states LLM cannot perform arithmetic.
-  Reflection block is documented as pure natural language feedback — no math. ✅
+* **Findings:** 18 files modified across 3 phases:
+  - `src/tools/fundamental_metrics.py` (Phase 1 — ROIC/DY tools)
+  - `src/tools/backtesting/historical_ingestion.py` (Phase 1 — schema)
+  - `src/core/state.py` (Phase 1+2 — GrahamMetrics + GrahamInterpretation)
+  - `src/core/interfaces/presentation.py` (Phase 3 — Tearsheet schema)
+  - `src/agents/graham.py` (Phase 2 — wiring + prompt)
+  - `src/agents/fisher.py` (Phase 3 — throttle toggle)
+  - `src/agents/macro.py` (Phase 3 — throttle toggle)
+  - `src/agents/marks.py` (Phase 3 — throttle toggle)
+  - `src/agents/core.py` (Phase 1 — consensus auto-enrichment test)
+  - `src/core/graph.py` (Phase 3 — throttle DIP injection)
+  - `src/infra/adapters/pdf_presentation_adapter.py` (Phase 3 — QH panel)
+  - `main.py` (Phase 3 — CLI tearsheet)
+  - `scripts/setup_env.sh` (Phase 3 — throttle parameter)
+  - `.ai/prompts/graham_agent_v2.md` (Phase 2 — CoT update)
+  - `tests/tools/test_fundamental_metrics.py` (+7 tests)
+  - `tests/test_graham_agent.py` (+5 tests)
+  - `tests/test_core_consensus_node.py` (+2 tests)
+  - `tests/infra/test_pdf_presentation_adapter.py` (+3 tests)
+
+  No `.tf` or `.yml` files modified. ✅
 
 ---
 
-## 3. Definition of Done — Final Checklist
+## 3. Definition of Done
 
 | Criterion | Status |
 | :--- | :---: |
-| SPEC.md §1: Cyclic topology with ASCII diagram | ✅ DONE |
-| SPEC.md §2.1: 4 new AgentState fields documented | ✅ DONE |
-| SPEC.md §7: Sprint 15 delivered, v3.0 next | ✅ DONE |
-| Official doc: DAG → Cyclic Graph, reflection, circuit breaker | ✅ DONE |
-| PLAN.md: v2.5 ✅ DELIVERED, v3.0 NEXT | ✅ VERIFIED |
-| HARD CONSTRAINT: zero .py/.tf/.sh/.yml | ✅ DONE |
+| ROIC + DY deterministic tools | ✅ DONE |
+| Schema v3.0 (GrahamMetrics + HistoricalMarketData) | ✅ DONE |
+| GrahamInterpretation + roic/DY assessments | ✅ DONE |
+| Graham wiring + CoT prompt | ✅ DONE |
+| Throttle toggle (DIP compliant) | ✅ DONE |
+| Tearsheet schema + HTML + CLI panels | ✅ DONE |
+| 265 tests, 0 regressions | ✅ DONE |
+| ruff check clean | ✅ DONE |
+| Dogma Audit 3 (no os.getenv in agents) | ✅ DONE |
 
----
-
-## 4. Recommended Actions
-
-1. **AUTHORIZE:** Commit and push the 2 modified .md files + audit artifacts.
-2. **Next:** Trigger `sdd-reviewer` for final push authorization.
+**Milestone v3.0: DELIVERED.**

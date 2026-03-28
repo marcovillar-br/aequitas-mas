@@ -67,6 +67,14 @@ class GrahamMetrics(BaseModel):
     margin_of_safety: Optional[float] = Field(
         description="Margem de segurança percentual.",
     )
+    roic: Optional[float] = Field(
+        default=None,
+        description="Return on Invested Capital (ROIC).",
+    )
+    dividend_yield: Optional[float] = Field(
+        default=None,
+        description="Annual Dividend Yield.",
+    )
 
     @field_validator(
         "vpa",
@@ -74,6 +82,8 @@ class GrahamMetrics(BaseModel):
         "price_to_earnings",
         "fair_value",
         "margin_of_safety",
+        "roic",
+        "dividend_yield",
         mode="before",
     )
     @classmethod
@@ -116,6 +126,14 @@ class GrahamInterpretation(BaseModel):
     altman_assessment: Optional[str] = Field(
         default=None,
         description="Optional assessment of the Altman Z-Score solvency gate.",
+    )
+    roic_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the ROIC quality signal.",
+    )
+    dividend_yield_assessment: Optional[str] = Field(
+        default=None,
+        description="Optional assessment of the Dividend Yield income signal.",
     )
     recommendation: str = Field(
         ...,

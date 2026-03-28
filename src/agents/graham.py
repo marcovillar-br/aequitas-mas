@@ -80,7 +80,9 @@ def _build_interpreter_prompt(
         "Generate the final explanation strictly in Portuguese (pt-BR).\n"
         "Populate all fields of the output schema.\n"
         "For `recommendation`, use exactly one of: buy, hold, avoid.\n"
-        "For `confidence`, provide a value between 0.0 and 1.0.\n\n"
+        "For `confidence`, provide a value between 0.0 and 1.0.\n"
+        "For `roic_assessment`, interpret the ROIC quality signal if available.\n"
+        "For `dividend_yield_assessment`, interpret the DY income signal if available.\n\n"
         f"Ticker: {historical_data.ticker}\n"
         f"As-of Date: {historical_data.as_of_date.isoformat()}\n"
         f"Observed Price: {historical_data.price}\n"
@@ -90,6 +92,8 @@ def _build_interpreter_prompt(
         f"Intrinsic Value: {intrinsic_value}\n"
         f"Margin of Safety: {margin_of_safety}\n"
         f"Dynamic Multiplier: {dynamic_multiplier}\n"
+        f"ROIC: {historical_data.roic if historical_data.roic is not None else 'N/A'}\n"
+        f"Dividend Yield: {historical_data.dividend_yield if historical_data.dividend_yield is not None else 'N/A'}\n"
     )
 
 
@@ -119,6 +123,8 @@ def _build_metrics_from_historical_data(
         price_to_earnings=price_to_earnings,
         fair_value=intrinsic_value,
         margin_of_safety=margin_of_safety,
+        roic=historical_data.roic,
+        dividend_yield=historical_data.dividend_yield,
     )
 
 

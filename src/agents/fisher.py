@@ -21,6 +21,10 @@ from src.tools.news_fetcher import NewsItem, get_ticker_news
 # Initialize structured logger for observability
 logger = structlog.get_logger(__name__)
 
+# Throttle flag injected by src/core/graph.py at import time.
+# Default True (safe for Free Tier). Set to False for paid API keys.
+FREE_TIER_THROTTLE: bool = True
+
 
 def _resolve_as_of_date(state: AgentState) -> date:
     """Resolve the point-in-time date from state when available."""
@@ -56,9 +60,9 @@ def fisher_agent(state: AgentState) -> dict:
     as_of_date = _resolve_as_of_date(state)
     logger.info("agente_fisher_invocado", ticker=ticker, as_of_date=as_of_date.isoformat())
 
-    # Free-Tier Rate Limiting
-    logger.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)
-    time.sleep(15)
+    if FREE_TIER_THROTTLE:
+        logger.debug("free_tier_throttle_applied", sleep_seconds=15)
+        time.sleep(15)
 
     urls = []
 

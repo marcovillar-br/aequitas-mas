@@ -287,3 +287,123 @@ def test_graham_node_returns_structured_interpretation(
     assert result["graham_interpretation"].recommendation == "buy"
     assert result["graham_interpretation"].confidence == pytest.approx(0.85)
     assert result["executed_nodes"] == ["graham"]
+
+
+# ---------------------------------------------------------------------------
+# Sprint 16 Phase 2 — SOTA factor wiring (ROIC, Dividend Yield)
+# ---------------------------------------------------------------------------
+
+
+def test_graham_metrics_include_roic_and_dividend_yield() -> None:
+    """GrahamMetrics from _build_metrics must include ROIC and DY from historical data."""
+    from src.agents.graham import _build_metrics_from_historical_data
+
+    historical = HistoricalMarketData(
+        ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        price=15.0,
+        book_value_per_share=20.0,
+        earnings_per_share=3.0,
+        selic_rate=0.10,
+        roic=0.18,
+        dividend_yield=0.045,
+    )
+
+    metrics = _build_metrics_from_historical_data(
+        historical, intrinsic_value=24.0, margin_of_safety=0.37,
+    )
+
+    assert metrics.roic == pytest.approx(0.18)
+    assert metrics.dividend_yield == pytest.approx(0.045)
+
+
+def test_graham_metrics_degrade_sota_factors_when_absent() -> None:
+    """When historical data lacks ROIC/DY, metrics must degrade to None."""
+    from src.agents.graham import _build_metrics_from_historical_data
+
+    historical = HistoricalMarketData(
+        ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        price=15.0,
+        book_value_per_share=20.0,
+        earnings_per_share=3.0,
+        selic_rate=0.10,
+    )
+
+    metrics = _build_metrics_from_historical_data(historical)
+
+    assert metrics.roic is None
+    assert metrics.dividend_yield is None
+
+
+def test_graham_prompt_includes_roic_and_dividend_yield() -> None:
+    """The interpreter prompt must contain ROIC and DY values."""
+    from src.agents.graham import _build_interpreter_prompt
+
+    historical = HistoricalMarketData(
+        ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        price=15.0,
+        book_value_per_share=20.0,
+        earnings_per_share=3.0,
+        selic_rate=0.10,
+        roic=0.18,
+        dividend_yield=0.045,
+    )
+
+    prompt = _build_interpreter_prompt(
+        historical_data=historical,
+        intrinsic_value=24.0,
+        margin_of_safety=0.37,
+        dynamic_multiplier=10.0,
+    )
+
+    assert "ROIC: 0.18" in prompt
+    assert "Dividend Yield: 0.045" in prompt
+
+
+def test_graham_interpretation_accepts_roic_and_dy_assessments() -> None:
+    """GrahamInterpretation must persist ROIC and DY qualitative assessments."""
+    interp = GrahamInterpretation(
+        thesis="Strong value with quality moat.",
+        fair_value_assessment="Undervalued.",
+        margin_of_safety_assessment="Adequate.",
+        roic_assessment="ROIC of 18% indicates competitive moat.",
+        dividend_yield_assessment="DY of 4.5% provides income cushion.",
+        recommendation="buy",
+        confidence=0.9,
+    )
+    assert interp.roic_assessment == "ROIC of 18% indicates competitive moat."
+    assert interp.dividend_yield_assessment == "DY of 4.5% provides income cushion."
+
+
+def test_graham_interpretation_degrades_roic_and_dy_assessments_to_none() -> None:
+    """Missing ROIC/DY assessments must degrade to None."""
+    interp = GrahamInterpretation(
+        thesis="Basic thesis.",
+        fair_value_assessment="Test.",
+        margin_of_safety_assessment="Test.",
+        recommendation="hold",
+    )
+    assert interp.roic_assessment is None
+    assert interp.dividend_yield_assessment is None
+
+
+def test_graham_metrics_rejects_non_finite_roic_and_dy() -> None:
+    """NaN/Inf in ROIC and DY must be rejected by the finite-float validator."""
+    import math
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        GrahamMetrics(
+            ticker="PETR4", vpa=35.0, lpa=8.0, price_to_earnings=5.5,
+            fair_value=45.0, margin_of_safety=30.0,
+            roic=math.nan, dividend_yield=0.05,
+        )
+
+    with pytest.raises(ValidationError):
+        GrahamMetrics(
+            ticker="PETR4", vpa=35.0, lpa=8.0, price_to_earnings=5.5,
+            fair_value=45.0, margin_of_safety=30.0,
+            roic=0.18, dividend_yield=math.inf,
+        )

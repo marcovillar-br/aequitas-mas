@@ -34,6 +34,22 @@ class ThesisReportPayload(BaseModel):
         default=None,
         description="Final committee verdict: APPROVED or REJECTED.",
     )
+    piotroski_f_score: Optional[int] = Field(
+        default=None,
+        description="Piotroski F-Score (0-9 quality gate).",
+    )
+    altman_z_score: Optional[float] = Field(
+        default=None,
+        description="Altman Z-Score (solvency signal).",
+    )
+    roic: Optional[float] = Field(
+        default=None,
+        description="Return on Invested Capital (quality signal).",
+    )
+    dividend_yield: Optional[float] = Field(
+        default=None,
+        description="Annual Dividend Yield (income signal).",
+    )
 
 
 @runtime_checkable

@@ -1,40 +1,59 @@
 ---
-summary_id: eod-pre-sprint16-doc-sync-001
+summary_id: eod-sprint16-sota-factors-final
 status: completed
 target_files:
-  - ".context/SPEC.md"
-  - "docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md"
-  - ".context/PLAN.md"
-tests_run: ["N/A — artifact-only scope"]
-dogmas_respected: [artifact-driven-communication, scope-discipline, ssot]
+  - "src/tools/fundamental_metrics.py"
+  - "src/core/state.py"
+  - "src/core/interfaces/presentation.py"
+  - "src/tools/backtesting/historical_ingestion.py"
+  - "src/agents/graham.py"
+  - "src/agents/fisher.py"
+  - "src/agents/macro.py"
+  - "src/agents/marks.py"
+  - "src/infra/adapters/pdf_presentation_adapter.py"
+  - "main.py"
+  - "scripts/setup_env.sh"
+  - ".ai/prompts/graham_agent_v2.md"
+tests_run: ["265 passed, 0 failed, 0 regressions"]
+dogmas_respected: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, pydantic-v2-frozen]
 ---
 
 ## 1. Implementation Summary
 
-Pre-Sprint 16 architectural documentation sync on branch
-`feature/sprint15-cyclic-graph`.
+Sprint 16 executed across 3 phases on branch `feature/sprint16-sota-factors`.
 
-- **SPEC.md:** Section 1 now shows the cyclic topology with a full ASCII
-  diagram depicting `route_after_consensus`, the fisher loop, and the
-  `__end__` termination paths. Added 3 new invariants (circuit breaker,
-  reflection prompt, Graham exclusion). Section 2.1 now documents
-  `iteration_count`, `reflection_feedback`, `signal_significance`, and
-  `cross_validation`. Section 7 updated to Sprint 15 delivered scope
-  with v3.0 as next target.
-- **Official Architecture Doc:** Replaced "Grafos Acíclicos Direcionados
-  (DAGs)" with "Grafo Cíclico com semântica de Comitê Iterativo e
-  Self-Reflection". Documented the `[REFLECTION — Iteration N]` prompt
-  injection and `_MAX_ITERATIONS=2` as acceptance criterion. Corrected
-  `SqliteSaver` → `MemorySaver` (factual fix).
-- **PLAN.md:** Verified v2.5 ✅ DELIVERED and v3.0 NEXT — no changes needed.
+### Phase 1 — ROIC + DY Tools & Schema (plan-001)
+- `calculate_roic` and `calculate_dividend_yield` in `fundamental_metrics.py`
+  with full controlled degradation.
+- `GrahamMetrics` + `HistoricalMarketData` schema expansion (v3.0).
+- Auto-enrichment: consensus receives ROIC/DY via `model_dump()`.
+
+### Phase 2 — Graham Wiring & CoT (plan-002)
+- `_build_metrics_from_historical_data` maps roic/DY from historical data.
+- `_build_interpreter_prompt` enriched with ROIC and DY lines.
+- `GrahamInterpretation` expanded: `roic_assessment` + `dividend_yield_assessment`.
+- `graham_agent_v2.md` CoT prompt: quality (ROIC >15%) + income (DY >0) guidance.
+
+### Phase 3 — Tearsheet & Throttling (plan-003)
+- `AEQUITAS_FREE_TIER_THROTTLE` toggle in Fisher/Macro/Marks (4 sleep calls).
+- `ThesisReportPayload` + 4 SOTA metrics (piotroski, altman, roic, DY).
+- Quantitative Health panel: HTML `<section class="quant-health">` + CLI
+  `SAÚDE QUANTITATIVA`.
+- `setup_env.sh` updated with throttle parameter.
 
 ## 2. Validation Performed
 
-- Scope guard: only 2 `.md` files modified, zero `.py`/`.tf`/`.sh`/`.yml`.
-- ASCII diagram validated for logical accuracy.
-- All 4 new AgentState fields documented in SPEC.md §2.1.
-- Risk Confinement invariant preserved in §1.
+- `pytest`: 265 tests passed with 0 regressions (+15 total across 3 phases).
+- `ruff check`: All checks passed.
+- sdd-auditor: PASSED across all 3 phases.
+- sdd-reviewer: PASSED across all 3 phases.
 
-## 3. Scope Control
+## 3. Sprint 16 — Consolidated Delivery
 
-Documentation-only. Zero code changes. Zero test changes.
+| Plan | Phase | Tests Added | Total |
+| :--- | :--- | :---: | :---: |
+| plan-sprint16-sota-factors-001 | ROIC + DY tools + schema | +7 | 257 |
+| plan-sprint16-sota-factors-002 | Graham wiring + CoT | +5 | 262 |
+| plan-sprint16-sota-factors-003 | Throttle + Tearsheet | +3 | 265 |
+
+**Milestone v3.0 (SOTA Factor Expansion): DELIVERED**

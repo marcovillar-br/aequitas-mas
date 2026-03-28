@@ -73,6 +73,14 @@ class HistoricalMarketData(BaseModel):
         default=None,
         description="Risk-free rate (Selic) at the exact as_of_date",
     )
+    roic: Optional[float] = Field(
+        default=None,
+        description="Return on Invested Capital at the as_of_date snapshot.",
+    )
+    dividend_yield: Optional[float] = Field(
+        default=None,
+        description="Annual Dividend Yield at the as_of_date snapshot.",
+    )
 
     @field_validator("ticker", mode="before")
     @classmethod
@@ -85,6 +93,8 @@ class HistoricalMarketData(BaseModel):
         "book_value_per_share",
         "earnings_per_share",
         "selic_rate",
+        "roic",
+        "dividend_yield",
         mode="before",
     )
     @classmethod

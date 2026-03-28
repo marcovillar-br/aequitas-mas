@@ -520,3 +520,64 @@ def test_core_consensus_degrades_when_cross_validation_is_none(
     invoke_kwargs = mock_chain.invoke.call_args.args[0]
     assert "cross_validation" in invoke_kwargs
     assert invoke_kwargs["cross_validation"] == "Validação cruzada entre agentes não disponível."
+
+
+# ---------------------------------------------------------------------------
+# Sprint 16 — SOTA Factor Expansion (ROIC, Dividend Yield)
+# ---------------------------------------------------------------------------
+
+
+def test_graham_metrics_accepts_roic_and_dividend_yield() -> None:
+    """GrahamMetrics must accept the new SOTA factor fields."""
+    metrics = GrahamMetrics(
+        ticker="PETR4",
+        vpa=35.0,
+        lpa=8.0,
+        price_to_earnings=5.5,
+        fair_value=45.0,
+        margin_of_safety=30.0,
+        roic=0.18,
+        dividend_yield=0.045,
+    )
+    assert metrics.roic == 0.18
+    assert metrics.dividend_yield == 0.045
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_receives_roic_and_dy_in_graham_metrics(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """The consensus prompt must receive ROIC and DY via graham_metrics dump."""
+    state = _build_state().model_copy(
+        update={
+            "metrics": GrahamMetrics(
+                ticker="PETR4",
+                vpa=35.0,
+                lpa=8.0,
+                price_to_earnings=5.5,
+                fair_value=45.0,
+                margin_of_safety=30.0,
+                roic=0.18,
+                dividend_yield=0.045,
+            ),
+        }
+    )
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Blocked to validate kwargs.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    graham_dump = invoke_kwargs["graham_metrics"]
+    assert graham_dump["roic"] == 0.18
+    assert graham_dump["dividend_yield"] == 0.045

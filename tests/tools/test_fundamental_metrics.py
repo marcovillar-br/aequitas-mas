@@ -11,8 +11,10 @@ from src.tools.fundamental_metrics import (
     AltmanInputs,
     PiotroskiInputs,
     calculate_altman_z_score,
+    calculate_dividend_yield,
     calculate_piotroski_f_score,
     calculate_price_to_earnings,
+    calculate_roic,
 )
 
 
@@ -288,3 +290,37 @@ def test_price_to_earnings_with_negative_eps_degrades_to_none() -> None:
     A negative P/E ratio is economically meaningless for Graham valuation.
     """
     assert calculate_price_to_earnings(100.0, -5.0) is None
+
+
+# ---------------------------------------------------------------------------
+# Sprint 16 — SOTA Factor Expansion (ROIC, Dividend Yield)
+# ---------------------------------------------------------------------------
+
+def test_roic_returns_correct_ratio() -> None:
+    """Valid operating income and invested capital must produce ROIC."""
+    assert calculate_roic(50.0, 200.0) == pytest.approx(0.25)
+
+
+def test_roic_degrades_for_invalid_invested_capital() -> None:
+    """Zero or negative invested capital must degrade to None."""
+    assert calculate_roic(50.0, 0.0) is None
+    assert calculate_roic(50.0, -100.0) is None
+
+
+def test_dividend_yield_returns_correct_ratio() -> None:
+    """Valid dividends and price must produce DY."""
+    assert calculate_dividend_yield(2.50, 50.0) == pytest.approx(0.05)
+
+
+def test_dividend_yield_degrades_for_invalid_price() -> None:
+    """Zero or negative price must degrade to None."""
+    assert calculate_dividend_yield(2.50, 0.0) is None
+    assert calculate_dividend_yield(2.50, -10.0) is None
+
+
+def test_roic_and_dividend_yield_degrade_for_none_inputs() -> None:
+    """None inputs must degrade to None without exception."""
+    assert calculate_roic(None, 200.0) is None
+    assert calculate_roic(50.0, None) is None
+    assert calculate_dividend_yield(None, 50.0) is None
+    assert calculate_dividend_yield(2.50, None) is None
