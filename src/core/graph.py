@@ -599,7 +599,7 @@ def route_after_consensus(
             ticker=state.target_ticker,
             iteration_count=state.iteration_count,
             p_value=state.cross_validation.p_value,
-            reason="Cross-validation sem significância estatística — reentrando no comitê via Fisher.",
+            reason="Cross-validation not statistically significant — re-entering committee via Fisher.",
         )
         return "fisher"
 
@@ -685,7 +685,7 @@ def create_graph(
         result["iteration_count"] = state.iteration_count + 1
         if route_after_consensus(state) == "fisher":
             result["reflection_feedback"] = (
-                "Cross-validation sem significância estatística — reentrando no comitê via Fisher."
+                "Cross-validation not statistically significant — re-entering committee via Fisher."
             )
         return result
 

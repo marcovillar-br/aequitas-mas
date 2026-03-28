@@ -480,7 +480,7 @@ def test_macro_includes_reflection_feedback_on_iteration_two(
         target_ticker="PETR4",
         as_of_date=date(2024, 1, 2),
         iteration_count=1,
-        reflection_feedback="Cross-validation insuficiente — reentrando no comitê.",
+        reflection_feedback="Cross-validation not significant — re-entering committee.",
     )
 
     agent(state)
@@ -489,4 +489,4 @@ def test_macro_includes_reflection_feedback_on_iteration_two(
     hyde_call_args = mock_hyde.call_args
     reflection_arg = hyde_call_args.kwargs.get("reflection", hyde_call_args.args[2] if len(hyde_call_args.args) > 2 else "")
     assert "[REFLECTION" in reflection_arg
-    assert "Cross-validation insuficiente" in reflection_arg
+    assert "Cross-validation not significant" in reflection_arg

@@ -728,10 +728,10 @@ def test_agent_state_accepts_iteration_fields() -> None:
         messages=[],
         target_ticker="PETR4",
         iteration_count=1,
-        reflection_feedback="Cross-validation insuficiente.",
+        reflection_feedback="Cross-validation not significant.",
     )
     assert state.iteration_count == 1
-    assert state.reflection_feedback == "Cross-validation insuficiente."
+    assert state.reflection_feedback == "Cross-validation not significant."
 
 
 def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:

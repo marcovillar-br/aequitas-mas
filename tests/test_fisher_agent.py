@@ -177,14 +177,14 @@ def test_fisher_includes_reflection_feedback_on_iteration_two(
         target_ticker="PETR4",
         as_of_date=date(2024, 1, 2),
         iteration_count=1,
-        reflection_feedback="Cross-validation insuficiente — reentrando no comitê.",
+        reflection_feedback="Cross-validation not significant — re-entering committee.",
     )
 
     fisher_agent(state)
 
     prompt = mock_structured.invoke.call_args.args[0]
     assert "[REFLECTION" in prompt
-    assert "Cross-validation insuficiente" in prompt
+    assert "Cross-validation not significant" in prompt
 
 
 @patch("src.agents.fisher.time.sleep")
