@@ -1,139 +1,173 @@
 ---
-plan_id: plan-sprint14-macro-validation-003
+plan_id: plan-sprint15-cyclic-graph-001
 target_files:
-  - "src/tools/econometric.py"
-  - "tests/tools/test_econometric.py"
   - "src/core/state.py"
-  - "src/agents/core.py"
-  - "tests/test_core_consensus_node.py"
+  - "src/core/graph.py"
+  - "tests/test_graph_routing.py"
   - ".context/current-sprint.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, pydantic-v2-frozen]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Phase 3 of Sprint 14: Macro-Signal Cross-Validation. Uses the OLS
-econometric tool (Phase 2) to test whether the Macro Agent's RAG confidence
-score (`macro_rag_score`) correlates with the Fisher Agent's sentiment signal
-(`fisher_rag_score`) — validating cross-agent signal coherence before the
-consensus gate.
+Sprint 15 Phase 1: Cyclic Graph Refinement. Transforms the Aequitas-MAS
+graph from a linear pipeline (`graham → fisher → macro → marks →
+core_consensus → __end__`) into a true cyclic graph where
+`core_consensus` can route back to `fisher` for a reflection loop when
+the committee's evidence is insufficiently validated.
 
-**Rationale:** If the macro environment assessment (HyDE RAG) and the
-qualitative sentiment analysis (Fisher) are both contributing meaningful
-signals, their scores should exhibit statistically significant correlation
-over multiple backtest windows. A low correlation (p > 0.05) suggests one
-of the signals is noise and should be discounted by the supervisor.
+**Architecture Change:**
+The current `router()` function routes `core_consensus → __end__`
+unconditionally. This phase adds a **post-consensus routing function**
+(`route_after_consensus`) that evaluates `iteration_count` and
+`cross_validation` to decide whether to loop back for another committee
+pass or terminate.
 
-Two axes of work:
+**Circuit Breaker:** `iteration_count >= 2` is a hard cap that prevents
+infinite LLM loops. This works alongside the existing `RECURSION_LIMIT=15`
+as a domain-level circuit breaker (the recursion limit is a framework
+safety net; `iteration_count` is a business-logic cap).
 
-1. **Cross-Validation Tool:** Add `cross_validate_agent_signals` to
-   `src/tools/econometric.py`. This function takes two agent score series
-   (e.g., macro_rag_scores and fisher_rag_scores from multiple runs) and
-   returns an `OLSResult` measuring their correlation. Reuses the existing
-   `calculate_ols_significance` under the hood.
+Three axes of work:
 
-2. **State & Consensus Wiring:** Add a
-   `cross_validation: Optional[EconometricResult] = None` field to
-   `AgentState` (separate from `signal_significance` which measures
-   signal vs returns). Inject it into the consensus prompt so the
-   supervisor can see whether the agents agree econometrically.
+1. **State Extension:** Add `iteration_count: int = 0` and
+   `reflection_feedback: Optional[str] = None` to `AgentState`.
+
+2. **Post-Consensus Router:** Implement `route_after_consensus(state)` that:
+   - Returns `"fisher"` when `iteration_count < 2` AND `cross_validation`
+     is None (evidence insufficient — trigger reflection loop).
+   - Returns `"__end__"` otherwise (either max iterations reached or
+     cross-validation data is present).
+   When routing back, `core_consensus_node` must patch
+   `iteration_count += 1` and set `reflection_feedback` with a reason.
+
+3. **Graph Wiring:** Replace `core_consensus → router` edge with
+   `core_consensus → route_after_consensus` to enable the reflection cycle.
 
 **SCOPE GUARD:**
-- Only `src/agents/core.py` modified among agent files.
-- No backtesting, fetcher, or infrastructure files modified.
+- No agent files (`src/agents/`) modified.
+- No tool files (`src/tools/`) modified.
 - No `.tf`, `.sh`, or `.yml` files modified.
+- `core_consensus_node` in `src/agents/core.py` is NOT modified — the
+  iteration_count increment is handled by a thin wrapper node in `graph.py`.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Cross-validation function (RED-GREEN-REFACTOR)
+### Step 2.1 — Extend AgentState with iteration fields (RED-GREEN-REFACTOR)
 
-* **Target:** `src/tools/econometric.py`
+* **Target:** `src/core/state.py`
+* **Execution mode:** code-bearing — write failing tests first.
+
+* **Action:**
+  Add two fields to `AgentState`:
+  ```python
+  iteration_count: int = Field(
+      default=0,
+      description="Number of completed committee iterations. Circuit breaker at 2.",
+  )
+  reflection_feedback: Optional[str] = Field(
+      default=None,
+      description="Feedback from post-consensus router explaining why a reflection loop was triggered.",
+  )
+  ```
+
+* **Test in `tests/test_graph_routing.py`:**
+
+**Test A — AgentState accepts iteration fields**
+```python
+def test_agent_state_accepts_iteration_fields() -> None:
+    """The state must transport iteration_count and reflection_feedback."""
+    state = AgentState(messages=[], target_ticker="PETR4", iteration_count=1,
+                       reflection_feedback="Cross-validation insuficiente.")
+    assert state.iteration_count == 1
+    assert state.reflection_feedback == "Cross-validation insuficiente."
+```
+
+---
+
+### Step 2.2 — Implement `route_after_consensus` function (RED-GREEN-REFACTOR)
+
+* **Target:** `src/core/graph.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
 * **Signature:**
+  ```python
+  def route_after_consensus(
+      state: AgentState,
+  ) -> Literal["fisher", "__end__"]:
+      """Post-consensus routing: loop back or terminate."""
+  ```
 
+* **Logic:**
+  - If `state.iteration_count < 2` AND `state.cross_validation is None`:
+    log `"reflection_loop_triggered"` and return `"fisher"`.
+  - Otherwise: return `"__end__"`.
+
+* **Tests in `tests/test_graph_routing.py`:**
+
+**Test B — Routes to fisher when iteration_count < 2 and cross_validation is None**
 ```python
-def cross_validate_agent_signals(
-    signal_a: Sequence[float | None],
-    signal_b: Sequence[float | None],
-) -> Optional[OLSResult]:
-    """Test correlation between two agent score series via OLS.
-
-    Delegates to calculate_ols_significance treating signal_a as the
-    independent variable and signal_b as the dependent variable.
-
-    Returns None when inputs are insufficient, mismatched, or when
-    signal_a has zero variance.
-    """
+def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
+    """First pass with no cross-validation must loop back to fisher."""
 ```
 
-* **Tests to add in `tests/tools/test_econometric.py`:**
-
-**Test A — Cross-validation with correlated signals returns significant result**
+**Test C — Routes to __end__ when iteration_count reaches cap**
 ```python
-def test_cross_validate_correlated_signals_returns_significant_result() -> None:
-    """Correlated agent signals must produce a low p-value."""
+def test_route_after_consensus_terminates_at_max_iterations() -> None:
+    """iteration_count >= 2 must terminate regardless of cross_validation."""
 ```
 
-**Test B — Cross-validation with uncorrelated signals returns high p-value**
+**Test D — Routes to __end__ when cross_validation is present**
 ```python
-def test_cross_validate_uncorrelated_signals_returns_high_p_value() -> None:
-    """Uncorrelated signals must produce p > 0.05."""
-```
-
-**Test C — Cross-validation degrades with insufficient data**
-```python
-def test_cross_validate_degrades_with_insufficient_data() -> None:
-    """Fewer than 3 valid pairs must degrade to None."""
+def test_route_after_consensus_terminates_when_cross_validation_present() -> None:
+    """Available cross_validation means evidence is sufficient — terminate."""
 ```
 
 ---
 
-### Step 2.2 — Add `cross_validation` field to AgentState (RED-GREEN-REFACTOR)
+### Step 2.3 — Wire `route_after_consensus` into graph and add iteration increment (RED-GREEN-REFACTOR)
 
-* **Target:** `src/core/state.py`
-* **Execution mode:** code-bearing — write failing test first.
-
-* **Action:**
-  Add `cross_validation: Optional[EconometricResult] = None` to `AgentState`,
-  adjacent to `signal_significance`.
-
-* **Test in `tests/test_core_consensus_node.py`:**
-
-**Test D — AgentState accepts cross_validation field**
-```python
-def test_agent_state_accepts_cross_validation_result() -> None:
-    """The state must transport cross-validation data without error."""
-```
-
----
-
-### Step 2.3 — Inject `cross_validation` into consensus prompt (RED-GREEN-REFACTOR)
-
-* **Target:** `src/agents/core.py`
+* **Target:** `src/core/graph.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
 * **Action:**
-  1. Add `{cross_validation}` to the consensus prompt human message after
-     `{signal_significance}`.
-  2. Pass `state.cross_validation.model_dump()` when available, else
-     `"Validação cruzada entre agentes não disponível."`.
+  1. In `create_graph()`, replace:
+     ```python
+     workflow.add_conditional_edges("core_consensus", router, router_map)
+     ```
+     with:
+     ```python
+     workflow.add_conditional_edges(
+         "core_consensus",
+         route_after_consensus,
+         {"fisher": "fisher", "__end__": END},
+     )
+     ```
 
-* **Tests in `tests/test_core_consensus_node.py`:**
+  2. Add a thin wrapper around `core_consensus_node` in `create_graph()`
+     that increments `iteration_count` in the returned patch:
+     ```python
+     def _consensus_with_iteration(state, config=None):
+         result = instrumented_consensus(state, config)
+         result["iteration_count"] = state.iteration_count + 1
+         return result
+     ```
+     Use this wrapper as the node callable instead of the raw instrumented
+     consensus. This keeps `src/agents/core.py` untouched.
 
-**Test E — Consensus receives cross_validation when available**
+* **Test in `tests/test_graph_routing.py`:**
+
+**Test E — Full graph halts at iteration_count == 2**
 ```python
-def test_core_consensus_passes_cross_validation_to_prompt() -> None:
-    """The supervisor prompt must receive cross-validation evidence."""
-```
-
-**Test F — Consensus degrades gracefully when cross_validation is None**
-```python
-def test_core_consensus_degrades_when_cross_validation_is_none() -> None:
-    """Missing cross-validation must not crash the consensus node."""
+def test_graph_halts_after_two_iterations(mock_agents) -> None:
+    """The graph must complete after at most 2 committee iterations."""
+    # Build state with cross_validation=None (trigger loop)
+    # Run graph via stream
+    # Assert core_consensus appears exactly 2 times in the path
+    # Assert the graph terminates (does not hang)
 ```
 
 ---
@@ -141,21 +175,23 @@ def test_core_consensus_degrades_when_cross_validation_is_none() -> None:
 ### Step 2.4 — Update `current-sprint.md` (artifact-only)
 
 * **Target:** `.context/current-sprint.md`
-* **Action:** Reopen Sprint 14 as IN PROGRESS, add Steps 6–8.
+* **Action:** Fill in the Sprint 15 Planned Steps with Steps 1–4.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/tools/econometric.py`: `cross_validate_agent_signals` delegates
-  to `calculate_ols_significance`.
-- [ ] `tests/tools/test_econometric.py`: Tests A–C passing.
-- [ ] `src/core/state.py`: `cross_validation: Optional[EconometricResult] = None`.
-- [ ] `tests/test_core_consensus_node.py`: Test D passing (state transport).
-- [ ] `src/agents/core.py`: Consensus prompt includes `{cross_validation}`.
-  Fallback to degradation string when `None`.
-- [ ] `tests/test_core_consensus_node.py`: Tests E–F passing.
+- [ ] `src/core/state.py`: `iteration_count: int = 0` and
+  `reflection_feedback: Optional[str] = None` on `AgentState`.
+- [ ] `tests/test_graph_routing.py`: Test A passing (state fields).
+- [ ] `src/core/graph.py`: `route_after_consensus` implemented with
+  circuit breaker at `iteration_count >= 2`.
+- [ ] `tests/test_graph_routing.py`: Tests B–D passing (routing logic).
+- [ ] `src/core/graph.py`: `core_consensus` edge replaced with
+  `route_after_consensus`. Iteration increment via wrapper node.
+- [ ] `tests/test_graph_routing.py`: Test E passing (full graph halt).
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** Only `src/agents/core.py` modified among agent files.
+- [ ] **HARD CONSTRAINT:** No agent files (`src/agents/`) modified.
+- [ ] **HARD CONSTRAINT:** No tool files (`src/tools/`) modified.
 - [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.

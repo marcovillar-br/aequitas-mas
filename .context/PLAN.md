@@ -52,11 +52,16 @@ Capacidades entregues e validadas no baseline:
 - `InstrumentedGraphApp` com `audit_sink` DI.
 - Structured API logging (request/response com latency_ms).
 
-### Sprint 14 (em andamento): CLI Observability & Presentation
+### Sprint 14: CLI Observability, Presentation & Econometric Validation
 - `structlog.dev.ConsoleRenderer` para ambiente local.
 - `ThesisReportPayload` enriquecido (as_of_date, market_price, approval_status).
 - Fail-fast router: ticker inválido pula Fisher/Macro/Marks.
-- `main.py` reconfigurado para usar telemetry module.
+- L10n pt-BR: recomendações, datas (DD/MM/YYYY), números (1.250,50).
+- `src/tools/econometric.py`: OLS determinístico (Gujarati methodology).
+- `EconometricResult` + `signal_significance` + `cross_validation` no `AgentState`.
+- Audit warning quando `p_value > 0.05`.
+- `cross_validate_agent_signals` (plumbing — aguardando score accumulator).
+- **240 testes passando.**
 
 ---
 
