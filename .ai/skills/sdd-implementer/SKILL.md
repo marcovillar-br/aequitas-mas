@@ -66,6 +66,8 @@ You MUST follow this exact sequence:
    - **8c. None Semantics:** For every `Optional` field used in routing or gating logic, verify that `None` means "unknown/absent — take no action" (safe default), NOT "trigger behavior". If the code acts on `None`, flag it as a potential production bug.
    - **8d. Boundary Inputs:** Verify all boundary inputs are validated (mismatched lengths, empty inputs, type mismatches).
    - **8e. Plan Coverage:** Verify every action listed in the plan step was implemented — not just the happy path.
+   - **8f. Validator Extension:** When adding new `Optional` fields to a Pydantic model that has an existing `@field_validator`, always add the new field names to the validator's field list. Never assume the validator covers new fields automatically.
+   - **8g. Format Consistency:** When rendering a value with a suffix (%, R$, /9), the suffix must be inside the conditional branch that checks for non-None — never unconditionally appended. When passing values to prompts, verify the unit in the prompt text matches the unit in the code (ratio vs percentage, decimal vs integer).
 9. **Sprint Checkpoint Update:** As each step from `current_plan.md` is completed, you MUST immediately mark the corresponding checkbox in `.context/current-sprint.md` from `- [ ]` to `- [x]`. Do not defer this to the end — update after each step.
 10. **EOD Summary:** Once the DoD is met, you MUST write a final report to `.ai/handoffs/eod_summary.md` detailing the validation performed (tests or artifact checks) and the dogmas respected.
 
