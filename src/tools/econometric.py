@@ -93,6 +93,9 @@ def calculate_ols_significance(
         OLSResult with slope, intercept, t-statistic, p-value, and R²,
         or None when regression cannot be computed.
     """
+    if len(signal_series) != len(return_series):
+        return None
+
     xs, ys = _filter_valid_pairs(signal_series, return_series)
     n = len(xs)
 

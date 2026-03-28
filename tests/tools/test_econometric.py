@@ -75,6 +75,12 @@ def test_ols_filters_none_values_from_series() -> None:
     assert result.n_observations == 3
 
 
+def test_ols_degrades_when_series_have_mismatched_lengths() -> None:
+    """Mismatched signal/return series must degrade to None, not silently truncate."""
+    assert calculate_ols_significance([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0]) is None
+    assert calculate_ols_significance([1.0], [1.0, 2.0, 3.0]) is None
+
+
 def test_ols_result_is_frozen() -> None:
     """OLSResult must be immutable."""
     result = OLSResult(slope=2.0, intercept=1.0, n_observations=5)
