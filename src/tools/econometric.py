@@ -155,3 +155,20 @@ def calculate_ols_significance(
         r_squared=r_squared,
         n_observations=n,
     )
+
+
+def cross_validate_agent_signals(
+    signal_a: Sequence[float | None],
+    signal_b: Sequence[float | None],
+) -> Optional[OLSResult]:
+    """Test correlation between two agent score series via OLS.
+
+    Delegates to calculate_ols_significance treating signal_a as the
+    independent variable and signal_b as the dependent variable.
+    Useful for validating whether Macro and Fisher signals exhibit
+    statistically significant coherence.
+
+    Returns None when inputs are insufficient, mismatched in length,
+    or when signal_a has zero variance.
+    """
+    return calculate_ols_significance(signal_a, signal_b)

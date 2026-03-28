@@ -441,3 +441,82 @@ def test_core_consensus_emits_audit_warning_when_p_value_above_threshold(
     sig_warnings = [e for e in audit_entries if "significância estatística" in e]
     assert len(sig_warnings) == 1
     assert "p-value=0.2500" in sig_warnings[0]
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 Phase 3 — Cross-validation wiring
+# ---------------------------------------------------------------------------
+
+
+def test_agent_state_accepts_cross_validation_result() -> None:
+    """The state must transport cross-validation data without error."""
+    eco = EconometricResult(
+        slope=1.8,
+        t_statistic=4.5,
+        p_value=0.002,
+        r_squared=0.85,
+        n_observations=20,
+    )
+    state = _build_state().model_copy(update={"cross_validation": eco})
+
+    assert state.cross_validation is not None
+    assert state.cross_validation.r_squared == 0.85
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_passes_cross_validation_to_prompt(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """The supervisor prompt must receive cross-validation evidence."""
+    eco = EconometricResult(
+        slope=1.8,
+        t_statistic=4.5,
+        p_value=0.002,
+        r_squared=0.85,
+        n_observations=20,
+    )
+    state = _build_state().model_copy(update={"cross_validation": eco})
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar kwargs.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "cross_validation" in invoke_kwargs
+    assert invoke_kwargs["cross_validation"] == eco.model_dump()
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_degrades_when_cross_validation_is_none(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """Missing cross-validation must not crash the consensus node."""
+    state = _build_state()  # cross_validation defaults to None
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar degradação.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "cross_validation" in invoke_kwargs
+    assert invoke_kwargs["cross_validation"] == "Validação cruzada entre agentes não disponível."

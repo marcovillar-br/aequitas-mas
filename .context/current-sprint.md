@@ -1,7 +1,7 @@
 # Project Status: Aequitas-MAS
 
 ## Sprint 14 — CLI Observability, Presentation & Econometric Validation
-**Status:** IN PROGRESS
+**Status:** DONE
 
 ### Objective
 Improve the local developer experience with human-readable structlog output,
@@ -18,11 +18,11 @@ signals, and cross-validate Macro/Fisher signal coherence.
 - [x] Step 4: Add `EconometricResult` schema to `AgentState` and inject
       `signal_significance` into `core_consensus_node` prompt.
 - [x] Step 5: Update SPEC.md Section 7 with econometric validation scope.
-- [ ] Step 6: Implement `cross_validate_agent_signals` in `econometric.py`
+- [x] Step 6: Implement `cross_validate_agent_signals` in `econometric.py`
       for Macro/Fisher signal correlation testing.
-- [ ] Step 7: Add `cross_validation` field to `AgentState` and inject into
+- [x] Step 7: Add `cross_validation` field to `AgentState` and inject into
       `core_consensus_node` prompt.
-- [ ] Step 8: Update `current-sprint.md` checkpoints.
+- [x] Step 8: Update `current-sprint.md` checkpoints.
 
 ### Delivered Scope (Phases 1–2)
 1. `structlog.dev.ConsoleRenderer` for local, `JSONRenderer` for cloud.
@@ -43,11 +43,19 @@ signals, and cross-validate Macro/Fisher signal coherence.
 - [x] EconometricResult in AgentState + consensus integration
 - [x] 232 tests passing, 0 regressions
 
+### Delivered Scope (Phase 3)
+9. `cross_validate_agent_signals` in `econometric.py` (pure delegation).
+10. `AgentState.cross_validation` field + consensus prompt wiring.
+11. 3 pure-text fallback strings preventing hallucination when stats are None.
+
 ### Residual Risks
 - OLS inference requires minimum 3 paired observations; real-world signal
   series from the committee may be shorter in early sessions.
 - Cross-validation assumes agent scores are comparable in scale; divergent
   score ranges may require normalization in a future sprint.
+
+### Next Planning Target
+- Sprint 15 — Cyclic Graph Refinement (milestone v2.5).
 
 ---
 
