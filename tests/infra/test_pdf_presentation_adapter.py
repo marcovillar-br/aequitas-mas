@@ -213,3 +213,54 @@ def test_pdf_adapter_renders_price_in_brazilian_format() -> None:
     html = adapter.render_html(payload)
 
     assert "1.250,50" in html
+
+
+# ---------------------------------------------------------------------------
+# Sprint 16 Phase 3 — Tearsheet / Quantitative Health panel
+# ---------------------------------------------------------------------------
+
+
+def test_thesis_payload_accepts_sota_metrics() -> None:
+    """ThesisReportPayload must accept the 4 SOTA factor fields."""
+    payload = ThesisReportPayload(
+        thesis="Test SOTA.",
+        piotroski_f_score=8,
+        altman_z_score=3.2,
+        roic=0.18,
+        dividend_yield=0.045,
+    )
+    assert payload.piotroski_f_score == 8
+    assert payload.altman_z_score == 3.2
+    assert payload.roic == 0.18
+    assert payload.dividend_yield == 0.045
+
+
+def test_pdf_adapter_renders_quantitative_health_panel() -> None:
+    """The HTML report must include a Quantitative Health section."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(
+        thesis="Test QH panel.",
+        piotroski_f_score=7,
+        altman_z_score=2.8,
+        roic=0.15,
+        dividend_yield=0.03,
+    )
+
+    html = adapter.render_html(payload)
+
+    assert "Quantitative Health" in html
+    assert "Piotroski" in html
+    assert "7" in html
+    assert "2,80" in html  # BRL format
+    assert "15,00" in html  # ROIC as percentage
+
+
+def test_pdf_adapter_degrades_none_sota_metrics() -> None:
+    """Missing SOTA metrics must render as N/A."""
+    adapter = PdfPresentationAdapter()
+    payload = ThesisReportPayload(thesis="Test degradation.")
+
+    html = adapter.render_html(payload)
+
+    assert "Quantitative Health" in html
+    assert html.count("N/A") >= 4  # piotroski, altman, roic, dy all N/A

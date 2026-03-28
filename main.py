@@ -79,6 +79,15 @@ def print_report(final_state: dict) -> None:
     print(f"{status_icon} Status do Comitê: {approval_status}")
     print("-" * 80)
     
+    # Section 0: Quantitative Health (SOTA Factors)
+    print("\n📋 SAÚDE QUANTITATIVA (SOTA Factors):")
+    if metrics:
+        print(f"   • ROIC: {format_brl_number(metrics.roic * 100.0) + '%' if metrics.roic is not None else 'N/A'}")
+        print(f"   • Dividend Yield: {format_brl_number(metrics.dividend_yield * 100.0) + '%' if metrics.dividend_yield is not None else 'N/A'}")
+    else:
+        print("   • ROIC: N/A")
+        print("   • Dividend Yield: N/A")
+
     # Section 1: Quantitative Analysis (Graham)
     if metrics:
         print("\n📈 ANÁLISE QUANTITATIVA (Graham Agent):")

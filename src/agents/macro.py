@@ -25,6 +25,7 @@ DIP Enforcement:
     No infrastructure SDK (boto3, opensearch-py) is imported here.
 """
 
+import os
 import time
 from collections.abc import Callable
 from datetime import date
@@ -52,6 +53,8 @@ from src.core.interfaces.vector_store import (
 from src.core.state import AgentState, MacroAnalysis
 
 logger = structlog.get_logger(__name__)
+
+_FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
 
 
 def _resolve_as_of_date(state: AgentState) -> date:
@@ -285,9 +288,9 @@ def create_macro_agent(
             pipeline="HyDE+RAG",
         )
 
-        # Free-Tier rate limiting before first LLM call.
-        logger.debug("macro_agent_rate_limit_applied", sleep_seconds=15)
-        time.sleep(15)
+        if _FREE_TIER_THROTTLE:
+            logger.debug("free_tier_throttle_applied", sleep_seconds=15)
+            time.sleep(15)
 
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
@@ -337,8 +340,9 @@ def create_macro_agent(
             # ------------------------------------------------------------------
             context_block = _format_retrieved_context(retrieved_docs)
 
-            # Free-Tier throttle before second LLM call.
-            time.sleep(10)
+            if _FREE_TIER_THROTTLE:
+                logger.debug("free_tier_throttle_applied", sleep_seconds=10)
+                time.sleep(10)
 
             synthesis_chain = _SYNTHESIS_PROMPT | llm.with_structured_output(MacroAnalysis)
             raw_result: MacroAnalysis = _invoke_synthesis_chain(

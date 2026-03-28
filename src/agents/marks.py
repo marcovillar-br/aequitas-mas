@@ -6,7 +6,9 @@ This module defines the agent responsible for acting as the "Devil's Advocate,"
 auditing the quantitative analysis from Graham and the qualitative analysis from
 Fisher to provide a final, risk-adjusted verdict.
 """
+import os
 import time
+
 import structlog
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -18,6 +20,8 @@ from src.core.state import AgentState
 
 # Initialize structured logger for observability
 log = structlog.get_logger(__name__)
+
+_FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
 
 
 class MarksVerdict(BaseModel):
@@ -52,9 +56,9 @@ def marks_agent(state: AgentState) -> dict:
     ticker = state.target_ticker
     log.info("agente_marks_invocado", ticker=ticker)
 
-    # Free-Tier Rate Limiting
-    log.debug("Applying API rate limit throttling (Free Tier)", sleep_seconds=15)
-    time.sleep(15)
+    if _FREE_TIER_THROTTLE:
+        log.debug("free_tier_throttle_applied", sleep_seconds=15)
+        time.sleep(15)
 
     metrics = state.metrics
     qual_analysis = state.qual_analysis
