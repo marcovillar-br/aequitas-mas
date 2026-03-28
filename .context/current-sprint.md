@@ -1,5 +1,17 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 15 — Cyclic Graph Refinement
+**Status:** IN PROGRESS
+**Target Branch:** `feature/sprint15-cyclic-graph`
+
+### Objective
+_Pending Orchestrator plan. Aligned with milestone v2.5._
+
+### Planned Steps
+_To be defined by `sdd-writing-plans`._
+
+---
+
 ## Sprint 14 — CLI Observability, Presentation & Econometric Validation
 **Status:** DONE
 
