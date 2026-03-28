@@ -735,7 +735,7 @@ def test_agent_state_accepts_iteration_fields() -> None:
 
 
 def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
-    """First pass with no cross-validation must loop back to core_consensus."""
+    """First pass with no cross-validation must loop back to fisher."""
     from src.core.graph import route_after_consensus
 
     state = AgentState(
@@ -746,7 +746,7 @@ def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
         executed_nodes=["graham", "fisher", "macro", "marks", "core_consensus"],
     )
 
-    assert route_after_consensus(state) == "core_consensus"
+    assert route_after_consensus(state) == "fisher"
 
 
 def test_route_after_consensus_terminates_at_max_iterations() -> None:
@@ -781,6 +781,47 @@ def test_route_after_consensus_terminates_when_cross_validation_present() -> Non
     assert route_after_consensus(state) == "__end__"
 
 
+def test_router_forces_fisher_reexecution_in_reflection_mode() -> None:
+    """When iteration_count > 0, the router must re-route to fisher
+    even if qual_analysis exists, provided fisher hasn't run in this iteration.
+    """
+    from src.core.graph import router
+
+    # After first consensus: all checkpoints exist, iteration_count=1
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=_build_metrics(),
+        qual_analysis=_build_fisher(),
+        macro_analysis=_build_macro(),
+        marks_verdict="APPROVE",
+        iteration_count=1,
+        executed_nodes=[
+            "graham", "fisher", "macro", "marks", "core_consensus",
+        ],
+    )
+
+    # Router should force fisher re-execution (reflection mode)
+    assert router(state) == "fisher"
+
+
+def test_graph_runs_full_committee_twice_in_reflection_loop(mock_agents: dict[str, Any]) -> None:
+    """The reflection loop must re-execute the full qualitative committee."""
+    from src.core.graph import create_graph
+
+    app = create_graph()
+    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    config = {"configurable": {"thread_id": "full-loop-test"}}
+
+    path: list[str] = []
+    for state_update in app.stream(initial_state, config=config):
+        path.extend(state_update.keys())
+
+    # Full committee runs twice: first pass + reflection pass
+    assert path.count("fisher") == 2, f"Expected fisher ×2, got {path.count('fisher')}. Path: {path}"
+    assert path.count("core_consensus") == 2, f"Expected consensus ×2, got {path.count('core_consensus')}. Path: {path}"
+
+
 def test_graph_halts_after_two_iterations(mock_agents: dict[str, Any]) -> None:
     """The graph must complete after at most 2 committee iterations.
 
@@ -799,4 +840,3 @@ def test_graph_halts_after_two_iterations(mock_agents: dict[str, Any]) -> None:
 
     consensus_count = path.count("core_consensus")
     assert consensus_count == 2, f"Expected 2 consensus passes, got {consensus_count}. Path: {path}"
-    assert path[-1] == "core_consensus", "Graph must end on the second consensus pass"

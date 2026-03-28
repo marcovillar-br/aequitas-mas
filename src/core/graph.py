@@ -484,6 +484,20 @@ def _has_specialist_checkpoint(state: AgentState, node_name: str) -> bool:
     return checkpoint_map[node_name] or node_name in state.executed_nodes
 
 
+def _nodes_since_last_consensus(state: AgentState) -> set[str]:
+    """Return the set of nodes executed after the most recent consensus pass.
+
+    Used by the reflection-mode router to determine which qualitative agents
+    still need to re-run in the current iteration.
+    """
+    nodes = list(state.executed_nodes)
+    try:
+        last_consensus_idx = len(nodes) - 1 - nodes[::-1].index("core_consensus")
+        return set(nodes[last_consensus_idx + 1:])
+    except ValueError:
+        return set(nodes)
+
+
 def _graham_fully_degraded(state: AgentState) -> bool:
     """Detect total Graham degradation indicating an invalid or delisted ticker.
 
@@ -532,6 +546,18 @@ def router(
             return "core_consensus"
         return "__end__"
 
+    # Reflection mode: force qualitative re-execution when looping
+    # Only active when iteration budget is not yet exhausted
+    if 0 < state.iteration_count < _MAX_ITERATIONS:
+        recent = _nodes_since_last_consensus(state)
+        if "fisher" not in recent:
+            return "fisher"
+        if "macro" not in recent:
+            return "macro"
+        if "marks" not in recent:
+            return "marks"
+        return "core_consensus"
+
     if not _has_specialist_checkpoint(state, "fisher"):
         return "fisher"
 
@@ -552,27 +578,23 @@ _MAX_ITERATIONS = 2
 
 def route_after_consensus(
     state: AgentState,
-) -> Literal["core_consensus", "__end__"]:
-    """Post-consensus routing: re-evaluate or terminate.
+) -> Literal["fisher", "__end__"]:
+    """Post-consensus routing: re-run qualitative committee or terminate.
 
-    Returns "core_consensus" when the committee has not exhausted its iteration
-    budget AND cross-validation evidence is absent — giving the supervisor a
-    second pass with updated iteration_count. Returns "__end__" when either the
-    circuit breaker fires (iteration_count >= 2) or cross-validation data is
-    present (evidence sufficient).
-
-    Note: Phase 1 loops back to core_consensus directly. Phase 2 will extend
-    this to re-run the full qualitative committee (fisher→macro→marks→consensus)
-    once checkpoint clearing for LangGraph frozen state is resolved.
+    Returns "fisher" when the committee has not exhausted its iteration budget
+    AND cross-validation evidence is absent — triggering a full committee
+    reflection loop (fisher → macro → marks → consensus). Returns "__end__"
+    when either the circuit breaker fires (iteration_count >= 2) or
+    cross-validation data is present (evidence sufficient).
     """
     if state.iteration_count < _MAX_ITERATIONS and state.cross_validation is None:
         logger.info(
             "reflection_loop_triggered",
             ticker=state.target_ticker,
             iteration_count=state.iteration_count,
-            reason="Cross-validation insuficiente — re-avaliando consenso.",
+            reason="Cross-validation insuficiente — reentrando no comitê via Fisher.",
         )
-        return "core_consensus"
+        return "fisher"
 
     return "__end__"
 
@@ -654,9 +676,9 @@ def create_graph(
         """
         result = instrumented_consensus(state, config)
         result["iteration_count"] = state.iteration_count + 1
-        if route_after_consensus(state) == "core_consensus":
+        if route_after_consensus(state) == "fisher":
             result["reflection_feedback"] = (
-                "Cross-validation insuficiente — re-avaliando consenso."
+                "Cross-validation insuficiente — reentrando no comitê via Fisher."
             )
         return result
 
@@ -674,7 +696,7 @@ def create_graph(
 
     # Post-consensus routing map (reflection loop or terminate)
     post_consensus_map = {
-        "core_consensus": "core_consensus",
+        "fisher": "fisher",
         "__end__": END,
     }
 

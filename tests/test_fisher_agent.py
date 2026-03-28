@@ -148,3 +148,70 @@ def test_fisher_agent_tool_failure(mock_get_news, initial_state: AgentState) -> 
     assert analysis.key_risks == ["Falha na ferramenta de notícias: API Failure"]
     assert len(result_delta["audit_log"]) == 1
     assert "CRÍTICO: Ferramenta de notícias falhou" in result_delta["audit_log"][0]
+
+
+# ---------------------------------------------------------------------------
+# Sprint 15 Phase 2 — Reflection feedback injection
+# ---------------------------------------------------------------------------
+
+
+@patch("src.agents.fisher.time.sleep")
+@patch("src.agents.fisher.ChatGoogleGenerativeAI")
+@patch("src.agents.fisher.get_ticker_news")
+def test_fisher_includes_reflection_feedback_on_iteration_two(
+    mock_get_news,
+    mock_llm_cls,
+    mock_sleep,
+) -> None:
+    """Fisher prompt must contain the reflection block when iteration_count > 0."""
+    mock_get_news.return_value = MOCK_NEWS_ITEMS
+
+    mock_structured = MagicMock()
+    mock_structured.invoke.return_value = MOCK_LLM_ANALYSIS
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_structured
+    mock_llm_cls.return_value = mock_llm
+
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        iteration_count=1,
+        reflection_feedback="Cross-validation insuficiente — reentrando no comitê.",
+    )
+
+    fisher_agent(state)
+
+    prompt = mock_structured.invoke.call_args.args[0]
+    assert "[REFLECTION" in prompt
+    assert "Cross-validation insuficiente" in prompt
+
+
+@patch("src.agents.fisher.time.sleep")
+@patch("src.agents.fisher.ChatGoogleGenerativeAI")
+@patch("src.agents.fisher.get_ticker_news")
+def test_fisher_prompt_unchanged_on_first_iteration(
+    mock_get_news,
+    mock_llm_cls,
+    mock_sleep,
+) -> None:
+    """First-pass behavior must be identical to pre-Phase-2."""
+    mock_get_news.return_value = MOCK_NEWS_ITEMS
+
+    mock_structured = MagicMock()
+    mock_structured.invoke.return_value = MOCK_LLM_ANALYSIS
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_structured
+    mock_llm_cls.return_value = mock_llm
+
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        iteration_count=0,
+    )
+
+    fisher_agent(state)
+
+    prompt = mock_structured.invoke.call_args.args[0]
+    assert "[REFLECTION" not in prompt
