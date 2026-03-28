@@ -17,6 +17,11 @@ risk-adjusted decision gating. Maintain Sprint 15 iteration_count logic.
 - [x] Step 3: Enrich `core_consensus_node` prompt with SOTA factor data
       for risk-adjusted consensus gating (auto via model_dump).
 - [x] Step 4: Integrated committee test with expanded factor suite.
+- [ ] Step 5: Wire `calculate_roic` and `calculate_dividend_yield` into
+      `graham_agent` via `_build_metrics_from_historical_data`.
+- [ ] Step 6: Enrich Graham interpreter prompt with ROIC and DY inputs.
+- [ ] Step 7: Update CoT prompt `.ai/prompts/graham_agent_v2.md` with
+      ROIC/DY interpretation guidance.
 
 ### Residual Risks
 - ROIC requires operating income and invested capital data which may not
