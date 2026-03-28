@@ -1,70 +1,40 @@
 ---
-summary_id: eod-sprint15-cyclic-graph-002
+summary_id: eod-pre-sprint16-doc-sync-001
 status: completed
 target_files:
-  - "src/core/graph.py"
-  - "src/agents/fisher.py"
-  - "src/agents/macro.py"
-  - "src/agents/marks.py"
-  - "tests/test_graph_routing.py"
-  - "tests/test_fisher_agent.py"
-  - "tests/test_macro_agent.py"
-  - ".context/current-sprint.md"
-tests_run: ["250 passed, 0 failed, 0 regressions"]
-dogmas_respected: [zero-math-policy, risk-confinement, controlled-degradation, pydantic-v2-frozen, dip]
+  - ".context/SPEC.md"
+  - "docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md"
+  - ".context/PLAN.md"
+tests_run: ["N/A — artifact-only scope"]
+dogmas_respected: [artifact-driven-communication, scope-discipline, ssot]
 ---
 
 ## 1. Implementation Summary
 
-Sprint 15 Phase 2 executed on branch `feature/sprint15-cyclic-graph`.
+Pre-Sprint 16 architectural documentation sync on branch
+`feature/sprint15-cyclic-graph`.
 
-- **Router Reflection Mode:** `router()` now detects when `0 < iteration_count
-  < _MAX_ITERATIONS` and forces qualitative agent re-execution using
-  `_nodes_since_last_consensus()` to track which agents ran in the current
-  iteration. This enables the full committee loop without clearing frozen
-  Pydantic state checkpoints.
-- **Route Change:** `route_after_consensus` now returns `"fisher"` (not
-  `"core_consensus"`), triggering the complete committee re-evaluation path:
-  `fisher → macro → marks → consensus`.
-- **Prompt Injection:** All 3 qualitative agents (Fisher, Macro, Marks) now
-  conditionally prepend a `[REFLECTION — Iteration N]` block when
-  `iteration_count > 0` and `reflection_feedback` is present. The block
-  contains pure natural language feedback from the consensus — zero math.
-  When `iteration_count == 0`, the block is empty string — zero impact on
-  first-pass behavior.
-- **LangGraph Frozen State Solution:** Instead of clearing checkpoints (not
-  possible with `frozen=True`), the router tracks recently-executed nodes
-  via `_nodes_since_last_consensus` to force re-routing through the
-  qualitative committee.
+- **SPEC.md:** Section 1 now shows the cyclic topology with a full ASCII
+  diagram depicting `route_after_consensus`, the fisher loop, and the
+  `__end__` termination paths. Added 3 new invariants (circuit breaker,
+  reflection prompt, Graham exclusion). Section 2.1 now documents
+  `iteration_count`, `reflection_feedback`, `signal_significance`, and
+  `cross_validation`. Section 7 updated to Sprint 15 delivered scope
+  with v3.0 as next target.
+- **Official Architecture Doc:** Replaced "Grafos Acíclicos Direcionados
+  (DAGs)" with "Grafo Cíclico com semântica de Comitê Iterativo e
+  Self-Reflection". Documented the `[REFLECTION — Iteration N]` prompt
+  injection and `_MAX_ITERATIONS=2` as acceptance criterion. Corrected
+  `SqliteSaver` → `MemorySaver` (factual fix).
+- **PLAN.md:** Verified v2.5 ✅ DELIVERED and v3.0 NEXT — no changes needed.
 
 ## 2. Validation Performed
 
-- `pytest`: 250 tests passed with 0 regressions (+5 new: A–E).
-- `ruff check`: All checks passed.
-- Post-Implementation Self-Review: docstrings ✅, boundaries ✅, plan actions ✅,
-  state field liveness ✅.
-- Hard constraints verified: graham.py untouched, src/tools/ untouched.
+- Scope guard: only 2 `.md` files modified, zero `.py`/`.tf`/`.sh`/`.yml`.
+- ASCII diagram validated for logical accuracy.
+- All 4 new AgentState fields documented in SPEC.md §2.1.
+- Risk Confinement invariant preserved in §1.
 
 ## 3. Scope Control
 
-`src/agents/graham.py` NOT modified. Zero `src/tools/` modifications. Zero
-`.tf`/`.sh`/`.yml` modifications. Reflection block is pure text — no math
-in agent prompts. First-pass (iteration_count=0) behavior is byte-for-byte
-identical to pre-Phase-2.
-
-## 4. Sprint 15 — Consolidated Delivery
-
-| Plan | Phase | Tests Added | Total |
-| :--- | :--- | :---: | :---: |
-| plan-sprint15-cyclic-graph-001 | Self-reflection (consensus→consensus) | +5 | 245 |
-| plan-sprint15-cyclic-graph-002 | Full committee loop (consensus→fisher→...→consensus) | +5 | 250 |
-
-**Graph topology delivered:**
-```
-consensus → route_after_consensus
-              │
-              ├─ iter < 2 && cv=None → fisher
-              │   → router (reflection mode)
-              │   → fisher → macro → marks → consensus
-              └─ iter ≥ 2 || cv ok → __end__
-```
+Documentation-only. Zero code changes. Zero test changes.
