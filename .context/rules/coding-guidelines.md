@@ -49,6 +49,14 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Boundary Rule:** `decimal.Decimal` is forbidden at graph or schema boundaries; deterministic tools must return `float` or `None`.
 - **Mathematical Delegation:** Financial formulas belong in deterministic Python under `/src/tools/`, never in prompts or domain prose.
 
+## 4b. Phase 0 — Git Isolation (Mandatory Pre-Planning Gate)
+Every new sprint or feature MUST begin with a synchronized workspace:
+1. `git fetch --all --prune` — sync remote refs.
+2. `git checkout development && git pull --ff-only` — ensure base is current.
+3. `git checkout -b feature/<sprint>-<name> && git push -u origin <branch>` — create and publish.
+4. Record the branch as `Target Branch` in `.context/current-sprint.md`.
+5. No planning or coding may occur on `main` or `development` directly.
+
 ## 5. Quality & Testing (TDD)
 - **Framework**: `pytest` and `pytest-asyncio`.
 - **Financial Logic**: Mandatory unit tests for deterministic mathematical functions (e.g., Graham calculations).
