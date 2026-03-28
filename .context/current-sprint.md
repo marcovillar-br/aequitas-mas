@@ -1,5 +1,46 @@
 # Project Status: Aequitas-MAS
 
+## Sprint 17 — SOTA Historical Refinement & Triple Barrier
+**Status:** IN PROGRESS
+**Target Branch:** `feature/sota-historical-refinement`
+
+### Objective
+Execute the SOTA refinement cycle documented in
+`docs/official/Aequitas-MAS_97_Refinamento_ML_Dados_Historicos_v1_pt-BR.md`.
+Two primary axes:
+
+1. **5-Year Horizon Transition:** Reduce the Graham fundamentalist analysis
+   window from 10 years to 5 years (≈1260 trading days), adapting filters
+   to the B3 emerging market reality per Testa & Lima (2012). Update
+   `HistoricalDataLoader`, `fundamental_metrics.py` thresholds, and the
+   Graham CoT prompt to reflect the adapted criteria table.
+
+2. **Triple Barrier Implementation:** Implement the AlphaX-inspired Triple
+   Barrier framework as a deterministic tool in `src/tools/`:
+   - Upper Barrier (Take Profit): Graham fair value convergence signal.
+   - Lower Barrier (Stop Loss): Fundamental deterioration signal via
+     dynamic Altman Z-Score / Piotroski degradation.
+   - Vertical Barrier (Time Window): Quarterly accounting refresh forcing
+     thesis re-evaluation at each CVM filing.
+
+### Suspended Items (Explicitly Deferred)
+- **Item E — Graph Neural Networks (GNN/GAT/STGAT):** SUSPENDED.
+  Requires dedicated GPU inference infrastructure (SageMaker endpoints)
+  and `NetworkRiskMetrics` schema not yet implemented. Deferred to a
+  future sprint after AWS infra is provisioned. Zero GNN code will be
+  written in this sprint.
+
+### Planned Steps
+_To be defined by `sdd-writing-plans`._
+
+### Residual Risks
+- 5-year horizon reduces the eligible B3 universe — some tickers may lack
+  sufficient history. Controlled degradation to None.
+- Triple Barrier thresholds require empirical calibration via backtesting
+  before production use.
+
+---
+
 ## Sprint 16 — SOTA Factor Expansion (Quality/Momentum/Growth)
 **Status:** DONE
 **Target Branch:** `feature/sprint16-sota-factors`
