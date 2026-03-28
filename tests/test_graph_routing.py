@@ -735,14 +735,16 @@ def test_agent_state_accepts_iteration_fields() -> None:
 
 
 def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
-    """First pass with no cross-validation must loop back to fisher."""
+    """Cross-validation with p_value > 0.05 must loop back to fisher."""
     from src.core.graph import route_after_consensus
+    from src.core.state import EconometricResult
 
+    weak_cv = EconometricResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
     state = AgentState(
         messages=[],
         target_ticker="PETR4",
         iteration_count=0,
-        cross_validation=None,
+        cross_validation=weak_cv,
         executed_nodes=["graham", "fisher", "macro", "marks", "core_consensus"],
     )
 
@@ -808,9 +810,12 @@ def test_router_forces_fisher_reexecution_in_reflection_mode() -> None:
 def test_graph_runs_full_committee_twice_in_reflection_loop(mock_agents: dict[str, Any]) -> None:
     """The reflection loop must re-execute the full qualitative committee."""
     from src.core.graph import create_graph
+    from src.tools.econometric import OLSResult
 
     app = create_graph()
-    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    # Provide weak cross_validation (p>0.05) to trigger reflection loop
+    weak_cv = OLSResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
+    initial_state = {"messages": [], "target_ticker": "PETR4", "cross_validation": weak_cv}
     config = {"configurable": {"thread_id": "full-loop-test"}}
 
     path: list[str] = []
@@ -825,13 +830,15 @@ def test_graph_runs_full_committee_twice_in_reflection_loop(mock_agents: dict[st
 def test_graph_halts_after_two_iterations(mock_agents: dict[str, Any]) -> None:
     """The graph must complete after at most 2 committee iterations.
 
-    With cross_validation=None, the reflection loop triggers. The graph
-    must run core_consensus exactly 2 times then terminate.
+    With weak cross_validation (p>0.05), the reflection loop triggers. The
+    graph must run core_consensus exactly 2 times then terminate.
     """
     from src.core.graph import create_graph
+    from src.tools.econometric import OLSResult
 
     app = create_graph()
-    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    weak_cv = OLSResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
+    initial_state = {"messages": [], "target_ticker": "PETR4", "cross_validation": weak_cv}
     config = {"configurable": {"thread_id": "cycle-test-001"}}
 
     path: list[str] = []

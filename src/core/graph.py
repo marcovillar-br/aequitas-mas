@@ -582,17 +582,24 @@ def route_after_consensus(
     """Post-consensus routing: re-run qualitative committee or terminate.
 
     Returns "fisher" when the committee has not exhausted its iteration budget
-    AND cross-validation evidence is absent — triggering a full committee
-    reflection loop (fisher → macro → marks → consensus). Returns "__end__"
-    when either the circuit breaker fires (iteration_count >= 2) or
-    cross-validation data is present (evidence sufficient).
+    AND cross-validation evidence explicitly indicates insufficient signal
+    coherence (p_value > 0.05) — triggering a full committee reflection loop
+    (fisher → macro → marks → consensus). Returns "__end__" when the circuit
+    breaker fires (iteration_count >= 2), cross-validation is absent (unknown),
+    or cross-validation is statistically significant (p_value <= 0.05).
     """
-    if state.iteration_count < _MAX_ITERATIONS and state.cross_validation is None:
+    if (
+        state.iteration_count < _MAX_ITERATIONS
+        and state.cross_validation is not None
+        and state.cross_validation.p_value is not None
+        and state.cross_validation.p_value > 0.05
+    ):
         logger.info(
             "reflection_loop_triggered",
             ticker=state.target_ticker,
             iteration_count=state.iteration_count,
-            reason="Cross-validation insuficiente — reentrando no comitê via Fisher.",
+            p_value=state.cross_validation.p_value,
+            reason="Cross-validation sem significância estatística — reentrando no comitê via Fisher.",
         )
         return "fisher"
 
@@ -678,7 +685,7 @@ def create_graph(
         result["iteration_count"] = state.iteration_count + 1
         if route_after_consensus(state) == "fisher":
             result["reflection_feedback"] = (
-                "Cross-validation insuficiente — reentrando no comitê via Fisher."
+                "Cross-validation sem significância estatística — reentrando no comitê via Fisher."
             )
         return result
 
