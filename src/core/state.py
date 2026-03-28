@@ -67,6 +67,14 @@ class GrahamMetrics(BaseModel):
     margin_of_safety: Optional[float] = Field(
         description="Margem de segurança percentual.",
     )
+    roic: Optional[float] = Field(
+        default=None,
+        description="Return on Invested Capital (ROIC).",
+    )
+    dividend_yield: Optional[float] = Field(
+        default=None,
+        description="Annual Dividend Yield.",
+    )
 
     @field_validator(
         "vpa",

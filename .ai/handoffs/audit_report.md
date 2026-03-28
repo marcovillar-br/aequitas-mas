@@ -1,57 +1,70 @@
 ---
-audit_id: "audit-plan-pre-sprint16-doc-sync-001-20260328"
-plan_validated: "plan-pre-sprint16-doc-sync-001"
+audit_id: "audit-plan-sprint16-sota-factors-001-20260328"
+plan_validated: "plan-sprint16-sota-factors-001"
 status: "PASSED"
 failed_checks: []
-tdd_verified: false
-audit_scope: "artifact-only"
+tdd_verified: true
+audit_scope: "code-bearing"
 ---
 
 ## 1. Executive Summary
 
-**PASSED — All 6 DoD criteria satisfied.**
+**PASSED — All 10 DoD criteria satisfied.**
 
-Documentation-only update. Zero `.py`, `.tf`, `.sh`, or `.yml` files modified.
-SPEC.md now reflects the Cyclic Graph topology with ASCII diagram, 4 new
-AgentState fields, and updated Section 7 pointing to v3.0. The official
-architecture document accurately describes the reflection capability and
-circuit breaker. PLAN.md verified: v2.5 ✅ DELIVERED, v3.0 NEXT. Push gate
-unblocked.
+The `sdd-implementer` executed all 4 steps with complete RED-GREEN-REFACTOR
+cycle. Suite grew from 250 to 257 tests (+7 new), with 0 regressions.
+Both `calculate_roic` and `calculate_dividend_yield` are pure Python math
+with zero LLM dependency. Schema expansion is additive — all existing tests
+pass without modification. Push gate unblocked.
 
 ---
 
 ## 2. Dogma Compliance Analysis
 
-### Check 2.1: Hard Constraints
+### Check 2.1: Risk Confinement (Math/LLM Isolation)
+* **Status:** PASSED
+* **Findings:** `fundamental_metrics.py` contains zero imports from
+  `langchain`, `ChatGoogle`, or any LLM dependency. Both new functions
+  use only `math.isfinite()` and `_coerce_optional_finite_float()` —
+  pure deterministic Python. 5 `isfinite` guards across the module.
+
+### Check 2.2: Pydantic V2 Integrity
 * **Status:** PASSED
 * **Findings:**
-  - `.py` files modified: 0 ✅
-  - `.tf`/`.sh`/`.yml` files modified: 0 ✅
-  - Only `.md` files in scope: SPEC.md + official doc ✅
+  - `GrahamMetrics`: `frozen=True`, `roic: Optional[float]` and
+    `dividend_yield: Optional[float]` covered by existing
+    `validate_finite_float` field_validator. ✅
+  - `HistoricalMarketData`: `frozen=True`, both new fields added to the
+    `validate_finite_metrics` validator list. ✅
+  - Zero `decimal.Decimal` in tools or state. ✅
 
-### Check 2.2: Diagram Integrity
+### Check 2.3: Inversion of Control
 * **Status:** PASSED
-* **Findings:** ASCII diagram in SPEC.md §1 accurately depicts:
-  - `route_after_consensus` as the decision point after consensus ✅
-  - `fisher (loop)` branch when `cv.p_value > 0.05 && iter < 2` ✅
-  - `__end__` branch when `iter >= 2 || cv absent || cv significant` ✅
-  - Reflection mode annotation showing `_nodes_since_last_consensus` ✅
+* **Findings:** Zero `boto3`, `os.getenv`, or `os.environ` in any modified
+  file. Tools remain infrastructure-agnostic.
 
-### Check 2.3: SSOT Consistency
+### Check 2.4: Temporal Invariance
+* **Status:** PASSED
+* **Findings:** `HistoricalMarketData.as_of_date` field preserved. New
+  `roic` and `dividend_yield` fields are point-in-time snapshots bound
+  to the same `as_of_date` boundary.
+
+### Check 2.5: State Field Liveness
+* **Status:** NOTED (plumbing-only)
+* **Findings:** `roic` and `dividend_yield` in `GrahamMetrics` default to
+  `None`. No graph node currently populates them — `graham_agent` needs
+  to be wired to call `calculate_roic` and `calculate_dividend_yield` in
+  Phase 2. **This is intentional plumbing**, correctly documented in the
+  implementer's self-review.
+
+### Check 2.6: Test Coverage
 * **Status:** PASSED
 * **Findings:**
-  - `iteration_count: int = 0` documented with circuit breaker note ✅
-  - `reflection_feedback: Optional[str] = None` documented with consumer note ✅
-  - `signal_significance: Optional[EconometricResult] = None` documented ✅
-  - `cross_validation: Optional[EconometricResult] = None` documented with
-    p_value semantics (None = unknown, not trigger) ✅
-  - `_MAX_ITERATIONS=2` documented in 3 locations (invariant, AgentState, §7) ✅
-
-### Check 2.4: Risk Confinement
-* **Status:** PASSED
-* **Findings:** Invariant "O grafo não usa matemática em prompts" preserved
-  in §1. Official doc §1 explicitly states LLM cannot perform arithmetic.
-  Reflection block is documented as pure natural language feedback — no math. ✅
+  - 3 ROIC tests: valid ratio, zero/negative capital, None inputs ✅
+  - 2 DY tests: valid ratio, zero/negative price ✅
+  - 1 schema test: GrahamMetrics accepts roic + dividend_yield ✅
+  - 1 consensus test: model_dump includes roic + DY in kwargs ✅
+  - All negative scenarios (zero division, non-finite, None) covered ✅
 
 ---
 
@@ -59,16 +72,20 @@ unblocked.
 
 | Criterion | Status |
 | :--- | :---: |
-| SPEC.md §1: Cyclic topology with ASCII diagram | ✅ DONE |
-| SPEC.md §2.1: 4 new AgentState fields documented | ✅ DONE |
-| SPEC.md §7: Sprint 15 delivered, v3.0 next | ✅ DONE |
-| Official doc: DAG → Cyclic Graph, reflection, circuit breaker | ✅ DONE |
-| PLAN.md: v2.5 ✅ DELIVERED, v3.0 NEXT | ✅ VERIFIED |
-| HARD CONSTRAINT: zero .py/.tf/.sh/.yml | ✅ DONE |
+| `calculate_roic` with controlled degradation | ✅ DONE |
+| `calculate_dividend_yield` with controlled degradation | ✅ DONE |
+| Tests A–E passing (tools) | ✅ DONE |
+| `GrahamMetrics` + `HistoricalMarketData` schema expansion | ✅ DONE |
+| Tests F–G passing (schema + consensus) | ✅ DONE |
+| Suite: 257 passed, 0 failed | ✅ DONE |
+| `ruff check`: All checks passed | ✅ DONE |
+| Sprint 15 iteration_count untouched | ✅ DONE |
+| No agent files modified | ✅ DONE |
+| No `.tf`/`.sh`/`.yml` modified | ✅ DONE |
 
 ---
 
 ## 4. Recommended Actions
 
-1. **AUTHORIZE:** Commit and push the 2 modified .md files + audit artifacts.
+1. **AUTHORIZE:** Commit and push the 6 modified files + audit_report.
 2. **Next:** Trigger `sdd-reviewer` for final push authorization.

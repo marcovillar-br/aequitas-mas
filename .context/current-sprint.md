@@ -10,13 +10,13 @@ Expand the quantitative boundary with institutional-grade SOTA factors
 risk-adjusted decision gating. Maintain Sprint 15 iteration_count logic.
 
 ### Planned Steps
-- [ ] Step 1: Implement `calculate_roic` and `calculate_dividend_yield`
+- [x] Step 1: Implement `calculate_roic` and `calculate_dividend_yield`
       deterministic tools in `src/tools/fundamental_metrics.py`.
-- [ ] Step 2: Add ROIC and Dividend Yield fields to `GrahamMetrics` and
+- [x] Step 2: Add ROIC and Dividend Yield fields to `GrahamMetrics` and
       `HistoricalMarketData` schemas (v3.0 boundary expansion).
-- [ ] Step 3: Enrich `core_consensus_node` prompt with SOTA factor data
-      for risk-adjusted consensus gating.
-- [ ] Step 4: Integrated committee test with expanded factor suite.
+- [x] Step 3: Enrich `core_consensus_node` prompt with SOTA factor data
+      for risk-adjusted consensus gating (auto via model_dump).
+- [x] Step 4: Integrated committee test with expanded factor suite.
 
 ### Residual Risks
 - ROIC requires operating income and invested capital data which may not

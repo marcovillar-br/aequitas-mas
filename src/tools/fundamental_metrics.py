@@ -157,3 +157,42 @@ def calculate_altman_z_score(inputs: AltmanInputs) -> Optional[float]:
         return None
 
     return z_score
+
+
+def calculate_roic(operating_income: Any, invested_capital: Any) -> Optional[float]:
+    """Calculate Return on Invested Capital deterministically.
+
+    ROIC = operating_income / invested_capital.
+    Non-finite and None values are filtered before division.
+    Returns None when inputs are missing, non-finite, or when
+    invested_capital is not strictly positive.
+    """
+    coerced_income = _coerce_optional_finite_float(operating_income)
+    coerced_capital = _coerce_optional_finite_float(invested_capital)
+    if coerced_income is None or coerced_capital is None or coerced_capital <= 0.0:
+        return None
+    result = coerced_income / coerced_capital
+    if not math.isfinite(result):
+        return None
+    return result
+
+
+def calculate_dividend_yield(
+    annual_dividends_per_share: Any,
+    price_per_share: Any,
+) -> Optional[float]:
+    """Calculate Dividend Yield deterministically.
+
+    DY = annual_dividends_per_share / price_per_share.
+    Non-finite and None values are filtered before division.
+    Returns None when inputs are missing, non-finite, or when
+    price_per_share is not strictly positive.
+    """
+    coerced_dividends = _coerce_optional_finite_float(annual_dividends_per_share)
+    coerced_price = _coerce_optional_finite_float(price_per_share)
+    if coerced_dividends is None or coerced_price is None or coerced_price <= 0.0:
+        return None
+    result = coerced_dividends / coerced_price
+    if not math.isfinite(result):
+        return None
+    return result
