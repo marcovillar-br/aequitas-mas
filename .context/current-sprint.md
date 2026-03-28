@@ -43,10 +43,14 @@ signals, and cross-validate Macro/Fisher signal coherence.
 - [x] EconometricResult in AgentState + consensus integration
 - [x] 232 tests passing, 0 regressions
 
-### Delivered Scope (Phase 3)
+### Delivered Scope (Phase 3 — Plumbing Only)
 9. `cross_validate_agent_signals` in `econometric.py` (pure delegation).
 10. `AgentState.cross_validation` field + consensus prompt wiring.
 11. 3 pure-text fallback strings preventing hallucination when stats are None.
+12. **Note:** No graph node currently populates `cross_validation` at runtime.
+    The field will always receive the fallback string until a score accumulator
+    (e.g., extended `BacktestEngine`) feeds historical Macro/Fisher score series
+    into the state. This is intentional plumbing for a future sprint.
 
 ### Residual Risks
 - OLS inference requires minimum 3 paired observations; real-world signal

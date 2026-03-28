@@ -43,7 +43,7 @@ Sprint 14 executed across 3 phases, 3 plans, and 2 branches.
 - `core_consensus_node` receives `{signal_significance}` with degradation
   fallback and audit warning when `p_value > 0.05`.
 
-### Phase 3 — Macro-Signal Cross-Validation (plan-003, current)
+### Phase 3 — Macro-Signal Cross-Validation (plan-003, current) — Plumbing Only
 - `cross_validate_agent_signals`: pure delegation to `calculate_ols_significance`
   for testing Macro/Fisher signal coherence via OLS.
 - `AgentState.cross_validation: Optional[EconometricResult] = None`.
@@ -51,6 +51,10 @@ Sprint 14 executed across 3 phases, 3 plans, and 2 branches.
   `"Validação cruzada entre agentes não disponível."`.
 - 3 fallback strings in consensus — all pure text, zero numeric literals,
   preventing mathematical hallucination when statistics are None.
+- **Runtime status:** No graph node currently populates `cross_validation`.
+  The supervisor always receives the fallback string until a score accumulator
+  feeds historical Macro/Fisher score series into the state. This phase
+  delivers schema, wiring, and tests — not end-to-end computation.
 
 ## 2. Validation Performed
 
