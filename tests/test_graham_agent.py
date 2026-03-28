@@ -387,3 +387,23 @@ def test_graham_interpretation_degrades_roic_and_dy_assessments_to_none() -> Non
     )
     assert interp.roic_assessment is None
     assert interp.dividend_yield_assessment is None
+
+
+def test_graham_metrics_rejects_non_finite_roic_and_dy() -> None:
+    """NaN/Inf in ROIC and DY must be rejected by the finite-float validator."""
+    import math
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        GrahamMetrics(
+            ticker="PETR4", vpa=35.0, lpa=8.0, price_to_earnings=5.5,
+            fair_value=45.0, margin_of_safety=30.0,
+            roic=math.nan, dividend_yield=0.05,
+        )
+
+    with pytest.raises(ValidationError):
+        GrahamMetrics(
+            ticker="PETR4", vpa=35.0, lpa=8.0, price_to_earnings=5.5,
+            fair_value=45.0, margin_of_safety=30.0,
+            roic=0.18, dividend_yield=math.inf,
+        )

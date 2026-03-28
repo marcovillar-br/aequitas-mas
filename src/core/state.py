@@ -82,6 +82,8 @@ class GrahamMetrics(BaseModel):
         "price_to_earnings",
         "fair_value",
         "margin_of_safety",
+        "roic",
+        "dividend_yield",
         mode="before",
     )
     @classmethod
