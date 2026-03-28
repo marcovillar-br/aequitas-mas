@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from src.agents.core import ConsensusDecision, core_consensus_node
 from src.core.state import (
     AgentState,
+    EconometricResult,
     FisherAnalysis,
     GrahamInterpretation,
     GrahamMetrics,
@@ -325,3 +326,118 @@ def test_core_consensus_degrades_when_graham_interpretation_is_none(
     invoke_kwargs = mock_chain.invoke.call_args.args[0]
     assert "graham_interpretation" in invoke_kwargs
     assert invoke_kwargs["graham_interpretation"] == "Não disponível (degradação controlada)"
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 Phase 2 — Econometric validation wiring
+# ---------------------------------------------------------------------------
+
+
+def test_agent_state_accepts_econometric_result() -> None:
+    """The state must transport signal significance without error."""
+    eco = EconometricResult(
+        slope=0.5,
+        intercept=0.01,
+        t_statistic=3.2,
+        p_value=0.01,
+        r_squared=0.72,
+        n_observations=30,
+    )
+    state = _build_state().model_copy(update={"signal_significance": eco})
+
+    assert state.signal_significance is not None
+    assert state.signal_significance.p_value == 0.01
+    assert state.signal_significance.slope == 0.5
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_passes_signal_significance_to_prompt(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """The supervisor prompt must receive the econometric evidence."""
+    eco = EconometricResult(
+        slope=0.5,
+        t_statistic=3.2,
+        p_value=0.01,
+        r_squared=0.72,
+        n_observations=30,
+    )
+    state = _build_state().model_copy(update={"signal_significance": eco})
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar kwargs.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "signal_significance" in invoke_kwargs
+    assert invoke_kwargs["signal_significance"] == eco.model_dump()
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_degrades_when_signal_significance_is_none(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """Missing econometric data must not crash the consensus node."""
+    state = _build_state()  # signal_significance defaults to None
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar degradação.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    core_consensus_node(state)
+
+    invoke_kwargs = mock_chain.invoke.call_args.args[0]
+    assert "signal_significance" in invoke_kwargs
+    assert invoke_kwargs["signal_significance"] == "Validação econométrica não disponível."
+
+
+@patch("src.agents.core._CONSENSUS_PROMPT")
+@patch("src.agents.core.ChatGoogleGenerativeAI")
+def test_core_consensus_emits_audit_warning_when_p_value_above_threshold(
+    mock_llm_cls,
+    mock_prompt,
+) -> None:
+    """When p_value > 0.05, an audit log entry must warn about lack of significance."""
+    eco = EconometricResult(
+        slope=0.1,
+        t_statistic=1.2,
+        p_value=0.25,  # NOT significant at 95%
+        r_squared=0.10,
+        n_observations=10,
+    )
+    state = _build_state().model_copy(update={"signal_significance": eco})
+
+    mock_chain = MagicMock()
+    mock_chain.invoke.return_value = ConsensusDecision(
+        approval_status="block",
+        rationale="Bloqueado para validar audit warning.",
+    )
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.with_structured_output.return_value = MagicMock()
+    mock_llm_cls.return_value = mock_llm_instance
+    mock_prompt.__or__.return_value = mock_chain
+
+    result = core_consensus_node(state)
+
+    audit_entries = result["audit_log"]
+    sig_warnings = [e for e in audit_entries if "significância estatística" in e]
+    assert len(sig_warnings) == 1
+    assert "p-value=0.2500" in sig_warnings[0]

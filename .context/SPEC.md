@@ -389,16 +389,21 @@ contratos baseados em coleções ou payloads não tipados.
 
 ## 7. Próxima Extensão Planejada
 
-O baseline consolidado (Sprint 12) entrega structured output tipado em todos
-os 5 agentes do comitê, SSE streaming, e a cadeia typed end-to-end
-Graham → Consensus → API → Presentation Adapter.
+O baseline consolidado (Sprint 14) entrega CLI observability (ConsoleRenderer,
+L10n pt-BR, fail-fast router) e validação econométrica dos sinais do comitê.
 
-Os próximos passos (Sprint 13: Abr/26 — Telemetry & Observability) focam em:
-- Request-scoped structlog contextvars (`thread_id`, `target_ticker`) para
-  correlação cross-cutting de logs em CloudWatch e OpenSearch.
-- Graph execution summary `DecisionPathEvent` com `latency_ms` para FinOps
-  cost attribution e SLA monitoring.
-- Structured API-level request/response logging com `latency_ms` sanitizado.
+Sprint 14 Phase 2 (Econometric Validation) entregou:
+- `src/tools/econometric.py`: OLS determinístico (closed-form) com slope,
+  t-statistic, p-value (via `scipy.stats.t`), R², e degradação controlada.
+- `EconometricResult` schema (frozen, isfinite validation) no `AgentState`.
+- `core_consensus_node` recebe `{signal_significance}` no prompt para
+  gating econométrico da decisão de otimização.
+- Gujarati minimum: 3 observações pareadas para inferência válida.
+
+Os próximos passos (milestone v2.5 — Cyclic Graph Refinement) focam em:
+- ReAct e Tree-of-Thought (ToT) no `core_consensus_node`.
+- Refinamento do Agente Marks com reasoning estruturado.
+- Regime-Aware Consensus (pesos dinâmicos por Selic).
 
 ## 8. SDLC & Git Flow
 

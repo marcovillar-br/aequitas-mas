@@ -1,6 +1,6 @@
 ---
-audit_id: "audit-plan-sprint14-cli-observability-001-20260326"
-plan_validated: "plan-sprint14-cli-observability-001"
+audit_id: "audit-plan-sprint14-econometric-validation-002-20260328"
+plan_validated: "plan-sprint14-econometric-validation-002"
 status: "PASSED"
 failed_checks: []
 tdd_verified: true
@@ -9,11 +9,13 @@ audit_scope: "code-bearing"
 
 ## 1. Executive Summary
 
-**PASSED — Todos os 8 critérios DoD satisfeitos.**
+**PASSED — Todos os 12 critérios DoD satisfeitos.**
 
-O `sdd-implementer` executou os 2 steps do plano com ciclo RED-GREEN-REFACTOR
-completo. A suite cresceu de 203 para 208 testes (+5 novos), com 0 regressões.
-`ruff check` passou limpo. Push gate desbloqueado.
+O `sdd-implementer` executou os 4 steps do plano com ciclo RED-GREEN-REFACTOR
+completo. A suite cresceu de 223 para 232 testes (+9 novos), com 0 regressões.
+Toda a matemática OLS (normal equations, t-statistic, p-value) está confinada
+em `src/tools/econometric.py` — zero math em agents ou prompts. `ruff check`
+passou limpo. Push gate desbloqueado.
 
 ---
 
@@ -21,51 +23,62 @@ completo. A suite cresceu de 203 para 208 testes (+5 novos), com 0 regressões.
 
 ### Check 2.1: Risk Confinement (Math/Decimals)
 * **Status:** PASSED
-* **Findings:** Zero ocorrências de `decimal.Decimal` nos arquivos modificados.
-  `current_market_price` usa `Optional[float]` com default `None` —
-  conforme dogma de Controlled Degradation.
+* **Findings:** Zero `decimal.Decimal` nos arquivos modificados. Toda
+  matemática OLS (closed-form normal equations, residual standard error,
+  t-statistic, p-value via `scipy.stats.t`, R²) está confinada
+  exclusivamente em `src/tools/econometric.py`. `grep` por keywords
+  matemáticos (`ss_xx`, `ss_yy`, `scipy`) em `src/agents/` e `src/core/`
+  retornou zero matches — Risk Confinement preservado.
 
-### Check 2.2: Temporal Invariance
-* **Status:** PASSED (N/A)
-* **Findings:** Nenhuma lógica de backtesting, ingestão ou retrieval adicionada.
-  `as_of_date` no `ThesisReportPayload` é uma string de exibição (`Optional[str]`),
-  não uma fronteira temporal computacional.
-
-### Check 2.3: Inversion of Control
+### Check 2.2: Controlled Degradation & Type Safety
 * **Status:** PASSED
-* **Findings:** Zero `os.getenv` em `src/agents/`. O `os.getenv("ENVIRONMENT")`
-  em `telemetry.py` é infraestrutura de observabilidade, não código de domínio —
-  mesmo padrão já existente em `graph.py`.
+* **Findings:**
+  - `OLSResult`: `frozen=True`, `@field_validator` com `math.isfinite()`
+    em todos os 5 campos float. Non-finite degrada para `None`. ✅
+  - `calculate_ols_significance`: retorna `None` para < 3 observações,
+    zero variance, ou inputs non-finite. ✅
+  - `AgentState.signal_significance`: `Optional[EconometricResult] = None`. ✅
+  - `core_consensus_node`: fallback `"Validação econométrica não disponível."`
+    quando `signal_significance is None`. ✅
 
-### Check 2.4: Artifact Consistency & Scope Fidelity
+### Check 2.3: Temporal Invariance
+* **Status:** PASSED (N/A)
+* **Findings:** O OLS tool opera sobre séries pré-computadas (signal vs
+  return). Não faz data fetching — sem risco de look-ahead.
+
+### Check 2.4: Inversion of Control
+* **Status:** PASSED
+* **Findings:** Zero `os.getenv` ou `os.environ` em `src/agents/`.
+  `scipy.stats.t` é uma dependência científica (já presente via portfolio
+  optimizer), não um SDK cloud.
+
+### Check 2.5: Artifact Consistency & Scope Fidelity
 * **Status:** PASSED
 * **Findings:**
 
-  **Scope guard validation — 6 arquivos modificados (todos permitidos):**
-  - `src/core/telemetry.py` — ConsoleRenderer/JSONRenderer switch ✅
-  - `src/core/interfaces/presentation.py` — 3 Optional fields ✅
-  - `src/infra/adapters/pdf_presentation_adapter.py` — HTML header block ✅
-  - `tests/test_telemetry.py` — +2 tests (A–B) ✅
-  - `tests/infra/test_pdf_presentation_adapter.py` — +3 tests (C–E) ✅
-  - `.context/current-sprint.md` — Steps 1–2 marcados `[x]` ✅
+  **Scope guard — 6 arquivos modificados + 2 novos (todos permitidos):**
+  - `src/tools/econometric.py` (NEW) — OLS tool ✅
+  - `tests/tools/test_econometric.py` (NEW) — 6 tests ✅
+  - `src/core/state.py` — EconometricResult alias + field ✅
+  - `src/agents/core.py` — prompt + invoke wiring ✅
+  - `tests/test_core_consensus_node.py` — +3 tests (F–H) ✅
+  - `.context/current-sprint.md` — Steps 3–5 marcados `[x]` ✅
+  - `.context/SPEC.md` — Section 7 updated ✅
+  - `.ai/handoffs/current_plan.md` — plan 002 ✅
 
   **HARD CONSTRAINT verified:**
-  - Zero `src/agents/` modificados ✅
-  - Zero `src/core/graph.py` modificado ✅
-  - Zero `.tf`, `.sh`, ou `.yml` modificados ✅
+  - Único agent modificado: `src/agents/core.py` ✅
+  - Zero `.tf`, `.sh`, `.yml` modificados ✅
+  - Zero `src/tools/fundamental_metrics.py` ou backtesting modificados ✅
 
   **Sprint Checkpoint Integrity:**
-  - Steps 1–2 da Sprint 14 todos marcados como `[x]` ✅
-
-  **Schema backward compatibility:**
-  - `ThesisReportPayload` — 3 novos campos são `Optional` com defaults ✅
-  - Testes pré-existentes (3) continuam passando sem alteração ✅
-  - `frozen=True` preservado ✅
+  - Steps 1–5 da Sprint 14 todos marcados como `[x]` ✅
 
   **TDD cycle verified:**
-  - Tests A–B falharam (JSONRenderer vs ConsoleRenderer) antes do switch ✅
-  - Tests C–E falharam (as_of_date/price/status missing in HTML) antes do enrich ✅
-  - 208 testes passando após GREEN ✅
+  - Tests A–E: importação falhou (ModuleNotFoundError) antes de criar o tool ✅
+  - Test A ajustado: perfect fit → t_stat=None (infinite), p_value=0.0 ✅
+  - Tests G–H: `signal_significance` not in invoke_kwargs antes do wiring ✅
+  - 232 testes passando após GREEN ✅
 
   **Lint Gate (Shift-Left):**
   - `poetry run ruff check src/ tests/` → All checks passed ✅
@@ -76,18 +89,22 @@ completo. A suite cresceu de 203 para 208 testes (+5 novos), com 0 regressões.
 
 | Critério | Status |
 | :--- | :---: |
-| `telemetry.py`: ConsoleRenderer para local, JSONRenderer para cloud | ✅ DONE |
-| `tests/test_telemetry.py`: Tests A–B passando | ✅ DONE |
-| `presentation.py`: 3 novos Optional fields | ✅ DONE |
-| `pdf_presentation_adapter.py`: Header block com as_of_date/price/status | ✅ DONE |
-| `tests/infra/test_pdf_presentation_adapter.py`: Tests C–E passando | ✅ DONE |
-| Suite completa: 208 passed, 0 failed | ✅ DONE |
+| `econometric.py`: OLS com closed-form, t-stat, p-value, R² | ✅ DONE |
+| `test_econometric.py`: Tests A–E + frozen test passando | ✅ DONE |
+| `state.py`: `EconometricResult` frozen, `signal_significance` field | ✅ DONE |
+| `test_core_consensus_node.py`: Test F (state transport) | ✅ DONE |
+| `core.py`: prompt `{signal_significance}`, fallback degradação | ✅ DONE |
+| `test_core_consensus_node.py`: Tests G–H passando | ✅ DONE |
+| `current-sprint.md`: Steps 3–5 marcados `[x]` | ✅ DONE |
+| `SPEC.md` Section 7 atualizada | ✅ DONE |
+| Suite completa: 232 passed, 0 failed | ✅ DONE |
 | `ruff check`: All checks passed | ✅ DONE |
-| HARD CONSTRAINT: zero agents/graph/.tf/.sh/.yml | ✅ DONE |
+| HARD CONSTRAINT: só `core.py` entre agents | ✅ DONE |
+| HARD CONSTRAINT: zero `.tf`/`.sh`/`.yml` | ✅ DONE |
 
 ---
 
 ## 4. Recommended Actions
 
-1. **AUTHORIZE:** Commit e push dos 6 arquivos modificados + audit_report.
+1. **AUTHORIZE:** Commit e push dos 8 arquivos (6 modified + 2 new).
 2. **Próximo:** Acionar `sdd-reviewer` para autorização final de push.

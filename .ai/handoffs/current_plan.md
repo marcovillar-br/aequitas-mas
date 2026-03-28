@@ -1,166 +1,206 @@
 ---
-plan_id: plan-sprint14-cli-observability-001
+plan_id: plan-sprint14-econometric-validation-002
 target_files:
-  - "src/core/telemetry.py"
-  - "tests/test_telemetry.py"
-  - "src/infra/adapters/pdf_presentation_adapter.py"
-  - "tests/infra/test_pdf_presentation_adapter.py"
+  - "src/tools/econometric.py"
+  - "tests/tools/test_econometric.py"
+  - "src/agents/core.py"
+  - "tests/test_core_consensus_node.py"
+  - "src/core/state.py"
   - ".context/current-sprint.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
+  - ".context/SPEC.md"
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, temporal-invariance]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Quick observability improvements for the local CLI developer experience.
-Two axes of work:
+Phase 2 of Sprint 14, aligned with milestone v2.0 (Econometric Validation)
+and the EGI & AM academic track. Implements the Gujarati methodology for
+validating that the committee's signals have statistical significance before
+gating the portfolio optimization decision.
 
-1. **structlog ConsoleRenderer for local:** The current `_configure_structlog`
-   always uses `JSONRenderer`, which produces single-line JSON blobs in the
-   terminal — unreadable for local development. When `ENVIRONMENT` is `local`
-   (or unset), switch to `structlog.dev.ConsoleRenderer()` for colored,
-   human-readable output. Keep `JSONRenderer` for cloud environments
-   (`dev`, `hom`, `prod`, `ci`) where CloudWatch/OpenSearch ingestion
-   requires structured JSON.
+Three axes of work:
 
-2. **Presentation Adapter enrichment:** The current `PdfPresentationAdapter`
-   renders `thesis`, `evidence`, and `quantitative_data` — but lacks
-   `as_of_date`, `current_market_price`, and a clear `APPROVED`/`REJECTED`
-   status block. These fields are essential for the Tech Lead's CLI review
-   and the PA defense report. Enrich `ThesisReportPayload` with 3 new
-   `Optional` fields and update the HTML renderer to display them.
+1. **Deterministic OLS Tool:** Create `src/tools/econometric.py` with a
+   pure-Python OLS regression function that computes slope, t-statistic,
+   p-value, and R² from agent signal series vs. return series. This tool
+   lives in `src/tools/` per Risk Confinement — no math in agents.
+
+2. **Signal Significance Schema:** Add an `EconometricResult` frozen Pydantic
+   schema to `src/core/state.py` to carry significance metrics through the
+   graph state. Add an `Optional[EconometricResult]` field to `AgentState`.
+
+3. **Consensus Integration:** Inject econometric evidence into
+   `core_consensus_node`. When significance data is available, the consensus
+   prompt receives `signal_significance` alongside existing specialist data.
+   When unavailable, the field degrades to a fallback string. The supervisor
+   can use this to strengthen or weaken its `approve`/`block` decision.
 
 **SCOPE GUARD:**
-- No agent files (`src/agents/`) modified.
-- No graph file (`src/core/graph.py`) modified.
+- Only `src/agents/core.py` modified among agent files.
+- `src/agents/graham.py`, `fisher.py`, `macro.py`, `marks.py` NOT touched.
+- Zero modifications to `src/tools/fundamental_metrics.py` or backtesting.
 - No `.tf`, `.sh`, or `.yml` files modified.
-- `ThesisReportPayload` enrichment is additive — existing fields untouched,
-  new fields are `Optional` with defaults.
+- The OLS tool uses only Python stdlib (`math`) and `scipy.stats` for the
+  t-distribution CDF. `scipy` is already a project dependency via the
+  portfolio optimizer.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — structlog ConsoleRenderer for local environment (RED-GREEN-REFACTOR)
+### Step 2.1 — Deterministic OLS tool (RED-GREEN-REFACTOR)
 
-* **Target:** `src/core/telemetry.py`
+* **Target:** `src/tools/econometric.py` (new file)
+* **Execution mode:** code-bearing — write failing tests first.
+
+* **Signatures:**
+
+```python
+class OLSResult(BaseModel):
+    """Immutable OLS regression output with controlled degradation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    slope: Optional[float] = None
+    intercept: Optional[float] = None
+    t_statistic: Optional[float] = None
+    p_value: Optional[float] = None
+    r_squared: Optional[float] = None
+    n_observations: int = 0
+
+
+def calculate_ols_significance(
+    signal_series: Sequence[float | None],
+    return_series: Sequence[float | None],
+) -> Optional[OLSResult]:
+    """Run OLS regression of returns on signal values.
+
+    Returns None when inputs are insufficient (< 3 valid paired observations)
+    or contain non-finite values. Uses scipy.stats.t for p-value computation.
+    """
+```
+
+* **Implementation rules:**
+  - Filter paired observations where both signal and return are finite floats.
+  - Require minimum 3 valid pairs (Gujarati minimum for OLS inference).
+  - Compute slope, intercept via closed-form normal equations (no numpy).
+  - Compute residual standard error, t-statistic, and two-tailed p-value.
+  - Compute R² = 1 - (SS_res / SS_tot).
+  - Validate all outputs with `math.isfinite()`, degrade to `None` if not.
+
+* **Tests to add in `tests/tools/test_econometric.py` (new file):**
+
+**Test A — OLS with perfect linear relationship**
+```python
+def test_ols_perfect_linear_returns_expected_coefficients() -> None:
+    """A perfect y = 2x + 1 relationship must produce exact slope and R²=1."""
+```
+
+**Test B — OLS with real-world noisy data returns valid statistics**
+```python
+def test_ols_noisy_data_returns_valid_statistics() -> None:
+    """Noisy data must still produce finite slope, t-stat, and p-value."""
+```
+
+**Test C — OLS degrades when inputs are insufficient**
+```python
+def test_ols_degrades_with_insufficient_observations() -> None:
+    """Fewer than 3 paired observations must degrade to None."""
+```
+
+**Test D — OLS degrades when all signals are identical**
+```python
+def test_ols_degrades_when_signal_has_zero_variance() -> None:
+    """Constant signal (zero variance) produces undefined slope — degrade."""
+```
+
+**Test E — OLS filters None values from paired series**
+```python
+def test_ols_filters_none_values_from_series() -> None:
+    """None entries must be excluded, not crash the regression."""
+```
+
+---
+
+### Step 2.2 — EconometricResult schema in AgentState (RED-GREEN-REFACTOR)
+
+* **Target:** `src/core/state.py`
+* **Execution mode:** code-bearing — write failing test first.
+
+* **Action:**
+  - Add `EconometricResult` Pydantic schema (reexporting `OLSResult` from
+    the tool for now — or define a graph-level wrapper if the tool's schema
+    is too granular).
+  - Add `signal_significance: Optional[EconometricResult] = None` to
+    `AgentState`.
+
+* **Test to add in `tests/test_core_consensus_node.py`:**
+
+**Test F — AgentState accepts EconometricResult field**
+```python
+def test_agent_state_accepts_econometric_result() -> None:
+    """The state must transport signal significance without error."""
+```
+
+* **Constraints:** `frozen=True` on `EconometricResult`. All float fields
+  `Optional[float] = None`. Validator with `math.isfinite()`.
+
+---
+
+### Step 2.3 — Inject signal_significance into consensus prompt (RED-GREEN-REFACTOR)
+
+* **Target:** `src/agents/core.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
 * **Action:**
-  In `_configure_structlog()`, read `os.getenv("ENVIRONMENT", "local")` and
-  select the renderer:
-  - `local` or empty → `structlog.dev.ConsoleRenderer()`
-  - anything else → `structlog.processors.JSONRenderer()`
+  1. In `_CONSENSUS_PROMPT`, add `{signal_significance}` after
+     `{marks_verdict}` in the human message.
+  2. In `core_consensus_node()`, pass `state.signal_significance` to the
+     prompt. When `None`, pass `"Validação econométrica não disponível."`.
+  3. When `signal_significance` IS available and `p_value > 0.05`, add an
+     audit log entry warning that the signal lacks statistical significance
+     at 95% confidence.
 
-  Add `import os` at the top (already used in `graph.py` but not in
-  `telemetry.py`).
+* **Tests to add in `tests/test_core_consensus_node.py`:**
 
-* **Test to add in `tests/test_telemetry.py`:**
-
-**Test A — ConsoleRenderer selected for local environment**
+**Test G — Consensus receives signal_significance when available**
 ```python
-def test_configure_structlog_uses_console_renderer_for_local() -> None:
-    """Local environment must use ConsoleRenderer for human-readable output."""
-    # Patch ENVIRONMENT=local
-    # Force reconfiguration
-    # Assert structlog.configure was called with ConsoleRenderer as last processor
+def test_core_consensus_passes_signal_significance_to_prompt() -> None:
+    """The supervisor prompt must receive the econometric evidence."""
 ```
 
-**Test B — JSONRenderer selected for cloud environment**
+**Test H — Consensus degrades gracefully when signal_significance is None**
 ```python
-def test_configure_structlog_uses_json_renderer_for_cloud() -> None:
-    """Cloud environments must use JSONRenderer for structured ingestion."""
-    # Patch ENVIRONMENT=dev
-    # Force reconfiguration
-    # Assert structlog.configure was called with JSONRenderer as last processor
+def test_core_consensus_degrades_when_signal_significance_is_none() -> None:
+    """Missing econometric data must not crash the consensus node."""
 ```
-
-* **Constraints:** The processor chain must preserve `merge_contextvars`,
-  `add_log_level`, `TimeStamper`, and `_inject_trace_context` — only the
-  final renderer changes.
 
 ---
 
-### Step 2.2 — Enrich ThesisReportPayload and HTML renderer (RED-GREEN-REFACTOR)
+### Step 2.4 — Update artifacts (artifact-only)
 
-* **Target:** `src/core/interfaces/presentation.py` and
-  `src/infra/adapters/pdf_presentation_adapter.py`
-* **Execution mode:** code-bearing — write failing tests first.
-
-* **Action in `src/core/interfaces/presentation.py`:**
-  Add 3 new Optional fields to `ThesisReportPayload`:
-  ```python
-  as_of_date: Optional[str] = Field(
-      default=None,
-      description="Point-in-time reference date (ISO-8601) for the analysis.",
-  )
-  current_market_price: Optional[float] = Field(
-      default=None,
-      description="Observed market price at the time of analysis.",
-  )
-  approval_status: Optional[str] = Field(
-      default=None,
-      description="Final committee verdict: APPROVED or REJECTED.",
-  )
-  ```
-
-* **Action in `src/infra/adapters/pdf_presentation_adapter.py`:**
-  In `render_html()`, add a header block before the thesis `<h1>` showing:
-  - `as_of_date` (or "N/A" if None)
-  - `current_market_price` (or "N/A" if None)
-  - `approval_status` rendered as a colored badge
-    (`APPROVED` = green, `REJECTED` = red, None = grey "PENDING")
-
-* **Tests to add in `tests/infra/test_pdf_presentation_adapter.py`:**
-
-**Test C — Report includes as_of_date and market price**
-```python
-def test_pdf_adapter_renders_as_of_date_and_price() -> None:
-    """The report must display as_of_date and current_market_price."""
-    # Build payload with as_of_date="2024-01-15" and price=35.50
-    # Assert both values appear in rendered HTML
-```
-
-**Test D — Report shows approval status badge**
-```python
-def test_pdf_adapter_renders_approval_status_badge() -> None:
-    """The report must display the committee approval status."""
-    # Build payload with approval_status="APPROVED"
-    # Assert "APPROVED" appears in rendered HTML
-```
-
-**Test E — Report degrades gracefully when new fields are None**
-```python
-def test_pdf_adapter_degrades_when_enrichment_fields_are_none() -> None:
-    """Missing enrichment fields must degrade to N/A, not crash."""
-    # Build payload with only thesis (no as_of_date, price, or status)
-    # Assert HTML renders without error and shows "N/A"
-```
-
-* **Constraints:** Existing tests must not break — the 3 new fields are
-  `Optional` with defaults, so existing `ThesisReportPayload()` calls
-  remain valid.
-
----
-
-### Step 2.3 — Update `current-sprint.md` (artifact-only)
-
-* **Target:** `.context/current-sprint.md`
-* **Action:** Prepend Sprint 14 section with status `IN PROGRESS` and
-  planned steps matching Steps 2.1–2.2.
+* **Target:** `.context/current-sprint.md` and `.context/SPEC.md`
+* **Action:**
+  - Add Steps 3–5 to Sprint 14 in `current-sprint.md`.
+  - Update SPEC.md Section 7 to reflect econometric validation as delivered.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/core/telemetry.py`: `ConsoleRenderer` for local, `JSONRenderer`
-  for cloud.
-- [ ] `tests/test_telemetry.py`: Tests A–B passing.
-- [ ] `src/core/interfaces/presentation.py`: 3 new Optional fields on
-  `ThesisReportPayload`.
-- [ ] `src/infra/adapters/pdf_presentation_adapter.py`: Header block with
-  `as_of_date`, `current_market_price`, and `approval_status`.
-- [ ] `tests/infra/test_pdf_presentation_adapter.py`: Tests C–E passing.
+- [ ] `src/tools/econometric.py`: `calculate_ols_significance` implemented
+  with closed-form OLS, t-stat, p-value via `scipy.stats.t`, and R².
+- [ ] `tests/tools/test_econometric.py`: Tests A–E passing.
+- [ ] `src/core/state.py`: `EconometricResult` schema with `frozen=True`.
+  `AgentState.signal_significance` field added.
+- [ ] `tests/test_core_consensus_node.py`: Test F passing (state transport).
+- [ ] `src/agents/core.py`: Consensus prompt includes `{signal_significance}`.
+  Fallback to degradation string when `None`. Audit warning when `p_value > 0.05`.
+- [ ] `tests/test_core_consensus_node.py`: Tests G–H passing.
+- [ ] `.context/current-sprint.md` updated with Steps 3–5.
+- [ ] `.context/SPEC.md` Section 7 updated.
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** No agent, graph, `.tf`, `.sh`, or `.yml` files modified.
+- [ ] **HARD CONSTRAINT:** Only `src/agents/core.py` modified among agent files.
+- [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.
