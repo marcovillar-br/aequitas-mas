@@ -248,7 +248,7 @@ def test_pdf_adapter_renders_quantitative_health_panel() -> None:
 
     html = adapter.render_html(payload)
 
-    assert "Quantitative Health" in html
+    assert "Saúde Quantitativa" in html
     assert "Piotroski" in html
     assert "7" in html
     assert "2,80" in html  # BRL format
@@ -262,5 +262,5 @@ def test_pdf_adapter_degrades_none_sota_metrics() -> None:
 
     html = adapter.render_html(payload)
 
-    assert "Quantitative Health" in html
+    assert "Saúde Quantitativa" in html
     assert html.count("N/A") >= 4  # piotroski, altman, roic, dy all N/A
