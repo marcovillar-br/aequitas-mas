@@ -34,7 +34,25 @@ $$EY = \frac{EBIT}{EV}$$
 
 $$EV (\text{Enterprise Value}) = \text{Capitalização de Mercado} + \text{Dívida Líquida}$$
 
-### Critérios Numéricos de Corte e Filtros de Segurança Intransponíveis
+### Critérios Fundamentalistas Adaptados para B3 (Horizonte de 5 Anos)
+
+A aplicação direta dos filtros originais de Graham (10 anos de lucros, 20 anos
+de dividendos) demonstrou-se excessivamente restritiva para o mercado acionário
+brasileiro. Conforme validado empiricamente por Testa & Lima (2012), a redução
+do horizonte para 5 anos adapta os critérios à realidade de mercados emergentes
+(ciclos mais curtos, inflação estrutural, volatilidade da Selic) sem comprometer
+a integridade do *Value Investing*.
+
+| Indicador Fundamentalista | Regra Original (Graham) | Critério Adaptado (B3 / 5 Anos) | Justificativa |
+| --- | --- | --- | --- |
+| **Histórico de Lucratividade** | 10 anos sem prejuízos | **5 anos** contínuos sem prejuízos | Adequação aos ciclos econômicos mais curtos de mercados emergentes. |
+| **Pagamento de Dividendos** | 20 anos ininterruptos | Pagamento contínuo nos últimos **5 anos** | Previne exclusão de empresas que retiveram lucros para expansão recente. |
+| **Crescimento de Lucros** | Mínimo de 33% em 10 anos | Aumento de **15% a 30% em 5 anos** | Ajuste proporcional ao horizonte reduzido, capturando tração de crescimento atual. |
+| **Liquidez Corrente** | ≥ 2.0 | ≥ 2.0 (ou mediana setorial ≥ 1.5) | Preserva solvência sem penalizar eficiência do capital de giro brasileiro. |
+| **Tamanho da Empresa** | Receita ≥ US$ 100M | Receita ≥ R$ 300M | Filtro de liquidez que exclui *micro-caps* com baixa governança. |
+| **Múltiplos de Preço** | P/L × P/VP ≤ 22.5 | P/L × P/VP ≤ 22.5 (mantido) | Núcleo da Margem de Segurança — invariante. |
+
+### Filtros de Segurança Intransponíveis
 
 | Filtro de Segurança | Regra de Negócio (Contrato Lógico) | Fonte Base |
 | --- | --- | --- |
@@ -101,9 +119,18 @@ O agente não deve basear recomendações exclusivamente em feeds de notícias d
 **2. Controle de Obsolescência e Validação de Fonte**
 Aplicação de indexação RAG com *timestamp* obrigatório. A IA deve retornar a URL ou ID do documento fonte associado à afirmação. Se a informação não estiver na base de conhecimento oficial, a saída mandatória é `"Não sei" / Null`.
 
-**3. Proteção Contra Oscilações Irracionais (Barreiras de Risco)**
-Implementação do método de "Tripla Barreira" (*Triple Barrier*):
+**3. Proteção Contra Oscilações Irracionais — Triple Barrier (AlphaX 2025)**
+Implementação do método de "Tripla Barreira" (*Triple Barrier*) inspirado no
+framework AlphaX, adaptado para o comitê iterativo do Aequitas-MAS:
 
-* *Take Profit* (Barreira Superior): Encerrar posição se o preço atingir o Valor Justo projetado.
-* *Stop Loss* (Barreira Inferior): Cortar perdas sob um declínio fixo (ex: 10%).
-* *Barreira Vertical (Tempo):* Encerrar análise ao fim do trimestre ou na divulgação de novo balanço oficial.
+* **Barreira Superior (Take Profit Analítico):** Ativada quando a projeção de
+  preços converge consistentemente acima do Valor Justo de Graham. O comitê
+  formaliza exigência de desinvestimento, capturando o prêmio de assimetria.
+* **Barreira Inferior (Stop Loss de Fundamentos):** Ativada não apenas por
+  declínio percentual de preço, mas pela deterioração dinâmica do Altman
+  Z-Score e/ou queda do Piotroski F-Score, forçando preservação de capital
+  antes da materialização de insolvência.
+* **Barreira Vertical (Janela Temporal):** Horizonte absoluto de retenção da
+  tese — forçando reavaliação ao término do trimestre contábil ou na
+  divulgação de novo Formulário de Referência pela CVM. Garante que o
+  sistema opere com fundamentos atualizados na janela de 5 anos.
