@@ -82,8 +82,8 @@ class PdfPresentationAdapter(PresentationAdapter):
         # Quantitative Health panel
         piotroski = str(payload.piotroski_f_score) if payload.piotroski_f_score is not None else "N/A"
         altman = format_brl_number(payload.altman_z_score) if payload.altman_z_score is not None else "N/A"
-        roic_pct = format_brl_number(payload.roic * 100.0) if payload.roic is not None else "N/A"
-        dy_pct = format_brl_number(payload.dividend_yield * 100.0) if payload.dividend_yield is not None else "N/A"
+        roic_pct = f"{format_brl_number(payload.roic * 100.0)}%" if payload.roic is not None else "N/A"
+        dy_pct = f"{format_brl_number(payload.dividend_yield * 100.0)}%" if payload.dividend_yield is not None else "N/A"
 
         return (
             "<html>"
@@ -100,8 +100,8 @@ class PdfPresentationAdapter(PresentationAdapter):
             "<table>"
             f"<tr><th>Piotroski F-Score</th><td>{escape(piotroski)}</td></tr>"
             f"<tr><th>Altman Z-Score</th><td>{escape(altman)}</td></tr>"
-            f"<tr><th>ROIC</th><td>{escape(roic_pct)}%</td></tr>"
-            f"<tr><th>Dividend Yield</th><td>{escape(dy_pct)}%</td></tr>"
+            f"<tr><th>ROIC</th><td>{escape(roic_pct)}</td></tr>"
+            f"<tr><th>Dividend Yield</th><td>{escape(dy_pct)}</td></tr>"
             "</table>"
             "</section>"
             f"<h1>{escape(payload.thesis)}</h1>"
