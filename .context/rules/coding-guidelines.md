@@ -12,6 +12,7 @@
 # Constraints
 - **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, comments, structlog event names, log `reason` strings, and internal feedback fields (e.g., `reflection_feedback`) MUST be in **English**.
 - **User Interface Language:** The final output, analysis report, CLI report (`print_report`), and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
+- **Blackboard & Context Exception:** Artifacts consumed exclusively by the human Tech Lead — `.ai/handoffs/` (audit_report, eod_summary, current_plan), `.context/` (PLAN.md, SPEC.md, current-sprint.md), and `docs/official/` — may use **pt-BR** for readability. This exception does NOT apply to runtime code, logs, or system prompts.
 
 ## 0. Engineering Team Topology
 The development of new features in Aequitas-MAS follows a strictly defined iterative operating flow of responsibilities to ensure the "Risk Confinement" dogma:
