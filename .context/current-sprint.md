@@ -1,7 +1,7 @@
 # Project Status: Aequitas-MAS
 
-## Sprint 14 — CLI Observability & Presentation Enrichment
-**Status:** IN PROGRESS
+## Sprint 14 — CLI Observability, Presentation & Econometric Validation
+**Status:** DONE
 
 ### Objective
 Improve the local developer experience with human-readable structlog output
@@ -19,11 +19,31 @@ the Tech Lead's CLI review and PA defense report.
       `signal_significance` into `core_consensus_node` prompt.
 - [x] Step 5: Update SPEC.md Section 7 with econometric validation scope.
 
+### Delivered Scope
+1. `structlog.dev.ConsoleRenderer` for local, `JSONRenderer` for cloud.
+2. `ThesisReportPayload` enriched (as_of_date, market_price, approval_status).
+3. Fail-fast router: invalid ticker skips Fisher/Macro/Marks.
+4. L10n pt-BR: recommendations, dates (DD/MM/YYYY), numbers (1.250,50).
+5. `main.py` telemetry init + as_of_date fallback + price reconstruction.
+6. `PLAN.md` rewritten with milestone-based roadmap (v1.0–v4.0).
+7. `src/tools/econometric.py`: OLS determinístico (Gujarati methodology).
+8. `EconometricResult` in `AgentState` + consensus prompt wiring.
+
+### Definition of Done
+- [x] ConsoleRenderer/JSONRenderer switch
+- [x] ThesisReportPayload 3 Optional fields + HTML header
+- [x] Fail-fast router for fully degraded Graham
+- [x] L10n pt-BR (recommendations, dates, numbers)
+- [x] OLS tool: slope, t-stat, p-value, R² with degradation
+- [x] EconometricResult in AgentState + consensus integration
+- [x] 232 tests passing, 0 regressions
+
 ### Residual Risks
-- `ConsoleRenderer` may behave differently with certain terminal emulators;
-  acceptable for local-only use.
 - OLS inference requires minimum 3 paired observations; real-world signal
   series from the committee may be shorter in early sessions.
+
+### Next Planning Target
+- Sprint 15 — Cyclic Graph Refinement (milestone v2.5).
 
 ---
 
