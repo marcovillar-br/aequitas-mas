@@ -62,8 +62,9 @@ You MUST follow this exact sequence:
    its BASE BRANCH, and inspect the full diff against that BASE BRANCH before
    reviewing individual files.
 3. **Dogma Enforcement Scan:** Validate architecture, typing, temporal
-   boundaries, deterministic math delegation, and artifact completeness
-   across the full diff.
+   boundaries, deterministic math delegation, artifact completeness, and
+   language compliance (internal strings in English, pt-BR only for
+   user-facing output) across the full diff.
 4. **Blocking Issue Report:** Report any blocking issues with precise file
    references and direct remediation guidance.
 5. **Correction Gate:** Require that all accepted corrections be committed to

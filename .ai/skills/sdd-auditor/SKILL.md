@@ -61,6 +61,7 @@ You MUST follow this exact sequence:
     - **Inversion of Control:** Fail audit if domain layer code directly imports cloud SDKs (for example `boto3`, `opensearch-py`) or calls `os.getenv` bypassing ports and adapters.
     - **Sprint Checkpoint Integrity:** Fail audit if completed steps in `current_plan.md` are not marked as `[x]` in `.context/current-sprint.md`. Every delivered step must have its checkbox updated.
     - **State Field Liveness Check:** For every new `Optional` field added to `AgentState` by the plan, verify that at least one graph node or tool writes to that field in production code (not just tests). If no writer exists, the audit must flag the field as "plumbing-only" and require that the plan artifacts explicitly document this status. Fail the audit if the plan claims end-to-end delivery but the field is inert at runtime.
+    - **Language Compliance:** Fail audit if any new structlog event name, log `reason` string, internal feedback field, or system-prompt content is in pt-BR. English is mandatory for all internal strings. pt-BR is reserved for user-facing output only (`print()`, API responses, CLI reports).
 6. **Blackboard Output:** You MUST write the final output to `.ai/handoffs/audit_report.md` using the exact section layout below, replacing placeholders with concrete values.
 
 ### Output Format Contract
