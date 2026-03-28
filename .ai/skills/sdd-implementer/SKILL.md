@@ -60,7 +60,12 @@ You MUST follow this exact sequence:
    - Did you import `boto3`, `opensearch-py`, or call `os.getenv` directly from domain code? If yes, refactor through dependency-injected ports and adapters.
    - Did any missing numeric field avoid controlled degradation to `Optional[float] = None` where required? If yes, fix it.
 7. **Lint Gate (Shift-Left):** After all code-bearing steps are complete, run `poetry run ruff check src/ tests/` and fix any violations before declaring the implementation done. Unused imports, formatting errors, and style violations must never reach the reviewer.
-8. **Post-Implementation Self-Review:** Before declaring the implementation done, re-read every new function's docstring against its final implementation and verify that: (a) the docstring accurately describes the real behavior (especially edge cases and degradation paths), (b) all boundary inputs are validated (mismatched lengths, empty inputs, type mismatches), and (c) every action listed in the plan step was implemented — not just the happy path.
+8. **Post-Implementation Self-Review:** Before declaring the implementation done, perform these mandatory sub-checks:
+   - **8a. Docstring Accuracy:** Re-read every new or modified function's docstring against its FINAL implementation. If the docstring describes behavior that was removed, simplified, or never implemented, fix it immediately.
+   - **8b. Language Compliance:** Verify that all new log messages, reason strings, system-prompt content, and internal feedback strings are in English. pt-BR is reserved exclusively for user-facing output (`print()`, API response messages, CLI reports).
+   - **8c. None Semantics:** For every `Optional` field used in routing or gating logic, verify that `None` means "unknown/absent — take no action" (safe default), NOT "trigger behavior". If the code acts on `None`, flag it as a potential production bug.
+   - **8d. Boundary Inputs:** Verify all boundary inputs are validated (mismatched lengths, empty inputs, type mismatches).
+   - **8e. Plan Coverage:** Verify every action listed in the plan step was implemented — not just the happy path.
 9. **Sprint Checkpoint Update:** As each step from `current_plan.md` is completed, you MUST immediately mark the corresponding checkbox in `.context/current-sprint.md` from `- [ ]` to `- [x]`. Do not defer this to the end — update after each step.
 10. **EOD Summary:** Once the DoD is met, you MUST write a final report to `.ai/handoffs/eod_summary.md` detailing the validation performed (tests or artifact checks) and the dogmas respected.
 
