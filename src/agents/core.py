@@ -172,12 +172,34 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
         )
         return _build_blocked_result(rationale, source_urls)
 
+    # Econometric audit warning: flag when signal lacks statistical significance
+    _sig_audit_entries: list[str] = []
+    if (
+        state.signal_significance is not None
+        and state.signal_significance.p_value is not None
+        and state.signal_significance.p_value > 0.05
+    ):
+        _sig_warning = (
+            f"[Core/Econometric] Sinal do comitê para '{ticker}' não possui "
+            f"significância estatística a 95% de confiança "
+            f"(p-value={state.signal_significance.p_value:.4f})."
+        )
+        _sig_audit_entries.append(_sig_warning)
+        logger.warning(
+            "core_consensus_signal_not_significant",
+            ticker=ticker,
+            p_value=state.signal_significance.p_value,
+        )
+
     if decision.approval_status == "block":
         logger.info("core_consensus_blocked", ticker=ticker)
         rationale = (
             f"{decision.rationale} A etapa de otimização foi bloqueada por consenso."
         )
-        return _build_blocked_result(rationale, source_urls)
+        result = _build_blocked_result(rationale, source_urls)
+        if _sig_audit_entries:
+            result["audit_log"] = result["audit_log"] + _sig_audit_entries
+        return result
 
     portfolio_tickers = state.portfolio_tickers or [ticker]
     if not state.portfolio_returns or state.risk_appetite is None:
@@ -241,7 +263,7 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
     )
     return {
         "core_analysis": core_analysis,
-        "audit_log": [audit_entry],
+        "audit_log": [audit_entry] + _sig_audit_entries,
         "messages": [AIMessage(content=core_analysis.rational, name="core_consensus")],
         "executed_nodes": ["core_consensus"],
         "optimization_blocked": False,
