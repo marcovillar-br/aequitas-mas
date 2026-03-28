@@ -10,8 +10,9 @@
 > from those dogmas.
 
 # Constraints
-- **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, and comments MUST be in **English**.
-- **User Interface Language:** The final output, analysis report, and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
+- **Cognitive Language:** All system prompts, internal reasoning, python code, variable names, comments, structlog event names, log `reason` strings, and internal feedback fields (e.g., `reflection_feedback`) MUST be in **English**.
+- **User Interface Language:** The final output, analysis report, CLI report (`print_report`), and any string intended for the end-user MUST be strictly in **Portuguese (PT-BR)**.
+- **Blackboard & Context Exception:** Artifacts consumed exclusively by the human Tech Lead — `.ai/handoffs/` (audit_report, eod_summary, current_plan), `.context/` (PLAN.md, SPEC.md, current-sprint.md), and `docs/official/` — may use **pt-BR** for readability. This exception does NOT apply to runtime code, logs, or system prompts.
 
 ## 0. Engineering Team Topology
 The development of new features in Aequitas-MAS follows a strictly defined iterative operating flow of responsibilities to ensure the "Risk Confinement" dogma:
@@ -48,6 +49,14 @@ The development of new features in Aequitas-MAS follows a strictly defined itera
 - **Defensive Typing in State:** LangGraph state definitions and LLM-facing Pydantic schemas MUST use `Optional[float] = None` for financial metrics.
 - **Boundary Rule:** `decimal.Decimal` is forbidden at graph or schema boundaries; deterministic tools must return `float` or `None`.
 - **Mathematical Delegation:** Financial formulas belong in deterministic Python under `/src/tools/`, never in prompts or domain prose.
+
+## 4b. Phase 0 — Git Isolation (Mandatory Pre-Planning Gate)
+Every new sprint or feature MUST begin with a synchronized workspace:
+1. `git fetch --all --prune` — sync remote refs.
+2. `git checkout development && git pull --ff-only` — ensure base is current.
+3. `git checkout -b feature/<sprint>-<name> && git push -u origin <branch>` — create and publish.
+4. Record the branch as `Target Branch` in `.context/current-sprint.md`.
+5. No planning or coding may occur on `main` or `development` directly.
 
 ## 5. Quality & Testing (TDD)
 - **Framework**: `pytest` and `pytest-asyncio`.

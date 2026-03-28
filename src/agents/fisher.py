@@ -96,7 +96,17 @@ def fisher_agent(state: AgentState) -> dict:
         )
         structured_llm = llm.with_structured_output(FisherAnalysis)
 
+        reflection_block = ""
+        if state.iteration_count > 0 and state.reflection_feedback:
+            reflection_block = (
+                f"\n\n[REFLECTION — Iteration {state.iteration_count}]\n"
+                f"The consensus supervisor requested re-evaluation: "
+                f"{state.reflection_feedback}\n"
+                "Adjust your analysis considering this feedback.\n\n"
+            )
+
         prompt = (
+            f"{reflection_block}"
             "System Prompt: Philip Fisher Qualitative Analyst (Scuttlebutt Framework). "
             "You are a rigorous qualitative equity analyst specialized in the Fisher/Scuttlebutt method. "
             f"Your task is to evaluate market sentiment and business risk using only the retrieved articles about {ticker}. "

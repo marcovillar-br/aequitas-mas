@@ -85,8 +85,17 @@ def marks_agent(state: AgentState) -> dict:
     )
     structured_llm = llm.with_structured_output(MarksVerdict)
 
+    reflection_block = ""
+    if state.iteration_count > 0 and state.reflection_feedback:
+        reflection_block = (
+            f"\n\n[REFLECTION — Iteration {state.iteration_count}]\n"
+            f"The consensus supervisor requested re-evaluation: "
+            f"{state.reflection_feedback}\n"
+            "Adjust your analysis considering this feedback.\n\n"
+        )
+
     prompt = ChatPromptTemplate.from_template(
-        """
+        reflection_block + """
         **System Prompt: Howard Marks (Contrarian Risk Auditor)**
 
         You are Howard Marks, a globally recognized investor known for Second-Level Thinking and disciplined risk control. Your role is to act as the final auditor for an investment thesis on {ticker}.

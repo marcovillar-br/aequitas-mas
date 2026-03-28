@@ -16,8 +16,9 @@
 
 **2. GESTÃO DE ESTADO E MÁQUINA DE ESTADOS FINITA (LANGGRAPH)**
 
-* A arquitetura abandona pipelines lineares (*Chains*) em favor de Grafos Acíclicos Direcionados (DAGs). O estado do sistema ($S_t$) muta a cada nó, permitindo "Reflexão" e "Correção de Erros" (*Self-Correction*).
-* **A Validação:** A "verdade" do sistema reside em *schemas* rígidos validados pelo pacote Pydantic (v2). Nenhuma saída de texto livre do LLM é aceita como dado estruturado. Se um agente tentar inserir um dado com tipagem incorreta, a exceção é devolvida ao LLM para correção antes de avançar o grafo. O estado lida com dados ausentes de forma defensiva através da tipagem `Optional[float] = None`.
+* A arquitetura opera como um **Grafo Cíclico** com semântica de **Comitê Iterativo** e capacidade de **Self-Reflection**. O roteador `route_after_consensus` permite que o consenso devolva o controle ao comitê qualitativo (Fisher → Macro → Marks) para re-avaliação quando a cross-validação econométrica indica sinais sem significância estatística (`p_value > 0.05`). Um circuit breaker (`_MAX_ITERATIONS=2`) garante terminação determinística.
+* **Reflexão Estruturada:** Quando o loop de reflexão é disparado, os agentes qualitativos recebem um bloco `[REFLECTION — Iteration N]` no prompt contendo o feedback do supervisor, permitindo ajuste de análise. O Agente Graham (quantitativo) NÃO participa do loop — dados de mercado não mudam entre iterações.
+* **A Validação:** A "verdade" do sistema reside em *schemas* rígidos validados pelo pacote Pydantic (v2). Nenhuma saída de texto livre do LLM é aceita como dado estruturado. Se um agente tentar inserir um dado com tipagem incorreta, a exceção é devolvida ao LLM para correção antes de avançar o grafo. O estado lida com dados ausentes de forma defensiva através da tipagem `Optional[float] = None`. Campos de reflexão: `iteration_count: int = 0` e `reflection_feedback: Optional[str] = None`.
 
 **3. ECOSSISTEMA DE DESENVOLVIMENTO: AI-ASSISTED WORKSPACE**
 
@@ -29,14 +30,15 @@ Para evitar o viés de "funciona na minha máquina" e alinhar o projeto a ambien
 
 **4. ESTRUTURA DOS AGENTES (PERSONAS) E INFRAESTRUTURA**
 
-O sistema utiliza a técnica de *Tree-of-Thought* (ToT) delegada a especialistas, respeitando o Princípio da Responsabilidade Única (SRP):
+O sistema utiliza a técnica de *Tree-of-Thought* (ToT) delegada a especialistas com capacidade de **Self-Reflection** via loop cíclico, respeitando o Princípio da Responsabilidade Única (SRP):
 
-* **Aequitas Core (Supervisor):** Roteamento e orquestração via *LangGraph Conditional Edges*. Possui a responsabilidade exclusiva de invocar a *Tool* determinística de otimização de portfólio (Álgebra Linear / Fronteira Eficiente de Markowitz) após o consenso das avaliações dos subagentes.
+* **Aequitas Core (Supervisor):** Roteamento e orquestração via *LangGraph Conditional Edges*. Possui a responsabilidade exclusiva de invocar a *Tool* determinística de otimização de portfólio (Álgebra Linear / Fronteira Eficiente de Markowitz) após o consenso das avaliações dos subagentes. Após o consenso, `route_after_consensus` avalia se o loop de reflexão deve ser disparado com base na significância da cross-validação econométrica.
 * **Agente Graham (Quantitativo):** Análise determinística; consome apenas as *Tools* tipadas (`yfinance` ou APIs da B3) para extração de múltiplos teóricos.
 * **Agente Fisher (Micro-Qualitativo):** Avaliação exclusiva de governança corporativa e microeconomia através da leitura de *filings* corporativos e *Scuttlebutt* via RAG.
 * **Agente Macro (Holístico):** Processamento RAG de relatórios macroeconômicos (FED, Banco Central) utilizando Geração Aumentada por Recuperação baseada em *HyDE* para definição do contexto temporal.
-* **Agente Marks (Auditor):** Crítico focado em atuar de forma contracíclica e mitigar viés de sobrevivência.
-* **Infraestrutura de Estado:** A persistência em ambiente de desenvolvimento opera com `SqliteSaver` em memória para anular custos. Em homologação/produção, utiliza-se Amazon DynamoDB (via interfaces e *Adapters* como `BaseCheckpointSaver`) e Amazon OpenSearch Serverless para o motor vetorial RAG.
+* **Agente Marks (Auditor):** Crítico focado em atuar de forma contracíclica e mitigar viés de sobrevivência. Em iterações de reflexão (`iteration_count > 0`), recebe o feedback do supervisor via bloco `[REFLECTION — Iteration N]` no prompt.
+* **Capacidade de Reflexão:** Fisher, Macro e Marks recebem o bloco `[REFLECTION]` condicionalmente quando `iteration_count > 0` e `reflection_feedback` está presente. Na primeira passagem (`iteration_count == 0`), o bloco é vazio — zero impacto no comportamento original.
+* **Infraestrutura de Estado:** A persistência em ambiente de desenvolvimento opera com `MemorySaver` em memória para anular custos. Em homologação/produção, utiliza-se Amazon DynamoDB (via interfaces e *Adapters* como `BaseCheckpointSaver`) e Amazon OpenSearch Serverless para o motor vetorial RAG.
 
 **5. CRITÉRIOS DE ACEITE E DEGRADAÇÃO (DEFINITION OF DONE)**
 
@@ -45,4 +47,5 @@ Para que qualquer etapa seja considerada válida e auditável nos rigores do TCC
 * **Separação de Preocupações / Inversão de Dependência (DIP):** O comando `import boto3` não pode constar dentro de `/src/agents/`.
 * **Validação Matemática (Shift-Left Testing):** 100% das funções determinísticas em `/src/tools/` devem ser acompanhadas por rigorosos testes unitários escritos em `pytest`, comprovando a precisão do cálculo financeiro sem o auxílio do modelo generativo.
 * **Degradação Controlada:** Na ausência da resolução de um Ticker (ex: FAKE3) ou métrica financeira, o fluxo deve interceptar a anomalia e retornar `None` sob o esquema Pydantic (`Optional[float] = None`), negando sumariamente ao LLM o acesso probabilístico para "adivinhar" o valor.
+* **Circuit Breaker de Reflexão:** O loop de reflexão do comitê é limitado a `_MAX_ITERATIONS=2`. Após 2 passagens, o grafo termina independentemente do estado da cross-validação. Este é um critério de aceite obrigatório para prevenir loops infinitos e controlar custos LLM (FinOps).
 * **Rastreabilidade Ética e Transparência:** O Agente Fisher (e Macro) é arquiteturalmente obrigado pelo *schema* Pydantic a devolver listas de URLs ou IDs de documentos de origem. O relatório final tem de ostentar a fórmula Python invocada pelo código em *logs*.

@@ -135,9 +135,10 @@ _SYNTHESIS_PROMPT = ChatPromptTemplate.from_messages(
     stop=stop_after_attempt(5),
     reraise=True,
 )
-def _invoke_hyde_chain(chain: Any, ticker: str) -> str:
+def _invoke_hyde_chain(chain: Any, ticker: str, reflection: str = "") -> str:
     """Invoke HyDE chain with exponential backoff. Returns the raw hypothesis text."""
-    response = chain.invoke({"ticker": ticker})
+    ticker_with_reflection = f"{reflection}{ticker}" if reflection else ticker
+    response = chain.invoke({"ticker": ticker_with_reflection})
     return response.content if hasattr(response, "content") else str(response)
 
 
@@ -301,7 +302,15 @@ def create_macro_agent(
             # ------------------------------------------------------------------
             hyde_chain = _HYDE_PROMPT | llm
             logger.info("macro_hyde_generation_started", ticker=ticker)
-            hyde_text = _invoke_hyde_chain(hyde_chain, ticker)
+            reflection_block = ""
+            if state.iteration_count > 0 and state.reflection_feedback:
+                reflection_block = (
+                    f"\n\n[REFLECTION — Iteration {state.iteration_count}]\n"
+                    f"The consensus supervisor requested re-evaluation: "
+                    f"{state.reflection_feedback}\n"
+                    "Adjust your analysis considering this feedback.\n\n"
+                )
+            hyde_text = _invoke_hyde_chain(hyde_chain, ticker, reflection=reflection_block)
             logger.info(
                 "macro_hyde_generation_completed",
                 ticker=ticker,

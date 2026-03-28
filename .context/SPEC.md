@@ -16,10 +16,24 @@ permanece normativo para estilo, tipagem e topologia de execução.
 ## 1. Topologia Vigente do Sistema
 
 O Aequitas-MAS opera como **Cyclic Graph** com semântica de
-**Iterative Committee**. O roteador central em `src/core/graph.py` controla a
-sequência:
+**Iterative Committee** e capacidade de **Self-Reflection**. O roteador
+central em `src/core/graph.py` controla a sequência, com
+`route_after_consensus` habilitando um loop de reflexão:
 
-`graham -> fisher -> macro -> marks -> core_consensus -> __end__`
+```
+graham ──→ fisher ──→ macro ──→ marks ──→ core_consensus
+                                               │
+                                    route_after_consensus
+                                       /              \
+                              fisher (loop)        __end__
+                           (if cv.p_value > 0.05   (if iter >= 2
+                            && iter < 2)            || cv absent
+                                │                   || cv significant)
+                                ↓
+                     fisher → macro → marks → core_consensus
+                     (reflection mode: router forces re-execution
+                      via _nodes_since_last_consensus)
+```
 
 ### Invariantes
 
@@ -28,6 +42,13 @@ sequência:
 3. Toda fronteira relevante usa modelos Pydantic v2 imutáveis ou `TypedDict`
    quando o nó retorna patch parcial compatível com LangGraph.
 4. `recursion_limit=15` permanece obrigatório como circuit breaker de FinOps.
+5. `_MAX_ITERATIONS=2` é o circuit breaker de domínio para o loop de reflexão.
+   Funciona junto com o `recursion_limit` (safety net do framework).
+6. Agentes qualitativos (Fisher, Macro, Marks) recebem um bloco
+   `[REFLECTION — Iteration N]` no prompt quando `iteration_count > 0`,
+   permitindo ajuste de análise baseado no feedback do consenso.
+7. Graham NÃO participa do loop de reflexão — dados quantitativos não mudam
+   entre iterações.
 
 ## 2. Contratos de Tipagem Estrita
 
@@ -40,6 +61,16 @@ Regras:
 - `as_of_date: date` é obrigatório como referência temporal point-in-time
 - métricas financeiras ausentes ou inválidas devem degradar para
   `Optional[float] = None`
+- `iteration_count: int = 0` — contador de iterações do comitê. Circuit
+  breaker em `_MAX_ITERATIONS=2`. Incrementado por `_consensus_with_iteration`.
+- `reflection_feedback: Optional[str] = None` — feedback do supervisor
+  explicando por que o loop de reflexão foi disparado. Consumido pelos
+  agentes qualitativos para ajustar suas análises.
+- `signal_significance: Optional[EconometricResult] = None` — resultado
+  OLS da validação econométrica (Gujarati) dos sinais do comitê.
+- `cross_validation: Optional[EconometricResult] = None` — resultado OLS
+  da cross-validação Macro/Fisher. Quando `p_value > 0.05`, dispara o
+  loop de reflexão. Quando `None`, significa "desconhecido" (não dispara).
 - Strict Boundary Mapping: em schemas Pydantic que atuam como boundaries,
   campos podem ser tipados como `Optional[T]`, mas NÃO devem usar
   `default=None`; todas as propriedades devem ser explicitamente mapeadas na
@@ -389,21 +420,22 @@ contratos baseados em coleções ou payloads não tipados.
 
 ## 7. Próxima Extensão Planejada
 
-O baseline consolidado (Sprint 14) entrega CLI observability (ConsoleRenderer,
-L10n pt-BR, fail-fast router) e validação econométrica dos sinais do comitê.
+O baseline consolidado (Sprint 15) entrega o Grafo Cíclico com capacidade
+de Self-Reflection, completando o milestone v2.5.
 
-Sprint 14 Phase 2 (Econometric Validation) entregou:
-- `src/tools/econometric.py`: OLS determinístico (closed-form) com slope,
-  t-statistic, p-value (via `scipy.stats.t`), R², e degradação controlada.
-- `EconometricResult` schema (frozen, isfinite validation) no `AgentState`.
-- `core_consensus_node` recebe `{signal_significance}` no prompt para
-  gating econométrico da decisão de otimização.
-- Gujarati minimum: 3 observações pareadas para inferência válida.
+Sprint 15 (Cyclic Graph Refinement) entregou:
+- `route_after_consensus` com `_MAX_ITERATIONS=2` circuit breaker.
+- Full committee reflection loop: `consensus → fisher → macro → marks → consensus`.
+- `_nodes_since_last_consensus` resolve frozen-state checkpoint problem.
+- `[REFLECTION — Iteration N]` prompt injection em Fisher, Macro e Marks.
+- `iteration_count` e `reflection_feedback` no `AgentState`.
+- Reflection loop dispara apenas com evidência explícita de falha
+  (`cross_validation.p_value > 0.05`), não por ausência de dados.
 
-Os próximos passos (milestone v2.5 — Cyclic Graph Refinement) focam em:
-- ReAct e Tree-of-Thought (ToT) no `core_consensus_node`.
-- Refinamento do Agente Marks com reasoning estruturado.
-- Regime-Aware Consensus (pesos dinâmicos por Selic).
+Os próximos passos (milestone v3.0 — SOTA Factor Expansion) focam em:
+- Integrar fatores quantitativos institucionais via Selenium/Pandas.
+- Expandir `HistoricalMarketData` com novos indicadores.
+- Semantic Chunking para Earnings Calls (MarketSenseAI).
 
 ## 8. SDLC & Git Flow
 

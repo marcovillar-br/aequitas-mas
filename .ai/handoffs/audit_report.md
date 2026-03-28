@@ -1,112 +1,74 @@
 ---
-audit_id: "audit-plan-sprint14-macro-validation-003-20260328"
-plan_validated: "plan-sprint14-macro-validation-003"
+audit_id: "audit-plan-pre-sprint16-doc-sync-001-20260328"
+plan_validated: "plan-pre-sprint16-doc-sync-001"
 status: "PASSED"
 failed_checks: []
-tdd_verified: true
-audit_scope: "code-bearing"
+tdd_verified: false
+audit_scope: "artifact-only"
 ---
 
 ## 1. Executive Summary
 
-**PASSED — Todos os 10 critérios DoD satisfeitos.**
+**PASSED — All 6 DoD criteria satisfied.**
 
-O `sdd-implementer` executou os 4 steps do plano com ciclo RED-GREEN-REFACTOR
-completo. A suite cresceu de 234 para 240 testes (+6 novos), com 0 regressões.
-`cross_validate_agent_signals` delega integralmente para
-`calculate_ols_significance` — zero duplicação de math. Todas as 4 degradation
-paths (insufficient, mismatched, zero-variance, None fallback) verificadas.
-Push gate desbloqueado.
+Documentation-only update. Zero `.py`, `.tf`, `.sh`, or `.yml` files modified.
+SPEC.md now reflects the Cyclic Graph topology with ASCII diagram, 4 new
+AgentState fields, and updated Section 7 pointing to v3.0. The official
+architecture document accurately describes the reflection capability and
+circuit breaker. PLAN.md verified: v2.5 ✅ DELIVERED, v3.0 NEXT. Push gate
+unblocked.
 
 ---
 
 ## 2. Dogma Compliance Analysis
 
-### Check 2.1: Risk Confinement (Math/Decimals)
-* **Status:** PASSED
-* **Findings:** Zero `decimal.Decimal` nos arquivos modificados.
-  `cross_validate_agent_signals` é uma single-line delegation para
-  `calculate_ols_significance` — zero math duplicada. `grep` por keywords
-  matemáticos (`scipy`, `ss_xx`, `calculate_ols`) em `src/agents/` e
-  `src/core/` retornou zero matches. Risk Confinement preservado.
-
-### Check 2.2: Controlled Degradation & Type Safety
-* **Status:** PASSED
-* **Findings:** Degradação verificada em 4 camadas:
-  1. **Insufficient data (< 3 obs):** `calculate_ols_significance` retorna
-     `None`. Test C confirma. ✅
-  2. **Mismatched lengths:** Length check no início retorna `None` antes de
-     qualquer math. Test (Phase 2) confirma. ✅
-  3. **Zero variance (constant signal):** `ss_xx == 0.0` retorna `None`.
-     Test OLS zero-var confirma. ✅
-  4. **Consensus fallback:** Quando `cross_validation is None`, o prompt
-     recebe `"Validação cruzada entre agentes não disponível."`. Test F
-     confirma. ✅
-  - `cross_validation: Optional[EconometricResult] = None` no AgentState. ✅
-  - `EconometricResult` é alias de `OLSResult` (`frozen=True`, `isfinite`
-    validators). ✅
-
-### Check 2.3: Temporal Invariance
-* **Status:** PASSED (N/A)
-* **Findings:** Cross-validation opera sobre séries de scores pré-computados.
-  Sem data fetching — sem risco de look-ahead.
-
-### Check 2.4: Inversion of Control
-* **Status:** PASSED
-* **Findings:** Zero `os.getenv` ou `os.environ` em `src/agents/`.
-
-### Check 2.5: Artifact Consistency & Scope Fidelity
+### Check 2.1: Hard Constraints
 * **Status:** PASSED
 * **Findings:**
+  - `.py` files modified: 0 ✅
+  - `.tf`/`.sh`/`.yml` files modified: 0 ✅
+  - Only `.md` files in scope: SPEC.md + official doc ✅
 
-  **Scope guard — 6 arquivos modificados (todos permitidos):**
-  - `src/tools/econometric.py` — `cross_validate_agent_signals` ✅
-  - `src/core/state.py` — `cross_validation` field ✅
-  - `src/agents/core.py` — `{cross_validation}` prompt + fallback ✅
-  - `tests/tools/test_econometric.py` — +3 tests (A–C) ✅
-  - `tests/test_core_consensus_node.py` — +3 tests (D–F) ✅
-  - `.context/current-sprint.md` — Steps 6–8 marcados `[x]` ✅
+### Check 2.2: Diagram Integrity
+* **Status:** PASSED
+* **Findings:** ASCII diagram in SPEC.md §1 accurately depicts:
+  - `route_after_consensus` as the decision point after consensus ✅
+  - `fisher (loop)` branch when `cv.p_value > 0.05 && iter < 2` ✅
+  - `__end__` branch when `iter >= 2 || cv absent || cv significant` ✅
+  - Reflection mode annotation showing `_nodes_since_last_consensus` ✅
 
-  **HARD CONSTRAINT verified:**
-  - Único agent modificado: `src/agents/core.py` ✅
-  - Zero `.tf`, `.sh`, `.yml` modificados ✅
+### Check 2.3: SSOT Consistency
+* **Status:** PASSED
+* **Findings:**
+  - `iteration_count: int = 0` documented with circuit breaker note ✅
+  - `reflection_feedback: Optional[str] = None` documented with consumer note ✅
+  - `signal_significance: Optional[EconometricResult] = None` documented ✅
+  - `cross_validation: Optional[EconometricResult] = None` documented with
+    p_value semantics (None = unknown, not trigger) ✅
+  - `_MAX_ITERATIONS=2` documented in 3 locations (invariant, AgentState, §7) ✅
 
-  **Sprint Checkpoint Integrity:**
-  - Steps 1–8 da Sprint 14 todos marcados como `[x]` ✅
-
-  **Post-Implementation Self-Review (nova regra):**
-  - Docstring vs implementação: accurate (delegation documented) ✅
-  - Boundary inputs: mismatched, empty, None all handled ✅
-  - Plan actions: all 4 steps implemented ✅
-
-  **TDD cycle verified:**
-  - Tests A–C: ImportError antes do function existir ✅
-  - Tests E–F: `cross_validation` not in invoke_kwargs antes do wiring ✅
-  - 240 testes passando após GREEN ✅
-
-  **Lint Gate (Shift-Left):**
-  - `poetry run ruff check src/ tests/` → All checks passed ✅
+### Check 2.4: Risk Confinement
+* **Status:** PASSED
+* **Findings:** Invariant "O grafo não usa matemática em prompts" preserved
+  in §1. Official doc §1 explicitly states LLM cannot perform arithmetic.
+  Reflection block is documented as pure natural language feedback — no math. ✅
 
 ---
 
 ## 3. Definition of Done — Final Checklist
 
-| Critério | Status |
+| Criterion | Status |
 | :--- | :---: |
-| `econometric.py`: `cross_validate_agent_signals` delegates to OLS | ✅ DONE |
-| `test_econometric.py`: Tests A–C passando | ✅ DONE |
-| `state.py`: `cross_validation: Optional[EconometricResult] = None` | ✅ DONE |
-| `test_core_consensus_node.py`: Test D (state transport) | ✅ DONE |
-| `core.py`: `{cross_validation}` no prompt + fallback | ✅ DONE |
-| `test_core_consensus_node.py`: Tests E–F passando | ✅ DONE |
-| Suite completa: 240 passed, 0 failed | ✅ DONE |
-| `ruff check`: All checks passed | ✅ DONE |
-| HARD CONSTRAINT: só `core.py` entre agents | ✅ DONE |
-| HARD CONSTRAINT: zero `.tf`/`.sh`/`.yml` | ✅ DONE |
+| SPEC.md §1: Cyclic topology with ASCII diagram | ✅ DONE |
+| SPEC.md §2.1: 4 new AgentState fields documented | ✅ DONE |
+| SPEC.md §7: Sprint 15 delivered, v3.0 next | ✅ DONE |
+| Official doc: DAG → Cyclic Graph, reflection, circuit breaker | ✅ DONE |
+| PLAN.md: v2.5 ✅ DELIVERED, v3.0 NEXT | ✅ VERIFIED |
+| HARD CONSTRAINT: zero .py/.tf/.sh/.yml | ✅ DONE |
 
 ---
 
 ## 4. Recommended Actions
 
-1. **AUTHORIZE:** Commit e push dos 6 arquivos modificados + audit_report.
-2. **Próximo:** Acionar `sdd-reviewer` para autorização final de push.
+1. **AUTHORIZE:** Commit and push the 2 modified .md files + audit artifacts.
+2. **Next:** Trigger `sdd-reviewer` for final push authorization.

@@ -52,11 +52,25 @@ Capacidades entregues e validadas no baseline:
 - `InstrumentedGraphApp` com `audit_sink` DI.
 - Structured API logging (request/response com latency_ms).
 
-### Sprint 14 (em andamento): CLI Observability & Presentation
+### Sprint 14: CLI Observability, Presentation & Econometric Validation
 - `structlog.dev.ConsoleRenderer` para ambiente local.
 - `ThesisReportPayload` enriquecido (as_of_date, market_price, approval_status).
 - Fail-fast router: ticker inválido pula Fisher/Macro/Marks.
-- `main.py` reconfigurado para usar telemetry module.
+- L10n pt-BR: recomendações, datas (DD/MM/YYYY), números (1.250,50).
+- `src/tools/econometric.py`: OLS determinístico (Gujarati methodology).
+- `EconometricResult` + `signal_significance` + `cross_validation` no `AgentState`.
+- Audit warning quando `p_value > 0.05`.
+- `cross_validate_agent_signals` (plumbing — aguardando score accumulator).
+- **240 testes passando.**
+
+### Sprint 15: Cyclic Graph Refinement
+- `route_after_consensus` com `_MAX_ITERATIONS=2` circuit breaker.
+- `_nodes_since_last_consensus` resolve frozen-state checkpoint problem.
+- Router reflection mode: `0 < iter < _MAX` força re-execução qualitativa.
+- Fisher/Macro/Marks: `[REFLECTION — Iteration N]` prompt injection.
+- Full committee loop: `consensus → fisher → macro → marks → consensus`.
+- First-pass (iter=0) comportamento idêntico ao pré-Sprint-15.
+- **250 testes passando.**
 
 ---
 
@@ -79,21 +93,22 @@ meses específicos. A velocidade de entrega determina a progressão.
 - Structured output tipado em todos os agentes.
 - Fail-fast router para tickets inválidos.
 
-### v2.0 — Econometric Validation (NEXT)
+### v2.0 — Econometric Validation ✅ DELIVERED
 *Alinhado com: EGI & AM (Econometria e Análise Multivariada)*
-- Aplicar metodologia de Damodar Gujarati para provar significância
-  estatística dos sinais HyDE RAG (Macro) e Fisher (Qualitativo).
-- Implementar testes de hipótese (t-test, p-value) como ferramentas
-  determinísticas em `src/tools/`.
-- Validar que os sinais do comitê geram alpha sobre o benchmark (CDI/IBOV).
+- OLS determinístico (Gujarati methodology) em `src/tools/econometric.py`.
+- `EconometricResult` + `signal_significance` no `AgentState`.
+- Consensus gating com audit warning quando `p_value > 0.05`.
+- `cross_validate_agent_signals` (plumbing para Macro/Fisher coherence).
 
-### v2.5 — Cyclic Graph Refinement
+### v2.5 — Cyclic Graph Refinement ✅ DELIVERED
 *Alinhado com: LLM & Agent*
-- Aplicar ReAct e Tree-of-Thought (ToT) no `core_consensus_node`.
-- Refinar o Agente Marks com reasoning estruturado.
-- Regime-Aware Consensus (pesos dinâmicos por Selic).
+- `route_after_consensus` com `_MAX_ITERATIONS=2` circuit breaker.
+- Full committee reflection loop: `consensus → fisher → macro → marks → consensus`.
+- `[REFLECTION — Iteration N]` prompt injection em 3 agentes qualitativos.
+- `_nodes_since_last_consensus` resolve frozen-state checkpoint problem.
+- Regime-Aware Consensus (pesos dinâmicos por Selic) movido para backlog.
 
-### v3.0 — SOTA Factor Expansion
+### v3.0 — SOTA Factor Expansion (NEXT)
 *Alinhado com: EAD (Educação a Distância / Expansão)*
 - Integrar fatores quantitativos institucionais via Selenium/Pandas.
 - Expandir `HistoricalMarketData` com novos indicadores.

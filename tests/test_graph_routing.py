@@ -265,6 +265,7 @@ def test_centralized_routing_flow(mock_agents: dict[str, Any]) -> None:
     initial_state = {
         "messages": [],
         "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         "portfolio_tickers": ["WEGE3"],
         "portfolio_returns": [[0.01], [0.02]],
         "risk_appetite": 0.4,
@@ -294,6 +295,7 @@ def test_graph_emits_decision_path_events_in_execution_order(
     initial_state = {
         "messages": [],
         "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         "portfolio_tickers": ["WEGE3"],
         "portfolio_returns": [[0.01], [0.02]],
         "risk_appetite": 0.4,
@@ -379,6 +381,7 @@ def test_graph_emits_blocked_phase_for_consensus_veto() -> None:
         initial_state = {
             "messages": [],
             "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         }
         config = {"configurable": {"thread_id": "test_consensus_blocked"}}
 
@@ -402,6 +405,7 @@ def test_graph_continues_when_audit_sink_fails(mock_agents: dict[str, Any]) -> N
     initial_state = {
         "messages": [],
         "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         "portfolio_tickers": ["WEGE3"],
         "portfolio_returns": [[0.01], [0.02]],
         "risk_appetite": 0.4,
@@ -433,6 +437,7 @@ def test_graph_creates_root_and_child_spans(mock_agents: dict[str, Any]) -> None
     initial_state = {
         "messages": [],
         "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         "portfolio_tickers": ["WEGE3"],
         "portfolio_returns": [[0.01], [0.02]],
         "risk_appetite": 0.4,
@@ -469,6 +474,7 @@ def test_graph_mutates_state_with_deterministic_rag_scores(
     initial_state = {
         "messages": [],
         "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
         "portfolio_tickers": ["WEGE3"],
         "portfolio_returns": [[0.01], [0.02]],
         "risk_appetite": 0.4,
@@ -553,6 +559,7 @@ def test_node_exceptions_record_error_span_and_degrade() -> None:
         initial_state = {
             "messages": [],
             "target_ticker": "WEGE3",
+        "iteration_count": 2,  # prevent reflection loop in non-cycle tests
             "portfolio_tickers": ["WEGE3"],
             "portfolio_returns": [[0.01], [0.02]],
             "risk_appetite": 0.4,
@@ -579,6 +586,7 @@ def test_routing_skips_specialists_and_goes_to_marks(mock_agents: dict[str, Any]
     initial_state = {
         "messages": [],
         "target_ticker": "PETR4",
+        "iteration_count": 2,
         "metrics": _build_metrics(),
         "qual_analysis": _build_fisher(),
         "macro_analysis": _build_macro(),
@@ -603,7 +611,7 @@ def test_macro_agent_receives_correct_state_shape(mock_agents: dict[str, Any]) -
     from src.core.graph import create_graph
 
     app = create_graph()
-    initial_state = {"messages": [], "target_ticker": "VALE3"}
+    initial_state = {"messages": [], "target_ticker": "VALE3", "iteration_count": 2}
     config = {"configurable": {"thread_id": "test_macro_state_shape"}}
 
     for _ in app.stream(initial_state, config=config):
@@ -673,7 +681,7 @@ def test_graph_execution_binds_structlog_contextvars(mock_agents: dict[str, Any]
     from src.core.graph import create_graph
 
     app = create_graph()
-    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    initial_state = {"messages": [], "target_ticker": "PETR4", "iteration_count": 2}
     config = {"configurable": {"thread_id": "ctx-test-123"}}
 
     with patch("src.core.graph.structlog.contextvars.bind_contextvars") as mock_bind:
@@ -691,7 +699,7 @@ def test_graph_emits_summary_event_after_execution(mock_agents: dict[str, Any]) 
 
     mock_sink = MagicMock(spec=AuditSinkPort)
     app = create_graph(audit_sink=mock_sink)
-    initial_state = {"messages": [], "target_ticker": "PETR4"}
+    initial_state = {"messages": [], "target_ticker": "PETR4", "iteration_count": 2}
     config = {"configurable": {"thread_id": "summary-test-456"}}
 
     app.invoke(initial_state, config=config)
@@ -707,3 +715,135 @@ def test_graph_emits_summary_event_after_execution(mock_agents: dict[str, Any]) 
     assert summary_event.latency_ms is not None
     assert summary_event.latency_ms > 0
     assert len(summary_event.executed_nodes_snapshot) > 0
+
+
+# ---------------------------------------------------------------------------
+# Sprint 15 — Cyclic Graph Refinement (reflection loop)
+# ---------------------------------------------------------------------------
+
+
+def test_agent_state_accepts_iteration_fields() -> None:
+    """The state must transport iteration_count and reflection_feedback."""
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        iteration_count=1,
+        reflection_feedback="Cross-validation not significant.",
+    )
+    assert state.iteration_count == 1
+    assert state.reflection_feedback == "Cross-validation not significant."
+
+
+def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
+    """Cross-validation with p_value > 0.05 must loop back to fisher."""
+    from src.core.graph import route_after_consensus
+    from src.core.state import EconometricResult
+
+    weak_cv = EconometricResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        iteration_count=0,
+        cross_validation=weak_cv,
+        executed_nodes=["graham", "fisher", "macro", "marks", "core_consensus"],
+    )
+
+    assert route_after_consensus(state) == "fisher"
+
+
+def test_route_after_consensus_terminates_at_max_iterations() -> None:
+    """iteration_count >= 2 must terminate regardless of cross_validation."""
+    from src.core.graph import route_after_consensus
+
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        iteration_count=2,
+        cross_validation=None,
+        executed_nodes=["graham", "fisher", "macro", "marks", "core_consensus"],
+    )
+
+    assert route_after_consensus(state) == "__end__"
+
+
+def test_route_after_consensus_terminates_when_cross_validation_present() -> None:
+    """Available cross_validation means evidence is sufficient — terminate."""
+    from src.core.graph import route_after_consensus
+    from src.core.state import EconometricResult
+
+    eco = EconometricResult(slope=1.8, p_value=0.01, r_squared=0.85, n_observations=20)
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        iteration_count=0,
+        cross_validation=eco,
+        executed_nodes=["graham", "fisher", "macro", "marks", "core_consensus"],
+    )
+
+    assert route_after_consensus(state) == "__end__"
+
+
+def test_router_forces_fisher_reexecution_in_reflection_mode() -> None:
+    """When iteration_count > 0, the router must re-route to fisher
+    even if qual_analysis exists, provided fisher hasn't run in this iteration.
+    """
+    from src.core.graph import router
+
+    # After first consensus: all checkpoints exist, iteration_count=1
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        metrics=_build_metrics(),
+        qual_analysis=_build_fisher(),
+        macro_analysis=_build_macro(),
+        marks_verdict="APPROVE",
+        iteration_count=1,
+        executed_nodes=[
+            "graham", "fisher", "macro", "marks", "core_consensus",
+        ],
+    )
+
+    # Router should force fisher re-execution (reflection mode)
+    assert router(state) == "fisher"
+
+
+def test_graph_runs_full_committee_twice_in_reflection_loop(mock_agents: dict[str, Any]) -> None:
+    """The reflection loop must re-execute the full qualitative committee."""
+    from src.core.graph import create_graph
+    from src.tools.econometric import OLSResult
+
+    app = create_graph()
+    # Provide weak cross_validation (p>0.05) to trigger reflection loop
+    weak_cv = OLSResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
+    initial_state = {"messages": [], "target_ticker": "PETR4", "cross_validation": weak_cv}
+    config = {"configurable": {"thread_id": "full-loop-test"}}
+
+    path: list[str] = []
+    for state_update in app.stream(initial_state, config=config):
+        path.extend(state_update.keys())
+
+    # Full committee runs twice: first pass + reflection pass
+    assert path.count("fisher") == 2, f"Expected fisher ×2, got {path.count('fisher')}. Path: {path}"
+    assert path.count("core_consensus") == 2, f"Expected consensus ×2, got {path.count('core_consensus')}. Path: {path}"
+
+
+def test_graph_halts_after_two_iterations(mock_agents: dict[str, Any]) -> None:
+    """The graph must complete after at most 2 committee iterations.
+
+    With weak cross_validation (p>0.05), the reflection loop triggers. The
+    graph must run core_consensus exactly 2 times then terminate.
+    """
+    from src.core.graph import create_graph
+    from src.tools.econometric import OLSResult
+
+    app = create_graph()
+    weak_cv = OLSResult(slope=0.1, p_value=0.25, r_squared=0.05, n_observations=10)
+    initial_state = {"messages": [], "target_ticker": "PETR4", "cross_validation": weak_cv}
+    config = {"configurable": {"thread_id": "cycle-test-001"}}
+
+    path: list[str] = []
+    for state_update in app.stream(initial_state, config=config):
+        path.extend(state_update.keys())
+
+    consensus_count = path.count("core_consensus")
+    assert consensus_count == 2, f"Expected 2 consensus passes, got {consensus_count}. Path: {path}"

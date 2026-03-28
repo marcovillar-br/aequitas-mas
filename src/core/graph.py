@@ -484,6 +484,20 @@ def _has_specialist_checkpoint(state: AgentState, node_name: str) -> bool:
     return checkpoint_map[node_name] or node_name in state.executed_nodes
 
 
+def _nodes_since_last_consensus(state: AgentState) -> set[str]:
+    """Return the set of nodes executed after the most recent consensus pass.
+
+    Used by the reflection-mode router to determine which qualitative agents
+    still need to re-run in the current iteration.
+    """
+    nodes = list(state.executed_nodes)
+    try:
+        last_consensus_idx = len(nodes) - 1 - nodes[::-1].index("core_consensus")
+        return set(nodes[last_consensus_idx + 1:])
+    except ValueError:
+        return set(nodes)
+
+
 def _graham_fully_degraded(state: AgentState) -> bool:
     """Detect total Graham degradation indicating an invalid or delisted ticker.
 
@@ -532,6 +546,18 @@ def router(
             return "core_consensus"
         return "__end__"
 
+    # Reflection mode: force qualitative re-execution when looping
+    # Only active when iteration budget is not yet exhausted
+    if 0 < state.iteration_count < _MAX_ITERATIONS:
+        recent = _nodes_since_last_consensus(state)
+        if "fisher" not in recent:
+            return "fisher"
+        if "macro" not in recent:
+            return "macro"
+        if "marks" not in recent:
+            return "marks"
+        return "core_consensus"
+
     if not _has_specialist_checkpoint(state, "fisher"):
         return "fisher"
 
@@ -545,6 +571,40 @@ def router(
         return "core_consensus"
 
     return "__end__"
+
+
+_MAX_ITERATIONS = 2
+
+
+def route_after_consensus(
+    state: AgentState,
+) -> Literal["fisher", "__end__"]:
+    """Post-consensus routing: re-run qualitative committee or terminate.
+
+    Returns "fisher" when the committee has not exhausted its iteration budget
+    AND cross-validation evidence explicitly indicates insufficient signal
+    coherence (p_value > 0.05) — triggering a full committee reflection loop
+    (fisher → macro → marks → consensus). Returns "__end__" when the circuit
+    breaker fires (iteration_count >= 2), cross-validation is absent (unknown),
+    or cross-validation is statistically significant (p_value <= 0.05).
+    """
+    if (
+        state.iteration_count < _MAX_ITERATIONS
+        and state.cross_validation is not None
+        and state.cross_validation.p_value is not None
+        and state.cross_validation.p_value > 0.05
+    ):
+        logger.info(
+            "reflection_loop_triggered",
+            ticker=state.target_ticker,
+            iteration_count=state.iteration_count,
+            p_value=state.cross_validation.p_value,
+            reason="Cross-validation not statistically significant — re-entering committee via Fisher.",
+        )
+        return "fisher"
+
+    return "__end__"
+
 
 # 2. GRAPH CONSTRUCTION
 def create_graph(
@@ -604,15 +664,33 @@ def create_graph(
             resolved_telemetry,
         ),
     )
-    workflow.add_node(
+    instrumented_consensus = _build_instrumented_node(
         "core_consensus",
-        _build_instrumented_node(
-            "core_consensus",
-            core_consensus_node,
-            resolved_audit_sink,
-            resolved_telemetry,
-        ),
+        core_consensus_node,
+        resolved_audit_sink,
+        resolved_telemetry,
     )
+
+    def _consensus_with_iteration(
+        state: AgentState,
+        config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Thin wrapper that increments iteration_count after consensus.
+
+        When a reflection loop is triggered, sets reflection_feedback so
+        qualitative agents can adjust their analysis. The router uses
+        _nodes_since_last_consensus() to force re-execution without
+        clearing frozen state checkpoints.
+        """
+        result = instrumented_consensus(state, config)
+        result["iteration_count"] = state.iteration_count + 1
+        if route_after_consensus(state) == "fisher":
+            result["reflection_feedback"] = (
+                "Cross-validation not statistically significant — re-entering committee via Fisher."
+            )
+        return result
+
+    workflow.add_node("core_consensus", _consensus_with_iteration)
 
     # Define the mapping from router decision to the next node
     router_map = {
@@ -621,6 +699,12 @@ def create_graph(
         "macro": "macro",
         "marks": "marks",
         "core_consensus": "core_consensus",
+        "__end__": END,
+    }
+
+    # Post-consensus routing map (reflection loop or terminate)
+    post_consensus_map = {
+        "fisher": "fisher",
         "__end__": END,
     }
 
@@ -633,7 +717,8 @@ def create_graph(
     workflow.add_conditional_edges("fisher", router, router_map)
     workflow.add_conditional_edges("macro", router, router_map)
     workflow.add_conditional_edges("marks", router, router_map)
-    workflow.add_conditional_edges("core_consensus", router, router_map)
+    # core_consensus uses the post-consensus router (reflection loop)
+    workflow.add_conditional_edges("core_consensus", route_after_consensus, post_consensus_map)
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()

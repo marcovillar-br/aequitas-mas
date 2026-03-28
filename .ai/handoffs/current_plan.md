@@ -1,161 +1,114 @@
 ---
-plan_id: plan-sprint14-macro-validation-003
+plan_id: plan-pre-sprint16-doc-sync-001
 target_files:
-  - "src/tools/econometric.py"
-  - "tests/tools/test_econometric.py"
-  - "src/core/state.py"
-  - "src/agents/core.py"
-  - "tests/test_core_consensus_node.py"
+  - ".context/SPEC.md"
+  - "docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md"
+  - ".context/PLAN.md"
   - ".context/current-sprint.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
+enforced_dogmas: [artifact-driven-communication, scope-discipline, ssot]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Phase 3 of Sprint 14: Macro-Signal Cross-Validation. Uses the OLS
-econometric tool (Phase 2) to test whether the Macro Agent's RAG confidence
-score (`macro_rag_score`) correlates with the Fisher Agent's sentiment signal
-(`fisher_rag_score`) — validating cross-agent signal coherence before the
-consensus gate.
+Pre-Sprint 16 architectural documentation sync. Updates all specification
+and architecture artifacts to reflect the Cyclic Graph topology delivered
+in Sprint 15 (milestone v2.5).
 
-**Rationale:** If the macro environment assessment (HyDE RAG) and the
-qualitative sentiment analysis (Fisher) are both contributing meaningful
-signals, their scores should exhibit statistically significant correlation
-over multiple backtest windows. A low correlation (p > 0.05) suggests one
-of the signals is noise and should be discounted by the supervisor.
+**This is a DOCUMENTATION-ONLY task. Zero `.py`, `.tf`, `.sh`, or `.yml`
+files may be modified.**
 
-Two axes of work:
+Three target documents:
 
-1. **Cross-Validation Tool:** Add `cross_validate_agent_signals` to
-   `src/tools/econometric.py`. This function takes two agent score series
-   (e.g., macro_rag_scores and fisher_rag_scores from multiple runs) and
-   returns an `OLSResult` measuring their correlation. Reuses the existing
-   `calculate_ols_significance` under the hood.
+1. **`.context/SPEC.md`** — Replace the linear DAG sequence with the cyclic
+   topology. Document `iteration_count`, `reflection_feedback`,
+   `_MAX_ITERATIONS=2`, and the `[REFLECTION]` prompt injection.
 
-2. **State & Consensus Wiring:** Add a
-   `cross_validation: Optional[EconometricResult] = None` field to
-   `AgentState` (separate from `signal_significance` which measures
-   signal vs returns). Inject it into the consensus prompt so the
-   supervisor can see whether the agents agree econometrically.
+2. **`docs/official/Aequitas-MAS_01_...v2_pt-BR.md`** — Update the logical
+   architecture sections (§2, §4) to reflect the hybrid reflection
+   capability. Replace "DAG" with "Cyclic Graph" where appropriate.
 
-**SCOPE GUARD:**
-- Only `src/agents/core.py` modified among agent files.
-- No backtesting, fetcher, or infrastructure files modified.
-- No `.tf`, `.sh`, or `.yml` files modified.
+3. **`.context/PLAN.md`** — Verify v2.5 is DELIVERED and v3.0 is NEXT.
+   Already done in prior commit — verify only, no changes expected.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Cross-validation function (RED-GREEN-REFACTOR)
+### Step 2.1 — Update SPEC.md topology and state contracts (artifact-only)
 
-* **Target:** `src/tools/econometric.py`
-* **Execution mode:** code-bearing — write failing tests first.
+* **Target:** `.context/SPEC.md`
+* **Actions:**
 
-* **Signature:**
+  **A — Section 1 (Topologia):**
+  Replace the linear sequence:
+  ```
+  graham -> fisher -> macro -> marks -> core_consensus -> __end__
+  ```
+  with the cyclic topology:
+  ```
+  graham -> fisher -> macro -> marks -> core_consensus
+                                              |
+                            route_after_consensus
+                              /              \
+                     fisher (loop)        __end__
+                  (if cv.p_value > 0.05   (if iter >= 2
+                   && iter < 2)            || cv absent
+                                           || cv significant)
+  ```
+  Add invariant: `_MAX_ITERATIONS=2` as domain-level circuit breaker.
 
-```python
-def cross_validate_agent_signals(
-    signal_a: Sequence[float | None],
-    signal_b: Sequence[float | None],
-) -> Optional[OLSResult]:
-    """Test correlation between two agent score series via OLS.
+  **B — Section 2.1 (AgentState):**
+  Add the new fields to the documented contract:
+  ```
+  iteration_count: int = 0
+  reflection_feedback: Optional[str] = None
+  signal_significance: Optional[EconometricResult] = None
+  cross_validation: Optional[EconometricResult] = None
+  ```
 
-    Delegates to calculate_ols_significance treating signal_a as the
-    independent variable and signal_b as the dependent variable.
-
-    Returns None when inputs are insufficient, mismatched, or when
-    signal_a has zero variance.
-    """
-```
-
-* **Tests to add in `tests/tools/test_econometric.py`:**
-
-**Test A — Cross-validation with correlated signals returns significant result**
-```python
-def test_cross_validate_correlated_signals_returns_significant_result() -> None:
-    """Correlated agent signals must produce a low p-value."""
-```
-
-**Test B — Cross-validation with uncorrelated signals returns high p-value**
-```python
-def test_cross_validate_uncorrelated_signals_returns_high_p_value() -> None:
-    """Uncorrelated signals must produce p > 0.05."""
-```
-
-**Test C — Cross-validation degrades with insufficient data**
-```python
-def test_cross_validate_degrades_with_insufficient_data() -> None:
-    """Fewer than 3 valid pairs must degrade to None."""
-```
+  **C — Section 7 (Próxima Extensão):**
+  Replace the stale Sprint 14 reference with Sprint 15 delivered scope
+  and Sprint 16 (v3.0) as the next target.
 
 ---
 
-### Step 2.2 — Add `cross_validation` field to AgentState (RED-GREEN-REFACTOR)
+### Step 2.2 — Update official architecture document (artifact-only)
 
-* **Target:** `src/core/state.py`
-* **Execution mode:** code-bearing — write failing test first.
+* **Target:** `docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md`
+* **Actions:**
 
-* **Action:**
-  Add `cross_validation: Optional[EconometricResult] = None` to `AgentState`,
-  adjacent to `signal_significance`.
+  **A — Section 2 (Gestão de Estado):**
+  Replace "Grafos Acíclicos Direcionados (DAGs)" with "Grafo Cíclico com
+  semântica de Comitê Iterativo". Add note about `route_after_consensus`
+  and the reflection loop.
 
-* **Test in `tests/test_core_consensus_node.py`:**
+  **B — Section 4 (Agentes):**
+  Add bullet about the `[REFLECTION — Iteration N]` prompt injection
+  capability in Fisher, Macro, and Marks. Note that Graham is excluded
+  (quantitative data doesn't change on reflection).
 
-**Test D — AgentState accepts cross_validation field**
-```python
-def test_agent_state_accepts_cross_validation_result() -> None:
-    """The state must transport cross-validation data without error."""
-```
-
----
-
-### Step 2.3 — Inject `cross_validation` into consensus prompt (RED-GREEN-REFACTOR)
-
-* **Target:** `src/agents/core.py`
-* **Execution mode:** code-bearing — write failing tests first.
-
-* **Action:**
-  1. Add `{cross_validation}` to the consensus prompt human message after
-     `{signal_significance}`.
-  2. Pass `state.cross_validation.model_dump()` when available, else
-     `"Validação cruzada entre agentes não disponível."`.
-
-* **Tests in `tests/test_core_consensus_node.py`:**
-
-**Test E — Consensus receives cross_validation when available**
-```python
-def test_core_consensus_passes_cross_validation_to_prompt() -> None:
-    """The supervisor prompt must receive cross-validation evidence."""
-```
-
-**Test F — Consensus degrades gracefully when cross_validation is None**
-```python
-def test_core_consensus_degrades_when_cross_validation_is_none() -> None:
-    """Missing cross-validation must not crash the consensus node."""
-```
+  **C — Section 5 (Critérios de Aceite):**
+  Add `_MAX_ITERATIONS=2` as an explicit acceptance criterion (circuit
+  breaker for reflection loop).
 
 ---
 
-### Step 2.4 — Update `current-sprint.md` (artifact-only)
+### Step 2.3 — Verify PLAN.md (artifact-only)
 
-* **Target:** `.context/current-sprint.md`
-* **Action:** Reopen Sprint 14 as IN PROGRESS, add Steps 6–8.
+* **Target:** `.context/PLAN.md`
+* **Action:** Verify v2.5 is marked ✅ DELIVERED and v3.0 is NEXT.
+  If already correct, no changes needed.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/tools/econometric.py`: `cross_validate_agent_signals` delegates
-  to `calculate_ols_significance`.
-- [ ] `tests/tools/test_econometric.py`: Tests A–C passing.
-- [ ] `src/core/state.py`: `cross_validation: Optional[EconometricResult] = None`.
-- [ ] `tests/test_core_consensus_node.py`: Test D passing (state transport).
-- [ ] `src/agents/core.py`: Consensus prompt includes `{cross_validation}`.
-  Fallback to degradation string when `None`.
-- [ ] `tests/test_core_consensus_node.py`: Tests E–F passing.
-- [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
-- [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** Only `src/agents/core.py` modified among agent files.
-- [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.
+- [ ] `SPEC.md` Section 1: Cyclic topology documented with ASCII diagram.
+- [ ] `SPEC.md` Section 2.1: `iteration_count`, `reflection_feedback`,
+  `signal_significance`, and `cross_validation` fields documented.
+- [ ] `SPEC.md` Section 7: Updated to Sprint 15 + v3.0 target.
+- [ ] `docs/official/...v2_pt-BR.md`: DAG → Cyclic Graph, reflection
+  capability documented, circuit breaker in acceptance criteria.
+- [ ] `PLAN.md`: v2.5 ✅ DELIVERED, v3.0 NEXT — verified.
+- [ ] **HARD CONSTRAINT:** Zero `.py`, `.tf`, `.sh`, or `.yml` files modified.

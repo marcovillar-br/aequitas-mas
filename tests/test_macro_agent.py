@@ -446,3 +446,47 @@ def test_macro_agent_opensearch_timeout_does_not_stall_langgraph(
 
     # Confirm the fallback is a valid Pydantic instance (no ValidationError raised).
     assert isinstance(result["macro_analysis"], MacroAnalysis)
+
+
+# ---------------------------------------------------------------------------
+# Sprint 15 Phase 2 — Reflection feedback injection
+# ---------------------------------------------------------------------------
+
+
+@patch("src.agents.macro.time.sleep")
+@patch("src.agents.macro._invoke_hyde_chain")
+@patch("src.agents.macro._invoke_synthesis_chain")
+@patch("src.agents.macro.ChatGoogleGenerativeAI")
+def test_macro_includes_reflection_feedback_on_iteration_two(
+    mock_llm_cls,
+    mock_synthesis,
+    mock_hyde,
+    mock_sleep,
+) -> None:
+    """Macro prompt must contain the reflection block when iteration_count > 0."""
+    mock_hyde.return_value = MOCK_HYDE_TEXT
+    mock_synthesis.return_value = MacroAnalysis(
+        trend_summary="Cenário restritivo.",
+        source_urls=[],
+    )
+    mock_llm_cls.return_value = MagicMock()
+
+    mock_store = MagicMock(spec=VectorStorePort)
+    mock_store.search_macro_context.return_value = MOCK_RETRIEVED_DOCS
+
+    agent = create_macro_agent(mock_store)
+    state = AgentState(
+        messages=[],
+        target_ticker="PETR4",
+        as_of_date=date(2024, 1, 2),
+        iteration_count=1,
+        reflection_feedback="Cross-validation not significant — re-entering committee.",
+    )
+
+    agent(state)
+
+    # _invoke_hyde_chain receives the reflection as the third argument
+    hyde_call_args = mock_hyde.call_args
+    reflection_arg = hyde_call_args.kwargs.get("reflection", hyde_call_args.args[2] if len(hyde_call_args.args) > 2 else "")
+    assert "[REFLECTION" in reflection_arg
+    assert "Cross-validation not significant" in reflection_arg
