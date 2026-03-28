@@ -80,15 +80,15 @@ def print_report(final_state: dict) -> None:
     print("-" * 80)
     
     # Section 0: Quantitative Health (SOTA Factors)
-    print("\n📋 SAÚDE QUANTITATIVA (SOTA Factors):")
+    print("\n📋 SAÚDE QUANTITATIVA (Fatores Institucionais):")
     if metrics:
         roic_str = f"{format_brl_number(metrics.roic * 100.0)}%" if metrics.roic is not None else "N/A"
         dy_str = f"{format_brl_number(metrics.dividend_yield * 100.0)}%" if metrics.dividend_yield is not None else "N/A"
-        print(f"   • ROIC: {roic_str}")
-        print(f"   • Dividend Yield: {dy_str}")
+        print(f"   • ROIC (Retorno sobre Capital Investido): {roic_str}")
+        print(f"   • Rendimento de Dividendos: {dy_str}")
     else:
-        print("   • ROIC: N/A")
-        print("   • Dividend Yield: N/A")
+        print("   • ROIC (Retorno sobre Capital Investido): N/A")
+        print("   • Rendimento de Dividendos: N/A")
 
     # Section 1: Quantitative Analysis (Graham)
     if metrics:
