@@ -92,8 +92,8 @@ def _build_interpreter_prompt(
         f"Intrinsic Value: {intrinsic_value}\n"
         f"Margin of Safety: {margin_of_safety}\n"
         f"Dynamic Multiplier: {dynamic_multiplier}\n"
-        f"ROIC: {historical_data.roic}\n"
-        f"Dividend Yield: {historical_data.dividend_yield}\n"
+        f"ROIC: {historical_data.roic if historical_data.roic is not None else 'N/A'}\n"
+        f"Dividend Yield: {historical_data.dividend_yield if historical_data.dividend_yield is not None else 'N/A'}\n"
     )
 
 
