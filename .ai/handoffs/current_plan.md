@@ -1,133 +1,175 @@
 ---
-plan_id: plan-sprint16-sota-factors-002
+plan_id: plan-sprint16-sota-factors-003
 target_files:
-  - "src/agents/graham.py"
-  - "tests/test_graham_agent.py"
-  - ".ai/prompts/graham_agent_v2.md"
+  - "src/agents/fisher.py"
+  - "src/agents/macro.py"
+  - "src/agents/marks.py"
+  - "src/core/interfaces/presentation.py"
+  - "src/infra/adapters/pdf_presentation_adapter.py"
+  - "tests/infra/test_pdf_presentation_adapter.py"
+  - "main.py"
   - ".context/current-sprint.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, pydantic-v2-frozen]
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Sprint 16 Phase 2: Wire the Graham Agent to the SOTA factor tools delivered
-in Phase 1. The agent calls `calculate_roic` and `calculate_dividend_yield`
-from `src/tools/fundamental_metrics.py` and maps the results into the
-`GrahamMetrics` schema. The interpreter prompt is enriched with ROIC and DY
-so the LLM can incorporate quality and income signals into its thesis.
+Sprint 16 Phase 3: Throttling parameterization, Tearsheet schema expansion,
+and presentation boundary upgrade. Three axes:
 
-**Architecture principle:** The agent MUST NOT calculate ROIC or DY. It calls
-the deterministic tools and reads the results. The tools were tested in
-Phase 1 — this phase only wires them.
+1. **Throttling Toggle:** The 3 qualitative agents (Fisher, Macro, Marks)
+   hardcode `time.sleep(15)` for Free Tier rate limiting. Wrap each in a
+   feature toggle controlled by `AEQUITAS_FREE_TIER_THROTTLE` env var
+   (default `"true"` for backward compatibility). When `"false"`, the sleep
+   is skipped entirely — enabling fast execution with paid API keys.
 
-Three axes of work:
+2. **Tearsheet Schema:** Enrich `ThesisReportPayload` with 4 SOTA metrics:
+   `roic`, `dividend_yield`, `piotroski_f_score`, `altman_z_score`. All
+   `Optional` with defaults. This enables the Presentation Adapter to
+   render a "Quantitative Health" panel independently of the narrative.
 
-1. **Tool Invocation:** In `_build_metrics_from_historical_data()`, call
-   `calculate_roic` and `calculate_dividend_yield` and map results into the
-   `GrahamMetrics` constructor.
-
-2. **Prompt Enrichment:** In `_build_interpreter_prompt()`, add ROIC and
-   Dividend Yield to the deterministic inputs block so the LLM can
-   interpret them.
-
-3. **CoT Prompt Update:** Update `.ai/prompts/graham_agent_v2.md` to include
-   `roic` and `dividend_yield` in the Deterministic Inputs section and add
-   interpretation guidance for quality (ROIC) and income (DY) signals.
+3. **Tearsheet Rendering:** Update `PdfPresentationAdapter.render_html()`
+   and `main.py` `print_report()` with a structured "Quantitative Health"
+   panel displaying the 4 SOTA metrics before the narrative thesis.
+   All values rendered via `format_brl_number` with "N/A" degradation.
 
 **SCOPE GUARD:**
-- Only `src/agents/graham.py` modified among agent files.
-- No tool files modified (tools already delivered in Phase 1).
-- No graph files modified (no node wrapper changes needed).
+- Agent changes limited to throttling toggle (no business logic changes).
+- No tool files modified.
+- No graph files modified.
 - No `.tf`, `.sh`, or `.yml` files modified.
+- `os.getenv` in agents for throttling toggle is acceptable — it's
+  operational config, not secret/domain data. Documented as exception.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Wire tools into _build_metrics_from_historical_data (RED-GREEN-REFACTOR)
+### Step 2.1 — Throttling parameterization (RED-GREEN-REFACTOR)
 
-* **Target:** `src/agents/graham.py`
+* **Target:** `src/agents/fisher.py`, `src/agents/macro.py`, `src/agents/marks.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
-* **Action:**
-  1. Import `calculate_roic` and `calculate_dividend_yield` from
-     `src.tools.fundamental_metrics`.
-  2. In `_build_metrics_from_historical_data()`, call both tools.
-     `HistoricalMarketData` already has `roic` and `dividend_yield` fields
-     (added in Phase 1), but these are populated at the data ingestion layer.
-     For the current architecture, ROIC and DY are computed from raw
-     inputs that aren't yet in `HistoricalMarketData`. Until the data
-     pipeline is extended, pass `historical_data.roic` and
-     `historical_data.dividend_yield` directly (they will be None for now,
-     but the wiring is correct for when the pipeline populates them).
-  3. Map both results into the `GrahamMetrics` constructor.
+* **Action:** In each agent, replace the hardcoded `time.sleep(15)` block:
 
-* **Tests in `tests/test_graham_agent.py`:**
-
-**Test A — Graham metrics include roic and dividend_yield when available**
-```python
-def test_graham_metrics_include_roic_and_dividend_yield() -> None:
-    """GrahamMetrics from a successful valuation must include ROIC and DY."""
-```
-
-**Test B — Graham metrics degrade roic and dividend_yield to None when absent**
-```python
-def test_graham_metrics_degrade_sota_factors_when_absent() -> None:
-    """When historical data lacks ROIC/DY, metrics must degrade to None."""
-```
-
----
-
-### Step 2.2 — Enrich interpreter prompt with ROIC and DY (RED-GREEN-REFACTOR)
-
-* **Target:** `src/agents/graham.py`
-* **Execution mode:** code-bearing — write failing test first.
-
-* **Action:** In `_build_interpreter_prompt()`, add two lines after
-  `Dynamic Multiplier`:
   ```python
-  f"ROIC: {historical_data.roic}\n"
-  f"Dividend Yield: {historical_data.dividend_yield}\n"
+  import os
+
+  _FREE_TIER_THROTTLE = os.getenv("AEQUITAS_FREE_TIER_THROTTLE", "true").lower() == "true"
   ```
 
-* **Test C — Interpreter prompt includes ROIC and DY**
+  Then guard each sleep:
+  ```python
+  if _FREE_TIER_THROTTLE:
+      logger.debug("free_tier_throttle_applied", sleep_seconds=15)
+      time.sleep(15)
+  ```
+
+  Macro has 2 sleep calls (before HyDE and before synthesis) — both guarded.
+
+* **Note:** `os.getenv` at module level in agents is an exception to the
+  DIP rule — this is operational throttling config, not a secret or domain
+  data. The env var is read once at import time, not per-request.
+
+* **Tests:** No new tests needed — throttling is operational, not business
+  logic. Existing agent tests already mock `time.sleep`. The toggle can be
+  verified by running `AEQUITAS_FREE_TIER_THROTTLE=false poetry run python main.py`.
+
+---
+
+### Step 2.2 — Tearsheet schema expansion (RED-GREEN-REFACTOR)
+
+* **Target:** `src/core/interfaces/presentation.py`
+* **Execution mode:** code-bearing — write failing test first.
+
+* **Action:** Add 4 Optional fields to `ThesisReportPayload`:
+  ```python
+  piotroski_f_score: Optional[int] = Field(
+      default=None,
+      description="Piotroski F-Score (0-9 quality gate).",
+  )
+  altman_z_score: Optional[float] = Field(
+      default=None,
+      description="Altman Z-Score (solvency signal).",
+  )
+  roic: Optional[float] = Field(
+      default=None,
+      description="Return on Invested Capital (quality signal).",
+  )
+  dividend_yield: Optional[float] = Field(
+      default=None,
+      description="Annual Dividend Yield (income signal).",
+  )
+  ```
+
+* **Test A — ThesisReportPayload accepts SOTA metrics**
 ```python
-def test_graham_prompt_includes_roic_and_dividend_yield() -> None:
-    """The interpreter prompt must contain ROIC and DY values."""
+def test_thesis_payload_accepts_sota_metrics() -> None:
+    """ThesisReportPayload must accept the 4 SOTA factor fields."""
 ```
 
 ---
 
-### Step 2.3 — Update CoT prompt artifact (artifact-only)
+### Step 2.3 — Tearsheet rendering (RED-GREEN-REFACTOR)
 
-* **Target:** `.ai/prompts/graham_agent_v2.md`
-* **Action:**
-  - Add `roic` and `dividend_yield` to the Deterministic Inputs section.
-  - Add interpretation guidance:
-    - ROIC > 15% indicates competitive moat (quality signal).
-    - ROIC < 5% or None: acknowledge as quality degradation.
-    - DY > 0: interpret as income cushion reducing downside risk.
-    - DY = None: acknowledge absence without inferring.
+* **Target:** `src/infra/adapters/pdf_presentation_adapter.py` and `main.py`
+* **Execution mode:** code-bearing — write failing tests first.
+
+* **Action in adapter:** Add a "Quantitative Health" `<section>` between the
+  header and the `<h1>` thesis:
+  ```html
+  <section class="quant-health">
+    <h2>Quantitative Health</h2>
+    <table>
+      <tr><th>Piotroski F-Score</th><td>{piotroski}</td></tr>
+      <tr><th>Altman Z-Score</th><td>{altman}</td></tr>
+      <tr><th>ROIC</th><td>{roic}</td></tr>
+      <tr><th>Dividend Yield</th><td>{dy}</td></tr>
+    </table>
+  </section>
+  ```
+  All values via `format_brl_number` / `str()` with "N/A" for None.
+
+* **Action in main.py:** Add a "SAÚDE QUANTITATIVA" panel after the header
+  and before Section 1 (Análise Quantitativa):
+  ```
+  📋 SAÚDE QUANTITATIVA (SOTA Factors):
+     • Piotroski F-Score: 8/9
+     • Altman Z-Score: 3,20
+     • ROIC: 18,00%
+     • Dividend Yield: 4,50%
+  ```
+
+* **Test B — HTML renders Quantitative Health panel**
+```python
+def test_pdf_adapter_renders_quantitative_health_panel() -> None:
+    """The HTML report must include a Quantitative Health section."""
+```
+
+* **Test C — HTML degrades None SOTA metrics to N/A**
+```python
+def test_pdf_adapter_degrades_none_sota_metrics() -> None:
+    """Missing SOTA metrics must render as N/A."""
+```
 
 ---
 
 ### Step 2.4 — Update `current-sprint.md` (artifact-only)
 
 * **Target:** `.context/current-sprint.md`
-* **Action:** Add Steps 5–7 for Phase 2.
+* **Action:** Add Steps 8–10 for Phase 3.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/agents/graham.py`: `_build_metrics_from_historical_data` maps
-  `roic` and `dividend_yield` from historical data into `GrahamMetrics`.
-- [ ] `src/agents/graham.py`: `_build_interpreter_prompt` includes ROIC and DY.
-- [ ] `tests/test_graham_agent.py`: Tests A–C passing.
-- [ ] `.ai/prompts/graham_agent_v2.md`: Updated with ROIC/DY inputs and
-  interpretation guidance.
+- [ ] Fisher/Macro/Marks: `_FREE_TIER_THROTTLE` toggle guarding all sleeps.
+- [ ] `ThesisReportPayload`: 4 new Optional SOTA fields.
+- [ ] `tests/infra/test_pdf_presentation_adapter.py`: Tests A–C passing.
+- [ ] `PdfPresentationAdapter`: Quantitative Health HTML section.
+- [ ] `main.py`: SAÚDE QUANTITATIVA CLI panel.
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** No tool files modified (Phase 1 tools untouched).
+- [ ] **HARD CONSTRAINT:** No tool or graph files modified.
 - [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.

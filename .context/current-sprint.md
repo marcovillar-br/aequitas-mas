@@ -22,6 +22,11 @@ risk-adjusted decision gating. Maintain Sprint 15 iteration_count logic.
 - [x] Step 6: Enrich Graham interpreter prompt with ROIC and DY inputs.
 - [x] Step 7: Update CoT prompt `.ai/prompts/graham_agent_v2.md` with
       ROIC/DY interpretation guidance.
+- [ ] Step 8: Parameterize Free Tier throttling via `AEQUITAS_FREE_TIER_THROTTLE`
+      env var in Fisher, Macro, and Marks agents.
+- [ ] Step 9: Enrich `ThesisReportPayload` with 4 SOTA metrics and render
+      Quantitative Health panel in HTML adapter and CLI.
+- [ ] Step 10: Integrated tearsheet test with expanded SOTA factors.
 
 ### Residual Risks
 - ROIC requires operating income and invested capital data which may not
