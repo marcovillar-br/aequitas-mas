@@ -6,7 +6,11 @@ import math
 
 import pytest
 
-from src.tools.econometric import OLSResult, calculate_ols_significance
+from src.tools.econometric import (
+    OLSResult,
+    calculate_ols_significance,
+    cross_validate_agent_signals,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -87,3 +91,41 @@ def test_ols_result_is_frozen() -> None:
 
     with pytest.raises(Exception):
         result.slope = 3.0
+
+
+# ---------------------------------------------------------------------------
+# Sprint 14 Phase 3 — Macro/Fisher cross-validation
+# ---------------------------------------------------------------------------
+
+
+def test_cross_validate_correlated_signals_returns_significant_result() -> None:
+    """Correlated agent signals must produce a low p-value."""
+    # Macro and Fisher move together: macro = 0.1*i, fisher = 0.2*i + noise
+    macro_scores = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    fisher_scores = [0.22, 0.38, 0.61, 0.79, 1.02, 1.18, 1.41, 1.59]
+
+    result = cross_validate_agent_signals(macro_scores, fisher_scores)
+
+    assert result is not None
+    assert result.p_value is not None
+    assert result.p_value < 0.05
+    assert result.r_squared is not None and result.r_squared > 0.9
+    assert result.n_observations == 8
+
+
+def test_cross_validate_uncorrelated_signals_returns_high_p_value() -> None:
+    """Uncorrelated signals must produce p > 0.05."""
+    macro_scores = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.6, 0.4]
+    fisher_scores = [0.8, 0.2, 0.7, 0.3, 0.9, 0.1, 0.5, 0.5]
+
+    result = cross_validate_agent_signals(macro_scores, fisher_scores)
+
+    assert result is not None
+    assert result.p_value is not None
+    assert result.p_value > 0.05
+
+
+def test_cross_validate_degrades_with_insufficient_data() -> None:
+    """Fewer than 3 valid pairs must degrade to None."""
+    assert cross_validate_agent_signals([0.5, 0.6], [0.7, 0.8]) is None
+    assert cross_validate_agent_signals([], []) is None

@@ -67,6 +67,7 @@ _CONSENSUS_PROMPT = ChatPromptTemplate.from_messages(
             "Macro analysis: {macro_analysis}\n\n"
             "Marks verdict: {marks_verdict}\n\n"
             "Signal significance (econometric): {signal_significance}\n\n"
+            "Cross-validation (Macro vs Fisher): {cross_validation}\n\n"
             "Decide whether the portfolio optimization stage should proceed.",
         ),
     ]
@@ -161,6 +162,11 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
                     state.signal_significance.model_dump()
                     if state.signal_significance is not None
                     else "Validação econométrica não disponível."
+                ),
+                "cross_validation": (
+                    state.cross_validation.model_dump()
+                    if state.cross_validation is not None
+                    else "Validação cruzada entre agentes não disponível."
                 ),
             }
         )

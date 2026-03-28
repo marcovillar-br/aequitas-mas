@@ -1,205 +1,160 @@
 ---
-plan_id: plan-sprint14-econometric-validation-002
+plan_id: plan-sprint14-macro-validation-003
 target_files:
   - "src/tools/econometric.py"
   - "tests/tools/test_econometric.py"
+  - "src/core/state.py"
   - "src/agents/core.py"
   - "tests/test_core_consensus_node.py"
-  - "src/core/state.py"
   - ".context/current-sprint.md"
-  - ".context/SPEC.md"
-enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, temporal-invariance]
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Phase 2 of Sprint 14, aligned with milestone v2.0 (Econometric Validation)
-and the EGI & AM academic track. Implements the Gujarati methodology for
-validating that the committee's signals have statistical significance before
-gating the portfolio optimization decision.
+Phase 3 of Sprint 14: Macro-Signal Cross-Validation. Uses the OLS
+econometric tool (Phase 2) to test whether the Macro Agent's RAG confidence
+score (`macro_rag_score`) correlates with the Fisher Agent's sentiment signal
+(`fisher_rag_score`) — validating cross-agent signal coherence before the
+consensus gate.
 
-Three axes of work:
+**Rationale:** If the macro environment assessment (HyDE RAG) and the
+qualitative sentiment analysis (Fisher) are both contributing meaningful
+signals, their scores should exhibit statistically significant correlation
+over multiple backtest windows. A low correlation (p > 0.05) suggests one
+of the signals is noise and should be discounted by the supervisor.
 
-1. **Deterministic OLS Tool:** Create `src/tools/econometric.py` with a
-   pure-Python OLS regression function that computes slope, t-statistic,
-   p-value, and R² from agent signal series vs. return series. This tool
-   lives in `src/tools/` per Risk Confinement — no math in agents.
+Two axes of work:
 
-2. **Signal Significance Schema:** Add an `EconometricResult` frozen Pydantic
-   schema to `src/core/state.py` to carry significance metrics through the
-   graph state. Add an `Optional[EconometricResult]` field to `AgentState`.
+1. **Cross-Validation Tool:** Add `cross_validate_agent_signals` to
+   `src/tools/econometric.py`. This function takes two agent score series
+   (e.g., macro_rag_scores and fisher_rag_scores from multiple runs) and
+   returns an `OLSResult` measuring their correlation. Reuses the existing
+   `calculate_ols_significance` under the hood.
 
-3. **Consensus Integration:** Inject econometric evidence into
-   `core_consensus_node`. When significance data is available, the consensus
-   prompt receives `signal_significance` alongside existing specialist data.
-   When unavailable, the field degrades to a fallback string. The supervisor
-   can use this to strengthen or weaken its `approve`/`block` decision.
+2. **State & Consensus Wiring:** Add a
+   `cross_validation: Optional[EconometricResult] = None` field to
+   `AgentState` (separate from `signal_significance` which measures
+   signal vs returns). Inject it into the consensus prompt so the
+   supervisor can see whether the agents agree econometrically.
 
 **SCOPE GUARD:**
 - Only `src/agents/core.py` modified among agent files.
-- `src/agents/graham.py`, `fisher.py`, `macro.py`, `marks.py` NOT touched.
-- Zero modifications to `src/tools/fundamental_metrics.py` or backtesting.
+- No backtesting, fetcher, or infrastructure files modified.
 - No `.tf`, `.sh`, or `.yml` files modified.
-- The OLS tool uses only Python stdlib (`math`) and `scipy.stats` for the
-  t-distribution CDF. `scipy` is already a project dependency via the
-  portfolio optimizer.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Deterministic OLS tool (RED-GREEN-REFACTOR)
+### Step 2.1 — Cross-validation function (RED-GREEN-REFACTOR)
 
-* **Target:** `src/tools/econometric.py` (new file)
+* **Target:** `src/tools/econometric.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
-* **Signatures:**
+* **Signature:**
 
 ```python
-class OLSResult(BaseModel):
-    """Immutable OLS regression output with controlled degradation."""
-
-    model_config = ConfigDict(frozen=True)
-
-    slope: Optional[float] = None
-    intercept: Optional[float] = None
-    t_statistic: Optional[float] = None
-    p_value: Optional[float] = None
-    r_squared: Optional[float] = None
-    n_observations: int = 0
-
-
-def calculate_ols_significance(
-    signal_series: Sequence[float | None],
-    return_series: Sequence[float | None],
+def cross_validate_agent_signals(
+    signal_a: Sequence[float | None],
+    signal_b: Sequence[float | None],
 ) -> Optional[OLSResult]:
-    """Run OLS regression of returns on signal values.
+    """Test correlation between two agent score series via OLS.
 
-    Returns None when inputs are insufficient (< 3 valid paired observations)
-    or contain non-finite values. Uses scipy.stats.t for p-value computation.
+    Delegates to calculate_ols_significance treating signal_a as the
+    independent variable and signal_b as the dependent variable.
+
+    Returns None when inputs are insufficient, mismatched, or when
+    signal_a has zero variance.
     """
 ```
 
-* **Implementation rules:**
-  - Filter paired observations where both signal and return are finite floats.
-  - Require minimum 3 valid pairs (Gujarati minimum for OLS inference).
-  - Compute slope, intercept via closed-form normal equations (no numpy).
-  - Compute residual standard error, t-statistic, and two-tailed p-value.
-  - Compute R² = 1 - (SS_res / SS_tot).
-  - Validate all outputs with `math.isfinite()`, degrade to `None` if not.
+* **Tests to add in `tests/tools/test_econometric.py`:**
 
-* **Tests to add in `tests/tools/test_econometric.py` (new file):**
-
-**Test A — OLS with perfect linear relationship**
+**Test A — Cross-validation with correlated signals returns significant result**
 ```python
-def test_ols_perfect_linear_returns_expected_coefficients() -> None:
-    """A perfect y = 2x + 1 relationship must produce exact slope and R²=1."""
+def test_cross_validate_correlated_signals_returns_significant_result() -> None:
+    """Correlated agent signals must produce a low p-value."""
 ```
 
-**Test B — OLS with real-world noisy data returns valid statistics**
+**Test B — Cross-validation with uncorrelated signals returns high p-value**
 ```python
-def test_ols_noisy_data_returns_valid_statistics() -> None:
-    """Noisy data must still produce finite slope, t-stat, and p-value."""
+def test_cross_validate_uncorrelated_signals_returns_high_p_value() -> None:
+    """Uncorrelated signals must produce p > 0.05."""
 ```
 
-**Test C — OLS degrades when inputs are insufficient**
+**Test C — Cross-validation degrades with insufficient data**
 ```python
-def test_ols_degrades_with_insufficient_observations() -> None:
-    """Fewer than 3 paired observations must degrade to None."""
-```
-
-**Test D — OLS degrades when all signals are identical**
-```python
-def test_ols_degrades_when_signal_has_zero_variance() -> None:
-    """Constant signal (zero variance) produces undefined slope — degrade."""
-```
-
-**Test E — OLS filters None values from paired series**
-```python
-def test_ols_filters_none_values_from_series() -> None:
-    """None entries must be excluded, not crash the regression."""
+def test_cross_validate_degrades_with_insufficient_data() -> None:
+    """Fewer than 3 valid pairs must degrade to None."""
 ```
 
 ---
 
-### Step 2.2 — EconometricResult schema in AgentState (RED-GREEN-REFACTOR)
+### Step 2.2 — Add `cross_validation` field to AgentState (RED-GREEN-REFACTOR)
 
 * **Target:** `src/core/state.py`
 * **Execution mode:** code-bearing — write failing test first.
 
 * **Action:**
-  - Add `EconometricResult` Pydantic schema (reexporting `OLSResult` from
-    the tool for now — or define a graph-level wrapper if the tool's schema
-    is too granular).
-  - Add `signal_significance: Optional[EconometricResult] = None` to
-    `AgentState`.
+  Add `cross_validation: Optional[EconometricResult] = None` to `AgentState`,
+  adjacent to `signal_significance`.
 
-* **Test to add in `tests/test_core_consensus_node.py`:**
+* **Test in `tests/test_core_consensus_node.py`:**
 
-**Test F — AgentState accepts EconometricResult field**
+**Test D — AgentState accepts cross_validation field**
 ```python
-def test_agent_state_accepts_econometric_result() -> None:
-    """The state must transport signal significance without error."""
+def test_agent_state_accepts_cross_validation_result() -> None:
+    """The state must transport cross-validation data without error."""
 ```
-
-* **Constraints:** `frozen=True` on `EconometricResult`. All float fields
-  `Optional[float] = None`. Validator with `math.isfinite()`.
 
 ---
 
-### Step 2.3 — Inject signal_significance into consensus prompt (RED-GREEN-REFACTOR)
+### Step 2.3 — Inject `cross_validation` into consensus prompt (RED-GREEN-REFACTOR)
 
 * **Target:** `src/agents/core.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
 * **Action:**
-  1. In `_CONSENSUS_PROMPT`, add `{signal_significance}` after
-     `{marks_verdict}` in the human message.
-  2. In `core_consensus_node()`, pass `state.signal_significance` to the
-     prompt. When `None`, pass `"Validação econométrica não disponível."`.
-  3. When `signal_significance` IS available and `p_value > 0.05`, add an
-     audit log entry warning that the signal lacks statistical significance
-     at 95% confidence.
+  1. Add `{cross_validation}` to the consensus prompt human message after
+     `{signal_significance}`.
+  2. Pass `state.cross_validation.model_dump()` when available, else
+     `"Validação cruzada entre agentes não disponível."`.
 
-* **Tests to add in `tests/test_core_consensus_node.py`:**
+* **Tests in `tests/test_core_consensus_node.py`:**
 
-**Test G — Consensus receives signal_significance when available**
+**Test E — Consensus receives cross_validation when available**
 ```python
-def test_core_consensus_passes_signal_significance_to_prompt() -> None:
-    """The supervisor prompt must receive the econometric evidence."""
+def test_core_consensus_passes_cross_validation_to_prompt() -> None:
+    """The supervisor prompt must receive cross-validation evidence."""
 ```
 
-**Test H — Consensus degrades gracefully when signal_significance is None**
+**Test F — Consensus degrades gracefully when cross_validation is None**
 ```python
-def test_core_consensus_degrades_when_signal_significance_is_none() -> None:
-    """Missing econometric data must not crash the consensus node."""
+def test_core_consensus_degrades_when_cross_validation_is_none() -> None:
+    """Missing cross-validation must not crash the consensus node."""
 ```
 
 ---
 
-### Step 2.4 — Update artifacts (artifact-only)
+### Step 2.4 — Update `current-sprint.md` (artifact-only)
 
-* **Target:** `.context/current-sprint.md` and `.context/SPEC.md`
-* **Action:**
-  - Add Steps 3–5 to Sprint 14 in `current-sprint.md`.
-  - Update SPEC.md Section 7 to reflect econometric validation as delivered.
+* **Target:** `.context/current-sprint.md`
+* **Action:** Reopen Sprint 14 as IN PROGRESS, add Steps 6–8.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/tools/econometric.py`: `calculate_ols_significance` implemented
-  with closed-form OLS, t-stat, p-value via `scipy.stats.t`, and R².
-- [ ] `tests/tools/test_econometric.py`: Tests A–E passing.
-- [ ] `src/core/state.py`: `EconometricResult` schema with `frozen=True`.
-  `AgentState.signal_significance` field added.
-- [ ] `tests/test_core_consensus_node.py`: Test F passing (state transport).
-- [ ] `src/agents/core.py`: Consensus prompt includes `{signal_significance}`.
-  Fallback to degradation string when `None`. Audit warning when `p_value > 0.05`.
-- [ ] `tests/test_core_consensus_node.py`: Tests G–H passing.
-- [ ] `.context/current-sprint.md` updated with Steps 3–5.
-- [ ] `.context/SPEC.md` Section 7 updated.
+- [ ] `src/tools/econometric.py`: `cross_validate_agent_signals` delegates
+  to `calculate_ols_significance`.
+- [ ] `tests/tools/test_econometric.py`: Tests A–C passing.
+- [ ] `src/core/state.py`: `cross_validation: Optional[EconometricResult] = None`.
+- [ ] `tests/test_core_consensus_node.py`: Test D passing (state transport).
+- [ ] `src/agents/core.py`: Consensus prompt includes `{cross_validation}`.
+  Fallback to degradation string when `None`.
+- [ ] `tests/test_core_consensus_node.py`: Tests E–F passing.
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
 - [ ] **HARD CONSTRAINT:** Only `src/agents/core.py` modified among agent files.

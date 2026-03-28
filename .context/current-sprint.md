@@ -4,9 +4,9 @@
 **Status:** DONE
 
 ### Objective
-Improve the local developer experience with human-readable structlog output
-and enrich the Presentation Adapter with essential analysis metadata for
-the Tech Lead's CLI review and PA defense report.
+Improve the local developer experience with human-readable structlog output,
+enrich the Presentation Adapter, implement econometric validation of agent
+signals, and cross-validate Macro/Fisher signal coherence.
 
 ### Planned Steps
 - [x] Step 1: Configure `structlog.dev.ConsoleRenderer` for local environment,
@@ -18,8 +18,13 @@ the Tech Lead's CLI review and PA defense report.
 - [x] Step 4: Add `EconometricResult` schema to `AgentState` and inject
       `signal_significance` into `core_consensus_node` prompt.
 - [x] Step 5: Update SPEC.md Section 7 with econometric validation scope.
+- [x] Step 6: Implement `cross_validate_agent_signals` in `econometric.py`
+      for Macro/Fisher signal correlation testing.
+- [x] Step 7: Add `cross_validation` field to `AgentState` and inject into
+      `core_consensus_node` prompt.
+- [x] Step 8: Update `current-sprint.md` checkpoints.
 
-### Delivered Scope
+### Delivered Scope (Phases 1–2)
 1. `structlog.dev.ConsoleRenderer` for local, `JSONRenderer` for cloud.
 2. `ThesisReportPayload` enriched (as_of_date, market_price, approval_status).
 3. Fail-fast router: invalid ticker skips Fisher/Macro/Marks.
@@ -38,9 +43,20 @@ the Tech Lead's CLI review and PA defense report.
 - [x] EconometricResult in AgentState + consensus integration
 - [x] 232 tests passing, 0 regressions
 
+### Delivered Scope (Phase 3 — Plumbing Only)
+9. `cross_validate_agent_signals` in `econometric.py` (pure delegation).
+10. `AgentState.cross_validation` field + consensus prompt wiring.
+11. 3 pure-text fallback strings preventing hallucination when stats are None.
+12. **Note:** No graph node currently populates `cross_validation` at runtime.
+    The field will always receive the fallback string until a score accumulator
+    (e.g., extended `BacktestEngine`) feeds historical Macro/Fisher score series
+    into the state. This is intentional plumbing for a future sprint.
+
 ### Residual Risks
 - OLS inference requires minimum 3 paired observations; real-world signal
   series from the committee may be shorter in early sessions.
+- Cross-validation assumes agent scores are comparable in scale; divergent
+  score ranges may require normalization in a future sprint.
 
 ### Next Planning Target
 - Sprint 15 — Cyclic Graph Refinement (milestone v2.5).

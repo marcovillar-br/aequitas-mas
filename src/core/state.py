@@ -369,6 +369,7 @@ class AgentState(BaseModel):
     macro_rag_score: Optional[float] = None
     marks_verdict: Optional[str] = None
     signal_significance: Optional[EconometricResult] = None
+    cross_validation: Optional[EconometricResult] = None
     core_analysis: Optional[CoreAnalysis] = None
     optimization_blocked: bool = False
 
