@@ -1,9 +1,13 @@
 ---
-plan_id: plan-sprint15-cyclic-graph-001
+plan_id: plan-sprint15-cyclic-graph-002
 target_files:
-  - "src/core/state.py"
   - "src/core/graph.py"
+  - "src/agents/fisher.py"
+  - "src/agents/macro.py"
+  - "src/agents/marks.py"
   - "tests/test_graph_routing.py"
+  - "tests/test_fisher_agent.py"
+  - "tests/test_macro_agent.py"
   - ".context/current-sprint.md"
 enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, pydantic-v2-frozen]
 validation_scale: "FACTS (Mean: 5.0)"
@@ -11,187 +15,160 @@ validation_scale: "FACTS (Mean: 5.0)"
 
 ## 1. Intent & Scope
 
-Sprint 15 Phase 1: Cyclic Graph Refinement. Transforms the Aequitas-MAS
-graph from a linear pipeline (`graham → fisher → macro → marks →
-core_consensus → __end__`) into a true cyclic graph where
-`core_consensus` can route back to `fisher` for a reflection loop when
-the committee's evidence is insufficiently validated.
+Sprint 15 Phase 2: Expand the self-reflection cycle (Phase 1) into a full
+committee re-evaluation loop. When `route_after_consensus` triggers a
+reflection, the graph must re-run the qualitative agents (Fisher, Macro,
+Marks) with the consensus feedback injected into their prompts, then
+re-enter consensus.
 
-**Architecture Change:**
-The current `router()` function routes `core_consensus → __end__`
-unconditionally. This phase adds a **post-consensus routing function**
-(`route_after_consensus`) that evaluates `iteration_count` and
-`cross_validation` to decide whether to loop back for another committee
-pass or terminate.
+**Architecture change:**
 
-**Circuit Breaker:** `iteration_count >= 2` is a hard cap that prevents
-infinite LLM loops. This works alongside the existing `RECURSION_LIMIT=15`
-as a domain-level circuit breaker (the recursion limit is a framework
-safety net; `iteration_count` is a business-logic cap).
+Phase 1 delivered: `consensus → consensus` (self-reflection)
+Phase 2 delivers: `consensus → fisher → macro → marks → consensus` (full loop)
+
+**LangGraph frozen state challenge:** `AgentState` uses `frozen=True` and
+`executed_nodes` uses `operator.add` (append-only). Clearing checkpoints
+directly is not possible. The solution: `route_after_consensus` returns
+`"fisher"` and the main `router` is enhanced to detect reflection mode
+(`iteration_count > 0`) and force re-execution of qualitative agents even
+when their checkpoints exist.
 
 Three axes of work:
 
-1. **State Extension:** Add `iteration_count: int = 0` and
-   `reflection_feedback: Optional[str] = None` to `AgentState`.
+1. **Router Enhancement:** Modify `router()` to detect reflection mode
+   (`state.iteration_count > 0` AND qualitative agents already executed)
+   and force re-routing through `fisher → macro → marks → core_consensus`.
 
-2. **Post-Consensus Router:** Implement `route_after_consensus(state)` that:
-   - Returns `"fisher"` when `iteration_count < 2` AND `cross_validation`
-     is None (evidence insufficient — trigger reflection loop).
-   - Returns `"__end__"` otherwise (either max iterations reached or
-     cross-validation data is present).
-   When routing back, `core_consensus_node` must patch
-   `iteration_count += 1` and set `reflection_feedback` with a reason.
+2. **Agent Prompt Injection:** Add a conditional `reflection_feedback`
+   block to Fisher, Macro, and Marks prompts. When `iteration_count > 0`
+   AND `reflection_feedback` is not None, prepend it to the prompt so the
+   agent can adjust its analysis. When `iteration_count == 0`, the block
+   is absent — zero impact on first-pass behavior.
 
-3. **Graph Wiring:** Replace `core_consensus → router` edge with
-   `core_consensus → route_after_consensus` to enable the reflection cycle.
+3. **Route Change:** Update `route_after_consensus` to return `"fisher"`
+   instead of `"core_consensus"`, enabling the full committee loop.
 
 **SCOPE GUARD:**
-- No agent files (`src/agents/`) modified.
+- `src/agents/graham.py` is NOT modified (quantitative data doesn't change).
 - No tool files (`src/tools/`) modified.
 - No `.tf`, `.sh`, or `.yml` files modified.
-- `core_consensus_node` in `src/agents/core.py` is NOT modified — the
-  iteration_count increment is handled by a thin wrapper node in `graph.py`.
+- Agent prompt changes are additive — first-pass (iteration_count=0) behavior
+  is identical to pre-Phase-2.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Extend AgentState with iteration fields (RED-GREEN-REFACTOR)
-
-* **Target:** `src/core/state.py`
-* **Execution mode:** code-bearing — write failing tests first.
-
-* **Action:**
-  Add two fields to `AgentState`:
-  ```python
-  iteration_count: int = Field(
-      default=0,
-      description="Number of completed committee iterations. Circuit breaker at 2.",
-  )
-  reflection_feedback: Optional[str] = Field(
-      default=None,
-      description="Feedback from post-consensus router explaining why a reflection loop was triggered.",
-  )
-  ```
-
-* **Test in `tests/test_graph_routing.py`:**
-
-**Test A — AgentState accepts iteration fields**
-```python
-def test_agent_state_accepts_iteration_fields() -> None:
-    """The state must transport iteration_count and reflection_feedback."""
-    state = AgentState(messages=[], target_ticker="PETR4", iteration_count=1,
-                       reflection_feedback="Cross-validation insuficiente.")
-    assert state.iteration_count == 1
-    assert state.reflection_feedback == "Cross-validation insuficiente."
-```
-
----
-
-### Step 2.2 — Implement `route_after_consensus` function (RED-GREEN-REFACTOR)
+### Step 2.1 — Enhance router for reflection mode (RED-GREEN-REFACTOR)
 
 * **Target:** `src/core/graph.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
-* **Signature:**
+* **Action:** Modify `router()` to add reflection-mode logic after the
+  fail-fast check:
+
   ```python
-  def route_after_consensus(
-      state: AgentState,
-  ) -> Literal["fisher", "__end__"]:
-      """Post-consensus routing: loop back or terminate."""
+  # Reflection mode: force qualitative re-execution when looping
+  if state.iteration_count > 0:
+      if state.qual_analysis is not None and "fisher" not in _recent_nodes(state):
+          return "fisher"
+      if state.macro_analysis is not None and "macro" not in _recent_nodes(state):
+          return "macro"
+      if state.marks_verdict is not None and "marks" not in _recent_nodes(state):
+          return "marks"
   ```
 
-* **Logic:**
-  - If `state.iteration_count < 2` AND `state.cross_validation is None`:
-    log `"reflection_loop_triggered"` and return `"fisher"`.
-  - Otherwise: return `"__end__"`.
+  Add helper `_recent_nodes(state)` that returns nodes executed in the
+  current iteration (after the last consensus pass). This can be approximated
+  by checking nodes after the last `"core_consensus"` entry in
+  `executed_nodes`.
+
+* **Also:** Change `route_after_consensus` return from `"core_consensus"`
+  to `"fisher"` and update `post_consensus_map`.
 
 * **Tests in `tests/test_graph_routing.py`:**
 
-**Test B — Routes to fisher when iteration_count < 2 and cross_validation is None**
+**Test A — Router forces fisher re-execution in reflection mode**
 ```python
-def test_route_after_consensus_loops_back_when_evidence_insufficient() -> None:
-    """First pass with no cross-validation must loop back to fisher."""
+def test_router_forces_fisher_reexecution_in_reflection_mode() -> None:
+    """When iteration_count > 0, the router must re-route to fisher
+    even if qual_analysis exists, provided fisher hasn't run in this iteration."""
 ```
 
-**Test C — Routes to __end__ when iteration_count reaches cap**
+**Test B — Full graph runs fisher→macro→marks→consensus twice**
 ```python
-def test_route_after_consensus_terminates_at_max_iterations() -> None:
-    """iteration_count >= 2 must terminate regardless of cross_validation."""
-```
-
-**Test D — Routes to __end__ when cross_validation is present**
-```python
-def test_route_after_consensus_terminates_when_cross_validation_present() -> None:
-    """Available cross_validation means evidence is sufficient — terminate."""
+def test_graph_runs_full_committee_twice_in_reflection_loop(mock_agents) -> None:
+    """The reflection loop must re-execute the full qualitative committee."""
 ```
 
 ---
 
-### Step 2.3 — Wire `route_after_consensus` into graph and add iteration increment (RED-GREEN-REFACTOR)
+### Step 2.2 — Inject reflection_feedback into agent prompts (RED-GREEN-REFACTOR)
 
-* **Target:** `src/core/graph.py`
+* **Target:** `src/agents/fisher.py`, `src/agents/macro.py`, `src/agents/marks.py`
 * **Execution mode:** code-bearing — write failing tests first.
 
-* **Action:**
-  1. In `create_graph()`, replace:
-     ```python
-     workflow.add_conditional_edges("core_consensus", router, router_map)
-     ```
-     with:
-     ```python
-     workflow.add_conditional_edges(
-         "core_consensus",
-         route_after_consensus,
-         {"fisher": "fisher", "__end__": END},
-     )
-     ```
+* **Action in each agent:**
+  At the beginning of the prompt construction, check
+  `state.iteration_count > 0 and state.reflection_feedback`:
+  ```python
+  reflection_block = ""
+  if state.iteration_count > 0 and state.reflection_feedback:
+      reflection_block = (
+          f"\n\n[REFLECTION — Iteration {state.iteration_count}]\n"
+          f"The consensus supervisor requested re-evaluation: "
+          f"{state.reflection_feedback}\n"
+          "Adjust your analysis considering this feedback.\n\n"
+      )
+  ```
+  Prepend `reflection_block` to the existing prompt string.
 
-  2. Add a thin wrapper around `core_consensus_node` in `create_graph()`
-     that increments `iteration_count` in the returned patch:
-     ```python
-     def _consensus_with_iteration(state, config=None):
-         result = instrumented_consensus(state, config)
-         result["iteration_count"] = state.iteration_count + 1
-         return result
-     ```
-     Use this wrapper as the node callable instead of the raw instrumented
-     consensus. This keeps `src/agents/core.py` untouched.
+* **Tests:**
 
-* **Test in `tests/test_graph_routing.py`:**
-
-**Test E — Full graph halts at iteration_count == 2**
+**Test C — Fisher includes reflection feedback on second iteration**
 ```python
-def test_graph_halts_after_two_iterations(mock_agents) -> None:
-    """The graph must complete after at most 2 committee iterations."""
-    # Build state with cross_validation=None (trigger loop)
-    # Run graph via stream
-    # Assert core_consensus appears exactly 2 times in the path
-    # Assert the graph terminates (does not hang)
+def test_fisher_includes_reflection_feedback_on_iteration_two() -> None:
+    """Fisher prompt must contain the reflection block when iteration_count > 0."""
 ```
+
+**Test D — Fisher prompt is unchanged on first iteration**
+```python
+def test_fisher_prompt_unchanged_on_first_iteration() -> None:
+    """First-pass behavior must be identical to pre-Phase-2."""
+```
+
+**Test E — Macro includes reflection feedback on second iteration**
+```python
+def test_macro_includes_reflection_feedback_on_iteration_two() -> None:
+    """Macro prompt must contain the reflection block when iteration_count > 0."""
+```
+
+* **Constraints:** The reflection block MUST NOT contain any numeric
+  calculations. It is pure natural language feedback from the consensus
+  rationale. Zero math in prompts.
 
 ---
 
-### Step 2.4 — Update `current-sprint.md` (artifact-only)
+### Step 2.3 — Update `current-sprint.md` (artifact-only)
 
 * **Target:** `.context/current-sprint.md`
-* **Action:** Fill in the Sprint 15 Planned Steps with Steps 1–4.
+* **Action:** Add Steps 5–7 for Phase 2.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `src/core/state.py`: `iteration_count: int = 0` and
-  `reflection_feedback: Optional[str] = None` on `AgentState`.
-- [ ] `tests/test_graph_routing.py`: Test A passing (state fields).
-- [ ] `src/core/graph.py`: `route_after_consensus` implemented with
-  circuit breaker at `iteration_count >= 2`.
-- [ ] `tests/test_graph_routing.py`: Tests B–D passing (routing logic).
-- [ ] `src/core/graph.py`: `core_consensus` edge replaced with
-  `route_after_consensus`. Iteration increment via wrapper node.
-- [ ] `tests/test_graph_routing.py`: Test E passing (full graph halt).
+- [ ] `src/core/graph.py`: `router()` detects reflection mode and forces
+  qualitative re-execution.
+- [ ] `src/core/graph.py`: `route_after_consensus` returns `"fisher"`.
+- [ ] `tests/test_graph_routing.py`: Tests A–B passing.
+- [ ] `src/agents/fisher.py`: Conditional reflection block in prompt.
+- [ ] `src/agents/macro.py`: Conditional reflection block in prompt.
+- [ ] `src/agents/marks.py`: Conditional reflection block in prompt.
+- [ ] `tests/test_fisher_agent.py`: Tests C–D passing.
+- [ ] `tests/test_macro_agent.py`: Test E passing.
+- [ ] First-pass behavior (iteration_count=0) is identical to pre-Phase-2.
 - [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
 - [ ] `poetry run ruff check src/ tests/` passes cleanly.
-- [ ] **HARD CONSTRAINT:** No agent files (`src/agents/`) modified.
-- [ ] **HARD CONSTRAINT:** No tool files (`src/tools/`) modified.
-- [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.
+- [ ] **HARD CONSTRAINT:** `src/agents/graham.py` NOT modified.
+- [ ] **HARD CONSTRAINT:** No `src/tools/`, `.tf`, `.sh`, or `.yml` modified.

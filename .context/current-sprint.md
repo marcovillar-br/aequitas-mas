@@ -16,6 +16,11 @@ breaker at `iteration_count >= 2`.
 - [x] Step 3: Wire `route_after_consensus` into graph and add iteration
       increment wrapper.
 - [x] Step 4: Update `current-sprint.md` checkpoints.
+- [ ] Step 5: Enhance `router()` for reflection mode — force qualitative
+      re-execution when `iteration_count > 0`. Route back to `fisher`.
+- [ ] Step 6: Inject conditional `reflection_feedback` block into Fisher,
+      Macro, and Marks prompts when `iteration_count > 0`.
+- [ ] Step 7: Verify full committee loop (fisher→macro→marks→consensus ×2).
 
 ---
 
