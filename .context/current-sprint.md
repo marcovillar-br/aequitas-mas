@@ -11,11 +11,11 @@ loop when the committee's evidence is insufficiently validated. Circuit
 breaker at `iteration_count >= 2`.
 
 ### Planned Steps
-- [ ] Step 1: Add `iteration_count` and `reflection_feedback` to `AgentState`.
-- [ ] Step 2: Implement `route_after_consensus` function with circuit breaker.
-- [ ] Step 3: Wire `route_after_consensus` into graph and add iteration
+- [x] Step 1: Add `iteration_count` and `reflection_feedback` to `AgentState`.
+- [x] Step 2: Implement `route_after_consensus` function with circuit breaker.
+- [x] Step 3: Wire `route_after_consensus` into graph and add iteration
       increment wrapper.
-- [ ] Step 4: Update `current-sprint.md` checkpoints.
+- [x] Step 4: Update `current-sprint.md` checkpoints.
 
 ---
 

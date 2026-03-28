@@ -1,86 +1,49 @@
 ---
-summary_id: eod-sprint14-consolidated-final
+summary_id: eod-sprint15-cyclic-graph-001
 status: completed
 target_files:
-  - "src/tools/econometric.py"
-  - "tests/tools/test_econometric.py"
   - "src/core/state.py"
-  - "src/agents/core.py"
-  - "tests/test_core_consensus_node.py"
-  - "src/core/telemetry.py"
-  - "src/core/interfaces/presentation.py"
-  - "src/infra/adapters/pdf_presentation_adapter.py"
   - "src/core/graph.py"
-  - "main.py"
-  - ".context/SPEC.md"
-  - ".context/PLAN.md"
+  - "tests/test_graph_routing.py"
   - ".context/current-sprint.md"
-tests_run: ["240 passed, 0 failed, 0 regressions"]
-dogmas_respected: [zero-math-policy, risk-confinement, controlled-degradation, temporal-invariance, dip, pydantic-v2-frozen]
+  - ".context/PLAN.md"
+tests_run: ["245 passed, 0 failed, 0 regressions"]
+dogmas_respected: [zero-math-policy, risk-confinement, controlled-degradation, pydantic-v2-frozen, dip]
 ---
 
 ## 1. Implementation Summary
 
-Sprint 14 executed across 3 phases, 3 plans, and 2 branches.
+Executed the approved Blackboard plan `plan-sprint15-cyclic-graph-001` on
+branch `feature/sprint15-cyclic-graph`.
 
-### Phase 1 — CLI Observability & Presentation (plan-001, PR #72)
-- `structlog.dev.ConsoleRenderer` for local, `JSONRenderer` for cloud.
-- `ThesisReportPayload` enriched (as_of_date, market_price, approval_status).
-- Fail-fast router: `_graham_fully_degraded()` skips Fisher/Macro/Marks.
-- `main.py`: `configure_telemetry(force=True)`, date fallback, price reconstruction.
-- L10n pt-BR: recommendations (COMPRAR/MANTER/EVITAR), dates (DD/MM/YYYY),
-  numbers (1.250,50).
-- `PLAN.md` rewritten with milestone-based roadmap (v1.0–v4.0).
-- Baseline Sync rule added to `sdd-writing-plans`.
-- Post-Implementation Self-Review rule added to `sdd-implementer`.
-
-### Phase 2 — Econometric Validation (plan-002, PR #74)
-- `src/tools/econometric.py`: Deterministic OLS (closed-form normal equations)
-  with slope, t-statistic, p-value (scipy.stats.t), R².
-- `OLSResult` frozen with `isfinite` validators and 4 degradation paths:
-  insufficient obs, mismatched lengths, zero variance, non-finite inputs.
-- `EconometricResult` alias in `AgentState.signal_significance`.
-- `core_consensus_node` receives `{signal_significance}` with degradation
-  fallback and audit warning when `p_value > 0.05`.
-
-### Phase 3 — Macro-Signal Cross-Validation (plan-003, current) — Plumbing Only
-- `cross_validate_agent_signals`: pure delegation to `calculate_ols_significance`
-  for testing Macro/Fisher signal coherence via OLS.
-- `AgentState.cross_validation: Optional[EconometricResult] = None`.
-- `core_consensus_node` receives `{cross_validation}` with fallback
-  `"Validação cruzada entre agentes não disponível."`.
-- 3 fallback strings in consensus — all pure text, zero numeric literals,
-  preventing mathematical hallucination when statistics are None.
-- **Runtime status:** No graph node currently populates `cross_validation`.
-  The supervisor always receives the fallback string until a score accumulator
-  feeds historical Macro/Fisher score series into the state. This phase
-  delivers schema, wiring, and tests — not end-to-end computation.
+- **State Extension:** Added `iteration_count: int = 0` and
+  `reflection_feedback: Optional[str] = None` to `AgentState`. Both fields
+  are written by the `_consensus_with_iteration` wrapper in `graph.py`.
+- **Post-Consensus Router:** Implemented `route_after_consensus` with
+  `_MAX_ITERATIONS = 2` as a hard circuit breaker. Routes to `"core_consensus"`
+  when `iteration_count < 2` AND `cross_validation is None`; routes to
+  `"__end__"` otherwise.
+- **Graph Wiring:** Replaced `core_consensus → router` edge with
+  `core_consensus → route_after_consensus` using `add_conditional_edges`.
+  `_consensus_with_iteration` wrapper increments `iteration_count` and sets
+  `reflection_feedback` on each pass.
+- **Architecture Note:** Phase 1 loops `core_consensus → core_consensus`
+  (self-reflection). Phase 2 will extend to re-run the full qualitative
+  committee (`fisher → macro → marks → consensus`) once LangGraph frozen
+  state checkpoint clearing is resolved.
 
 ## 2. Validation Performed
 
-- `pytest`: 240 tests passed with 0 regressions.
-  - Phase 1: +13 tests (telemetry, presentation, L10n, fail-fast)
-  - Phase 2: +10 tests (OLS tool + consensus wiring + audit warning)
-  - Phase 3: +6 tests (cross-validation + consensus wiring)
-  - Copilot fixes: +2 tests (length check, audit warning)
+- `pytest`: 245 tests passed with 0 regressions (+5 new tests: A–E).
+- 8 pre-existing tests adjusted with `iteration_count=2` to prevent
+  unintended reflection loops in linear-flow test scenarios.
 - `ruff check`: All checks passed (lint gate shift-left).
-- sdd-auditor: PASSED across all 3 phases.
-- sdd-reviewer (The Shield): PASSED across all 3 phases.
-- Copilot Code Review: 3 findings identified and resolved.
+- Post-Implementation Self-Review: docstrings ✅, boundaries ✅, plan actions ✅,
+  state field liveness ✅.
+- Halting test (E): proves graph terminates after exactly 2 consensus passes.
 
 ## 3. Scope Control
 
-All math confined to `src/tools/econometric.py`. Only `src/agents/core.py`
-modified among agent files (all 3 phases). Zero `.tf`, `.sh`, `.yml` modified.
-L10n confined to presentation boundary. Internal Pydantic schemas untouched
-by L10n. Cross-validation is a zero-duplication delegation pattern.
-
-## 4. Sprint 14 — Consolidated Delivery
-
-| Plan | Branch | PR | Tests Added | Total |
-| :--- | :--- | :---: | :---: | :---: |
-| plan-sprint14-cli-observability-001 | feature/sprint14-econometric-validation | #72 | +13 | 223 |
-| plan-sprint14-econometric-validation-002 | feature/sprint14-econometric-validation | #74 | +11 | 234 |
-| plan-sprint14-macro-validation-003 | feature/sprint14-macro-validation | pending | +6 | 240 |
-
-**Milestone v2.0 (Econometric Validation): DELIVERED**
+Zero agent, tool, infrastructure, or terraform files modified. Only
+`src/core/state.py` and `src/core/graph.py` touched in `src/`. The routing
+function contains zero math — only integer comparison and None check.

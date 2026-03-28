@@ -1,6 +1,6 @@
 ---
-audit_id: "audit-plan-sprint14-macro-validation-003-20260328"
-plan_validated: "plan-sprint14-macro-validation-003"
+audit_id: "audit-plan-sprint15-cyclic-graph-001-20260328"
+plan_validated: "plan-sprint15-cyclic-graph-001"
 status: "PASSED"
 failed_checks: []
 tdd_verified: true
@@ -9,83 +9,75 @@ audit_scope: "code-bearing"
 
 ## 1. Executive Summary
 
-**PASSED — Todos os 10 critérios DoD satisfeitos.**
+**PASSED — Todos os 11 critérios DoD satisfeitos.**
 
 O `sdd-implementer` executou os 4 steps do plano com ciclo RED-GREEN-REFACTOR
-completo. A suite cresceu de 234 para 240 testes (+6 novos), com 0 regressões.
-`cross_validate_agent_signals` delega integralmente para
-`calculate_ols_significance` — zero duplicação de math. Todas as 4 degradation
-paths (insufficient, mismatched, zero-variance, None fallback) verificadas.
-Push gate desbloqueado.
+completo. A suite cresceu de 240 para 245 testes (+5 novos), com 0 regressões.
+8 testes pré-existentes foram ajustados para incluir `iteration_count=2` no
+estado inicial, prevenindo que o novo reflection loop interfira com cenários
+que testam o fluxo linear. Push gate desbloqueado.
 
 ---
 
 ## 2. Dogma Compliance Analysis
 
-### Check 2.1: Risk Confinement (Math/Decimals)
+### Check 2.1: Risk Confinement (Math in Routing)
 * **Status:** PASSED
-* **Findings:** Zero `decimal.Decimal` nos arquivos modificados.
-  `cross_validate_agent_signals` é uma single-line delegation para
-  `calculate_ols_significance` — zero math duplicada. `grep` por keywords
-  matemáticos (`scipy`, `ss_xx`, `calculate_ols`) em `src/agents/` e
-  `src/core/` retornou zero matches. Risk Confinement preservado.
+* **Findings:** `route_after_consensus` contém apenas comparações de inteiros
+  (`iteration_count < _MAX_ITERATIONS`) e check de None (`cross_validation is
+  None`). Zero operações matemáticas, zero floats, zero imports de math/scipy.
+  A lógica de routing é puramente determinística e booleana.
 
-### Check 2.2: Controlled Degradation & Type Safety
+### Check 2.2: Pydantic V2 Integrity (frozen=True)
 * **Status:** PASSED
-* **Findings:** Degradação verificada em 4 camadas:
-  1. **Insufficient data (< 3 obs):** `calculate_ols_significance` retorna
-     `None`. Test C confirma. ✅
-  2. **Mismatched lengths:** Length check no início retorna `None` antes de
-     qualquer math. Test (Phase 2) confirma. ✅
-  3. **Zero variance (constant signal):** `ss_xx == 0.0` retorna `None`.
-     Test OLS zero-var confirma. ✅
-  4. **Consensus fallback:** Quando `cross_validation is None`, o prompt
-     recebe `"Validação cruzada entre agentes não disponível."`. Test F
-     confirma. ✅
-  - `cross_validation: Optional[EconometricResult] = None` no AgentState. ✅
-  - `EconometricResult` é alias de `OLSResult` (`frozen=True`, `isfinite`
-    validators). ✅
+* **Findings:**
+  - `AgentState`: `model_config = ConfigDict(frozen=True)` preservado. ✅
+  - `iteration_count: int = Field(default=0)` — tipo primitivo, sem necessidade
+    de validator `isfinite`. ✅
+  - `reflection_feedback: Optional[str] = Field(default=None)` — string opcional,
+    sem risco de non-finite. ✅
+  - Ambos os campos são additive (não usam `operator.add`), portanto o wrapper
+    `_consensus_with_iteration` pode sobrescrever via patch dict. ✅
 
-### Check 2.3: Temporal Invariance
-* **Status:** PASSED (N/A)
-* **Findings:** Cross-validation opera sobre séries de scores pré-computados.
-  Sem data fetching — sem risco de look-ahead.
-
-### Check 2.4: Inversion of Control
+### Check 2.3: Halting Problem (Circuit Breaker)
 * **Status:** PASSED
-* **Findings:** Zero `os.getenv` ou `os.environ` em `src/agents/`.
+* **Findings:**
+  - `_MAX_ITERATIONS = 2` — constante hard-coded, não configurável em runtime. ✅
+  - `route_after_consensus` retorna `"__end__"` quando `iteration_count >= 2`
+    **independente** do estado de `cross_validation`. ✅
+  - `_consensus_with_iteration` wrapper incrementa `iteration_count` em cada
+    passagem via `state.iteration_count + 1`. ✅
+  - Test E (`test_graph_halts_after_two_iterations`) prova que o grafo termina
+    com exatamente 2 passagens de consensus e não trava. ✅
+  - Circuit breaker convive com `RECURSION_LIMIT=15` — o iteration_count é
+    business-logic, o recursion_limit é framework safety net. ✅
+
+### Check 2.4: State Field Liveness
+* **Status:** PASSED
+* **Findings:**
+  - `iteration_count`: ESCRITO por `_consensus_with_iteration` wrapper
+    (`result["iteration_count"] = state.iteration_count + 1`). ✅
+  - `reflection_feedback`: ESCRITO pelo mesmo wrapper quando reflection loop
+    é triggered. ✅
+  - Ambos os campos são populados em produção (não plumbing-only). ✅
 
 ### Check 2.5: Artifact Consistency & Scope Fidelity
 * **Status:** PASSED
 * **Findings:**
 
-  **Scope guard — 6 arquivos modificados (todos permitidos):**
-  - `src/tools/econometric.py` — `cross_validate_agent_signals` ✅
-  - `src/core/state.py` — `cross_validation` field ✅
-  - `src/agents/core.py` — `{cross_validation}` prompt + fallback ✅
-  - `tests/tools/test_econometric.py` — +3 tests (A–C) ✅
-  - `tests/test_core_consensus_node.py` — +3 tests (D–F) ✅
-  - `.context/current-sprint.md` — Steps 6–8 marcados `[x]` ✅
+  **Scope guard — 4 arquivos modificados (todos permitidos):**
+  - `src/core/state.py` — 2 campos novos no AgentState ✅
+  - `src/core/graph.py` — route_after_consensus + wrapper + wiring ✅
+  - `tests/test_graph_routing.py` — +5 tests, 8 adjusted ✅
+  - `.context/current-sprint.md` — Steps 1–4 marcados `[x]` ✅
 
   **HARD CONSTRAINT verified:**
-  - Único agent modificado: `src/agents/core.py` ✅
+  - Zero `src/agents/` modificados ✅
+  - Zero `src/tools/` modificados ✅
   - Zero `.tf`, `.sh`, `.yml` modificados ✅
 
   **Sprint Checkpoint Integrity:**
-  - Steps 1–8 da Sprint 14 todos marcados como `[x]` ✅
-
-  **Post-Implementation Self-Review (nova regra):**
-  - Docstring vs implementação: accurate (delegation documented) ✅
-  - Boundary inputs: mismatched, empty, None all handled ✅
-  - Plan actions: all 4 steps implemented ✅
-
-  **TDD cycle verified:**
-  - Tests A–C: ImportError antes do function existir ✅
-  - Tests E–F: `cross_validation` not in invoke_kwargs antes do wiring ✅
-  - 240 testes passando após GREEN ✅
-
-  **Lint Gate (Shift-Left):**
-  - `poetry run ruff check src/ tests/` → All checks passed ✅
+  - Steps 1–4 da Sprint 15 todos marcados como `[x]` ✅
 
 ---
 
@@ -93,20 +85,21 @@ Push gate desbloqueado.
 
 | Critério | Status |
 | :--- | :---: |
-| `econometric.py`: `cross_validate_agent_signals` delegates to OLS | ✅ DONE |
-| `test_econometric.py`: Tests A–C passando | ✅ DONE |
-| `state.py`: `cross_validation: Optional[EconometricResult] = None` | ✅ DONE |
-| `test_core_consensus_node.py`: Test D (state transport) | ✅ DONE |
-| `core.py`: `{cross_validation}` no prompt + fallback | ✅ DONE |
-| `test_core_consensus_node.py`: Tests E–F passando | ✅ DONE |
-| Suite completa: 240 passed, 0 failed | ✅ DONE |
+| `state.py`: `iteration_count: int = 0` | ✅ DONE |
+| `state.py`: `reflection_feedback: Optional[str] = None` | ✅ DONE |
+| `test_graph_routing.py`: Test A (state fields) | ✅ DONE |
+| `graph.py`: `route_after_consensus` com circuit breaker | ✅ DONE |
+| `test_graph_routing.py`: Tests B–D (routing logic) | ✅ DONE |
+| `graph.py`: core_consensus edge → route_after_consensus | ✅ DONE |
+| `graph.py`: `_consensus_with_iteration` wrapper | ✅ DONE |
+| `test_graph_routing.py`: Test E (halt at 2 iterations) | ✅ DONE |
+| Suite completa: 245 passed, 0 failed | ✅ DONE |
 | `ruff check`: All checks passed | ✅ DONE |
-| HARD CONSTRAINT: só `core.py` entre agents | ✅ DONE |
-| HARD CONSTRAINT: zero `.tf`/`.sh`/`.yml` | ✅ DONE |
+| HARD CONSTRAINT: zero agents/tools/.tf/.sh/.yml | ✅ DONE |
 
 ---
 
 ## 4. Recommended Actions
 
-1. **AUTHORIZE:** Commit e push dos 6 arquivos modificados + audit_report.
+1. **AUTHORIZE:** Commit e push dos 4 arquivos modificados + audit_report + eod_summary.
 2. **Próximo:** Acionar `sdd-reviewer` para autorização final de push.

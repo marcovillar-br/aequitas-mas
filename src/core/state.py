@@ -373,6 +373,16 @@ class AgentState(BaseModel):
     core_analysis: Optional[CoreAnalysis] = None
     optimization_blocked: bool = False
 
+    # Cyclic Graph — Reflection Loop
+    iteration_count: int = Field(
+        default=0,
+        description="Number of completed committee iterations. Circuit breaker at 2.",
+    )
+    reflection_feedback: Optional[str] = Field(
+        default=None,
+        description="Feedback from post-consensus router explaining why a reflection loop was triggered.",
+    )
+
     # Audit Log from the Marks Agent (The Devil's Advocate).
     # Annotated + operator.add allows accumulating critiques without overwriting.
     audit_log: Annotated[List[str], operator.add] = Field(default_factory=list)

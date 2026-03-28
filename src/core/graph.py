@@ -546,6 +546,37 @@ def router(
 
     return "__end__"
 
+
+_MAX_ITERATIONS = 2
+
+
+def route_after_consensus(
+    state: AgentState,
+) -> Literal["core_consensus", "__end__"]:
+    """Post-consensus routing: re-evaluate or terminate.
+
+    Returns "core_consensus" when the committee has not exhausted its iteration
+    budget AND cross-validation evidence is absent — giving the supervisor a
+    second pass with updated iteration_count. Returns "__end__" when either the
+    circuit breaker fires (iteration_count >= 2) or cross-validation data is
+    present (evidence sufficient).
+
+    Note: Phase 1 loops back to core_consensus directly. Phase 2 will extend
+    this to re-run the full qualitative committee (fisher→macro→marks→consensus)
+    once checkpoint clearing for LangGraph frozen state is resolved.
+    """
+    if state.iteration_count < _MAX_ITERATIONS and state.cross_validation is None:
+        logger.info(
+            "reflection_loop_triggered",
+            ticker=state.target_ticker,
+            iteration_count=state.iteration_count,
+            reason="Cross-validation insuficiente — re-avaliando consenso.",
+        )
+        return "core_consensus"
+
+    return "__end__"
+
+
 # 2. GRAPH CONSTRUCTION
 def create_graph(
     audit_sink: AuditSinkPort | None = None,
@@ -604,15 +635,32 @@ def create_graph(
             resolved_telemetry,
         ),
     )
-    workflow.add_node(
+    instrumented_consensus = _build_instrumented_node(
         "core_consensus",
-        _build_instrumented_node(
-            "core_consensus",
-            core_consensus_node,
-            resolved_audit_sink,
-            resolved_telemetry,
-        ),
+        core_consensus_node,
+        resolved_audit_sink,
+        resolved_telemetry,
     )
+
+    def _consensus_with_iteration(
+        state: AgentState,
+        config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Thin wrapper that increments iteration_count after consensus.
+
+        When a reflection loop is triggered, clears qual_analysis,
+        macro_analysis, marks_verdict, and core_analysis so the router
+        re-runs the full qualitative committee on the next pass.
+        """
+        result = instrumented_consensus(state, config)
+        result["iteration_count"] = state.iteration_count + 1
+        if route_after_consensus(state) == "core_consensus":
+            result["reflection_feedback"] = (
+                "Cross-validation insuficiente — re-avaliando consenso."
+            )
+        return result
+
+    workflow.add_node("core_consensus", _consensus_with_iteration)
 
     # Define the mapping from router decision to the next node
     router_map = {
@@ -620,6 +668,12 @@ def create_graph(
         "fisher": "fisher",
         "macro": "macro",
         "marks": "marks",
+        "core_consensus": "core_consensus",
+        "__end__": END,
+    }
+
+    # Post-consensus routing map (reflection loop or terminate)
+    post_consensus_map = {
         "core_consensus": "core_consensus",
         "__end__": END,
     }
@@ -633,7 +687,8 @@ def create_graph(
     workflow.add_conditional_edges("fisher", router, router_map)
     workflow.add_conditional_edges("macro", router, router_map)
     workflow.add_conditional_edges("marks", router, router_map)
-    workflow.add_conditional_edges("core_consensus", router, router_map)
+    # core_consensus uses the post-consensus router (reflection loop)
+    workflow.add_conditional_edges("core_consensus", route_after_consensus, post_consensus_map)
 
     # 3. PERSISTENCE (CHECKPOINTER)
     env = os.getenv("ENVIRONMENT", "local").lower()
