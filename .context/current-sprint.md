@@ -1,7 +1,7 @@
 # Project Status: Aequitas-MAS
 
 ## Sprint 15 — Cyclic Graph Refinement
-**Status:** IN PROGRESS
+**Status:** DONE
 **Target Branch:** `feature/sprint15-cyclic-graph`
 
 ### Objective
@@ -21,6 +21,28 @@ breaker at `iteration_count >= 2`.
 - [x] Step 6: Inject conditional `reflection_feedback` block into Fisher,
       Macro, and Marks prompts when `iteration_count > 0`.
 - [x] Step 7: Verify full committee loop (fisher→macro→marks→consensus ×2).
+
+### Delivered Scope
+1. `iteration_count: int = 0` and `reflection_feedback: Optional[str] = None`
+   in `AgentState`.
+2. `route_after_consensus` with `_MAX_ITERATIONS=2` circuit breaker.
+3. `_consensus_with_iteration` wrapper increments count and sets feedback.
+4. `_nodes_since_last_consensus` helper solves frozen-state checkpoint problem.
+5. Router reflection mode: `0 < iter < _MAX` forces qualitative re-execution.
+6. Fisher/Macro/Marks: conditional `[REFLECTION — Iteration N]` prompt block.
+7. Full committee loop: `consensus → fisher → macro → marks → consensus`.
+8. First-pass (iter=0) behavior identical to pre-Sprint-15.
+
+### Definition of Done
+- [x] iteration_count + reflection_feedback in AgentState
+- [x] route_after_consensus with circuit breaker
+- [x] Full committee reflection loop (fisher→macro→marks→consensus ×2)
+- [x] Prompt injection in 3 qualitative agents
+- [x] graham.py and src/tools/ untouched
+- [x] 250 tests passing, 0 regressions
+
+### Next Planning Target
+- Sprint 16 — SOTA Factor Expansion (milestone v3.0).
 
 ---
 
