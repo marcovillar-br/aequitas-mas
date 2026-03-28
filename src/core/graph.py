@@ -677,9 +677,10 @@ def create_graph(
     ) -> dict[str, Any]:
         """Thin wrapper that increments iteration_count after consensus.
 
-        When a reflection loop is triggered, clears qual_analysis,
-        macro_analysis, marks_verdict, and core_analysis so the router
-        re-runs the full qualitative committee on the next pass.
+        When a reflection loop is triggered, sets reflection_feedback so
+        qualitative agents can adjust their analysis. The router uses
+        _nodes_since_last_consensus() to force re-execution without
+        clearing frozen state checkpoints.
         """
         result = instrumented_consensus(state, config)
         result["iteration_count"] = state.iteration_count + 1
