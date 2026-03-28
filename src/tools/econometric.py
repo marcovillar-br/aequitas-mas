@@ -81,9 +81,10 @@ def calculate_ols_significance(
     Implements closed-form normal equations for simple linear regression:
         y = slope * x + intercept
 
-    Returns None when inputs are insufficient (< 3 valid paired observations),
-    contain non-finite values, or when the signal has zero variance (undefined
-    slope).
+    Non-finite and None values are filtered from both series before regression.
+    Returns None when fewer than 3 valid paired observations remain after
+    filtering, when the series have mismatched lengths, or when the signal
+    has zero variance (undefined slope).
 
     Args:
         signal_series: Independent variable (agent signal values).
