@@ -1,7 +1,7 @@
 # Project Status: Aequitas-MAS
 
 ## Sprint 16 — SOTA Factor Expansion (Quality/Momentum/Growth)
-**Status:** IN PROGRESS
+**Status:** DONE
 **Target Branch:** `feature/sprint16-sota-factors`
 
 ### Objective
@@ -28,10 +28,31 @@ risk-adjusted decision gating. Maintain Sprint 15 iteration_count logic.
       Quantitative Health panel in HTML adapter and CLI.
 - [x] Step 10: Integrated tearsheet test with expanded SOTA factors.
 
+### Delivered Scope
+1. `calculate_roic` and `calculate_dividend_yield` in `fundamental_metrics.py`.
+2. `GrahamMetrics` + `HistoricalMarketData` expanded with `roic` and `dividend_yield`.
+3. `GrahamInterpretation` expanded with `roic_assessment` and `dividend_yield_assessment`.
+4. Graham agent wired: `_build_metrics` + `_build_interpreter_prompt` + CoT prompt.
+5. Consensus auto-enrichment via `model_dump()` — zero prompt template changes.
+6. `AEQUITAS_FREE_TIER_THROTTLE` toggle in Fisher/Macro/Marks (default "true").
+7. `ThesisReportPayload` + 4 SOTA metrics (piotroski, altman, roic, DY).
+8. Quantitative Health panel: HTML adapter + CLI tearsheet.
+9. `setup_env.sh` updated with throttle parameter.
+
+### Definition of Done
+- [x] ROIC + DY deterministic tools with controlled degradation
+- [x] Schema v3.0 expansion (GrahamMetrics + HistoricalMarketData)
+- [x] Graham wiring + CoT interpretation guidance
+- [x] Throttle parameterization (3 agents, 4 sleep calls)
+- [x] Tearsheet schema + rendering (HTML + CLI)
+- [x] 265 tests passing, 0 regressions
+
 ### Residual Risks
-- ROIC requires operating income and invested capital data which may not
-  be available for all B3 tickers. Controlled degradation to None.
-- Dividend Yield depends on declared dividends which may be zero or missing.
+- ROIC/DY in GrahamMetrics are plumbing-only until data pipeline populates
+  `HistoricalMarketData.roic` and `.dividend_yield` from B3 fetcher.
+
+### Next Planning Target
+- Sprint 17 — Semantic Chunking for Earnings Calls (milestone v3.0 cont.).
 
 ---
 

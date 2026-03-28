@@ -108,11 +108,19 @@ meses específicos. A velocidade de entrega determina a progressão.
 - `_nodes_since_last_consensus` resolve frozen-state checkpoint problem.
 - Regime-Aware Consensus (pesos dinâmicos por Selic) movido para backlog.
 
-### v3.0 — SOTA Factor Expansion (NEXT)
+### v3.0 — SOTA Factor Expansion ✅ DELIVERED
 *Alinhado com: EAD (Educação a Distância / Expansão)*
-- Integrar fatores quantitativos institucionais via Selenium/Pandas.
-- Expandir `HistoricalMarketData` com novos indicadores.
-- Semantic Chunking para Earnings Calls (MarketSenseAI).
+- `calculate_roic` + `calculate_dividend_yield` em `fundamental_metrics.py`.
+- GrahamMetrics + HistoricalMarketData v3.0 schema (roic, dividend_yield).
+- Graham wiring + CoT interpretation (ROIC quality + DY income).
+- `AEQUITAS_FREE_TIER_THROTTLE` toggle para latência controlada.
+- Tearsheet: ThesisReportPayload + Quantitative Health panel (HTML + CLI).
+- **265 testes passando.**
+
+### v3.5 — Semantic Chunking & Earnings Calls (NEXT)
+*Alinhado com: AMLDO (Aprendizado de Máquina)*
+- Semantic Chunking para transcrições de Earnings Calls (MarketSenseAI).
+- Expandir Fisher RAG com dados de governança corporativa.
 
 ### v4.0 — PA Defense & Final Thesis
 *Alinhado com: PA (Projeto Aplicado)*
