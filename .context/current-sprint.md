@@ -13,10 +13,17 @@ the Tech Lead's CLI review and PA defense report.
       keeping `JSONRenderer` for cloud (dev/hom/prod/ci).
 - [x] Step 2: Enrich `ThesisReportPayload` with `as_of_date`,
       `current_market_price`, and `approval_status`. Update HTML renderer.
+- [x] Step 3: Implement deterministic OLS regression tool in
+      `src/tools/econometric.py` (Gujarati methodology).
+- [x] Step 4: Add `EconometricResult` schema to `AgentState` and inject
+      `signal_significance` into `core_consensus_node` prompt.
+- [x] Step 5: Update SPEC.md Section 7 with econometric validation scope.
 
 ### Residual Risks
 - `ConsoleRenderer` may behave differently with certain terminal emulators;
   acceptable for local-only use.
+- OLS inference requires minimum 3 paired observations; real-world signal
+  series from the committee may be shorter in early sessions.
 
 ---
 

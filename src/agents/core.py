@@ -66,6 +66,7 @@ _CONSENSUS_PROMPT = ChatPromptTemplate.from_messages(
             "Fisher analysis: {fisher_analysis}\n\n"
             "Macro analysis: {macro_analysis}\n\n"
             "Marks verdict: {marks_verdict}\n\n"
+            "Signal significance (econometric): {signal_significance}\n\n"
             "Decide whether the portfolio optimization stage should proceed.",
         ),
     ]
@@ -156,6 +157,11 @@ def core_consensus_node(state: AgentState) -> CoreConsensusNodeResult:
                     else None
                 ),
                 "marks_verdict": state.marks_verdict,
+                "signal_significance": (
+                    state.signal_significance.model_dump()
+                    if state.signal_significance is not None
+                    else "Validação econométrica não disponível."
+                ),
             }
         )
     except Exception as exc:
