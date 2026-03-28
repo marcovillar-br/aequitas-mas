@@ -1,114 +1,198 @@
 ---
-plan_id: plan-pre-sprint16-doc-sync-001
+plan_id: plan-sprint16-sota-factors-001
 target_files:
-  - ".context/SPEC.md"
-  - "docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md"
-  - ".context/PLAN.md"
+  - "src/tools/fundamental_metrics.py"
+  - "tests/tools/test_fundamental_metrics.py"
+  - "src/core/state.py"
+  - "src/agents/core.py"
+  - "tests/test_core_consensus_node.py"
+  - "src/tools/backtesting/historical_ingestion.py"
   - ".context/current-sprint.md"
-enforced_dogmas: [artifact-driven-communication, scope-discipline, ssot]
+enforced_dogmas: [zero-math-policy, risk-confinement, controlled-degradation, tdd, dip, pydantic-v2-frozen]
 validation_scale: "FACTS (Mean: 5.0)"
 ---
 
 ## 1. Intent & Scope
 
-Pre-Sprint 16 architectural documentation sync. Updates all specification
-and architecture artifacts to reflect the Cyclic Graph topology delivered
-in Sprint 15 (milestone v2.5).
+Sprint 16 Phase 1: SOTA Factor Expansion. Adds two institutional-grade
+quantitative factors (ROIC, Dividend Yield) to the deterministic tool
+boundary and wires them through the AgentState into the consensus pipeline.
 
-**This is a DOCUMENTATION-ONLY task. Zero `.py`, `.tf`, `.sh`, or `.yml`
-files may be modified.**
+Aligned with milestone v3.0 and the EAD academic track. These factors
+strengthen the Graham quantitative signal with quality (ROIC) and income
+(Dividend Yield) dimensions, enabling the consensus supervisor to make
+more informed risk-adjusted decisions.
 
-Three target documents:
+**Architecture principle:** All new data flows through `AgentState` fields.
+Agents read from state — they never compute. Sprint 15 `iteration_count`
+logic is preserved and untouched.
 
-1. **`.context/SPEC.md`** — Replace the linear DAG sequence with the cyclic
-   topology. Document `iteration_count`, `reflection_feedback`,
-   `_MAX_ITERATIONS=2`, and the `[REFLECTION]` prompt injection.
+Four axes of work:
 
-2. **`docs/official/Aequitas-MAS_01_...v2_pt-BR.md`** — Update the logical
-   architecture sections (§2, §4) to reflect the hybrid reflection
-   capability. Replace "DAG" with "Cyclic Graph" where appropriate.
+1. **Deterministic Tools:** Implement `calculate_roic` and
+   `calculate_dividend_yield` in `src/tools/fundamental_metrics.py` with
+   controlled degradation for missing/invalid inputs.
 
-3. **`.context/PLAN.md`** — Verify v2.5 is DELIVERED and v3.0 is NEXT.
-   Already done in prior commit — verify only, no changes expected.
+2. **Schema Expansion:** Add `roic: Optional[float] = None` and
+   `dividend_yield: Optional[float] = None` to `GrahamMetrics` and
+   `HistoricalMarketData`.
+
+3. **Consensus Enrichment:** Inject `roic` and `dividend_yield` into the
+   `core_consensus_node` prompt alongside existing Graham metrics, giving
+   the supervisor typed access to quality and income signals.
+
+4. **Integrated Testing:** End-to-end test proving the full committee
+   consumes the expanded factor suite.
+
+**SCOPE GUARD:**
+- `src/agents/graham.py` is NOT modified in this plan (factor wiring into
+  Graham's interpretation prompt is Phase 2).
+- `src/agents/fisher.py`, `macro.py`, `marks.py` NOT modified.
+- No `.tf`, `.sh`, or `.yml` files modified.
+- Sprint 15 `iteration_count`/`reflection_feedback` logic untouched.
 
 ---
 
 ## 2. File Implementation
 
-### Step 2.1 — Update SPEC.md topology and state contracts (artifact-only)
+### Step 2.1 — Deterministic ROIC and Dividend Yield tools (RED-GREEN-REFACTOR)
 
-* **Target:** `.context/SPEC.md`
-* **Actions:**
+* **Target:** `src/tools/fundamental_metrics.py`
+* **Execution mode:** code-bearing — write failing tests first.
 
-  **A — Section 1 (Topologia):**
-  Replace the linear sequence:
-  ```
-  graham -> fisher -> macro -> marks -> core_consensus -> __end__
-  ```
-  with the cyclic topology:
-  ```
-  graham -> fisher -> macro -> marks -> core_consensus
-                                              |
-                            route_after_consensus
-                              /              \
-                     fisher (loop)        __end__
-                  (if cv.p_value > 0.05   (if iter >= 2
-                   && iter < 2)            || cv absent
-                                           || cv significant)
-  ```
-  Add invariant: `_MAX_ITERATIONS=2` as domain-level circuit breaker.
+* **Signatures:**
 
-  **B — Section 2.1 (AgentState):**
-  Add the new fields to the documented contract:
-  ```
-  iteration_count: int = 0
-  reflection_feedback: Optional[str] = None
-  signal_significance: Optional[EconometricResult] = None
-  cross_validation: Optional[EconometricResult] = None
-  ```
+```python
+def calculate_roic(
+    operating_income: Any,
+    invested_capital: Any,
+) -> Optional[float]:
+    """Calculate Return on Invested Capital deterministically.
 
-  **C — Section 7 (Próxima Extensão):**
-  Replace the stale Sprint 14 reference with Sprint 15 delivered scope
-  and Sprint 16 (v3.0) as the next target.
+    ROIC = operating_income / invested_capital.
+    Returns None when inputs are missing, non-finite, or when
+    invested_capital is not strictly positive.
+    """
+
+
+def calculate_dividend_yield(
+    annual_dividends_per_share: Any,
+    price_per_share: Any,
+) -> Optional[float]:
+    """Calculate Dividend Yield deterministically.
+
+    DY = annual_dividends_per_share / price_per_share.
+    Returns None when inputs are missing, non-finite, or when
+    price_per_share is not strictly positive.
+    """
+```
+
+* **Tests in `tests/tools/test_fundamental_metrics.py`:**
+
+**Test A — ROIC with valid inputs**
+```python
+def test_roic_returns_correct_ratio() -> None:
+    """Valid operating income and invested capital must produce ROIC."""
+```
+
+**Test B — ROIC degrades for zero/negative invested capital**
+```python
+def test_roic_degrades_for_invalid_invested_capital() -> None:
+    """Zero or negative invested capital must degrade to None."""
+```
+
+**Test C — Dividend Yield with valid inputs**
+```python
+def test_dividend_yield_returns_correct_ratio() -> None:
+    """Valid dividends and price must produce DY."""
+```
+
+**Test D — Dividend Yield degrades for zero/negative price**
+```python
+def test_dividend_yield_degrades_for_invalid_price() -> None:
+    """Zero or negative price must degrade to None."""
+```
+
+**Test E — Both degrade for None inputs**
+```python
+def test_roic_and_dividend_yield_degrade_for_none_inputs() -> None:
+    """None inputs must degrade to None without exception."""
+```
 
 ---
 
-### Step 2.2 — Update official architecture document (artifact-only)
+### Step 2.2 — Schema expansion (RED-GREEN-REFACTOR)
 
-* **Target:** `docs/official/Aequitas-MAS_01_Documento_Mestre_Arquitetura_Especificacao_v2_pt-BR.md`
-* **Actions:**
+* **Target:** `src/core/state.py` and `src/tools/backtesting/historical_ingestion.py`
+* **Execution mode:** code-bearing — write failing test first.
 
-  **A — Section 2 (Gestão de Estado):**
-  Replace "Grafos Acíclicos Direcionados (DAGs)" with "Grafo Cíclico com
-  semântica de Comitê Iterativo". Add note about `route_after_consensus`
-  and the reflection loop.
+* **Action in `GrahamMetrics`:**
+  Add two Optional fields:
+  ```python
+  roic: Optional[float] = Field(
+      default=None,
+      description="Return on Invested Capital (ROIC).",
+  )
+  dividend_yield: Optional[float] = Field(
+      default=None,
+      description="Annual Dividend Yield.",
+  )
+  ```
+  Both must be covered by the existing `validate_finite_float` field_validator.
 
-  **B — Section 4 (Agentes):**
-  Add bullet about the `[REFLECTION — Iteration N]` prompt injection
-  capability in Fisher, Macro, and Marks. Note that Graham is excluded
-  (quantitative data doesn't change on reflection).
+* **Action in `HistoricalMarketData`:**
+  Add two Optional fields:
+  ```python
+  roic: Optional[float] = None
+  dividend_yield: Optional[float] = None
+  ```
 
-  **C — Section 5 (Critérios de Aceite):**
-  Add `_MAX_ITERATIONS=2` as an explicit acceptance criterion (circuit
-  breaker for reflection loop).
+* **Test F — GrahamMetrics accepts new SOTA fields**
+```python
+def test_graham_metrics_accepts_roic_and_dividend_yield() -> None:
+    """GrahamMetrics must accept the new SOTA factor fields."""
+```
 
 ---
 
-### Step 2.3 — Verify PLAN.md (artifact-only)
+### Step 2.3 — Consensus prompt enrichment (RED-GREEN-REFACTOR)
 
-* **Target:** `.context/PLAN.md`
-* **Action:** Verify v2.5 is marked ✅ DELIVERED and v3.0 is NEXT.
-  If already correct, no changes needed.
+* **Target:** `src/agents/core.py`
+* **Execution mode:** code-bearing — write failing tests first.
+
+* **Action:** The consensus prompt already receives `{graham_metrics}` as
+  a `model_dump()` dict. Since `roic` and `dividend_yield` are now part of
+  `GrahamMetrics`, they will be automatically included in the dumped dict —
+  **no prompt template change required**. However, add a test to verify
+  the fields are present in the invoke kwargs.
+
+* **Test G — Consensus receives ROIC and DY in graham_metrics**
+```python
+def test_core_consensus_receives_roic_and_dy_in_graham_metrics() -> None:
+    """The consensus prompt must receive ROIC and DY via graham_metrics dump."""
+```
+
+---
+
+### Step 2.4 — Update `current-sprint.md` (artifact-only)
+
+* **Target:** `.context/current-sprint.md`
+* **Action:** Mark completed steps.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `SPEC.md` Section 1: Cyclic topology documented with ASCII diagram.
-- [ ] `SPEC.md` Section 2.1: `iteration_count`, `reflection_feedback`,
-  `signal_significance`, and `cross_validation` fields documented.
-- [ ] `SPEC.md` Section 7: Updated to Sprint 15 + v3.0 target.
-- [ ] `docs/official/...v2_pt-BR.md`: DAG → Cyclic Graph, reflection
-  capability documented, circuit breaker in acceptance criteria.
-- [ ] `PLAN.md`: v2.5 ✅ DELIVERED, v3.0 NEXT — verified.
-- [ ] **HARD CONSTRAINT:** Zero `.py`, `.tf`, `.sh`, or `.yml` files modified.
+- [ ] `fundamental_metrics.py`: `calculate_roic` and `calculate_dividend_yield`
+  with controlled degradation.
+- [ ] `tests/tools/test_fundamental_metrics.py`: Tests A–E passing.
+- [ ] `src/core/state.py`: `GrahamMetrics` includes `roic` and `dividend_yield`.
+- [ ] `historical_ingestion.py`: `HistoricalMarketData` includes `roic` and
+  `dividend_yield`.
+- [ ] `tests/test_core_consensus_node.py`: Tests F–G passing.
+- [ ] Full test suite: `poetry run pytest` passes with 0 regressions.
+- [ ] `poetry run ruff check src/ tests/` passes cleanly.
+- [ ] **HARD CONSTRAINT:** Sprint 15 iteration_count logic untouched.
+- [ ] **HARD CONSTRAINT:** No agent files modified except `core.py` (and only
+  if prompt template change is needed — which it isn't for this plan).
+- [ ] **HARD CONSTRAINT:** No `.tf`, `.sh`, or `.yml` files modified.
